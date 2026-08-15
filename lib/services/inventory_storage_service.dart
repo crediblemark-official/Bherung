@@ -25,18 +25,14 @@ class InventoryStorageService {
       if (jsonStr != null && jsonStr.trim().isNotEmpty) {
         final List<dynamic> decoded = jsonDecode(jsonStr);
         final List<Product> list = decoded.map((item) => Product.fromJson(item as Map<String, dynamic>)).toList();
-        if (list.isNotEmpty) {
-          return list;
-        }
+        return list;
       }
     } catch (e) {
       debugPrint('Error loading products from local storage: $e');
     }
 
-    // Default: Starter Template
-    final initialList = List<Product>.from(sampleProducts);
-    await saveProducts(initialList);
-    return initialList;
+    // Default keadaan awal: bersih (kosong). Master katalog resmi ditarik dari Google Spreadsheet toko.
+    return [];
   }
 
   // Save Products
@@ -194,10 +190,25 @@ class InventoryStorageService {
     }
   }
 
-  // Reset to default sample starter template
-  Future<List<Product>> resetToDefaultProducts() async {
-    final defaultList = List<Product>.from(sampleProducts);
-    await saveProducts(defaultList);
-    return defaultList;
+  // Muat data produk demo / uji coba secara eksplisit
+  Future<List<Product>> loadDemoProducts() async {
+    final demoList = List<Product>.from(sampleProducts);
+    await saveProducts(demoList);
+    return demoList;
+  }
+
+  // Kosongkan seluruh produk lokal
+  Future<void> clearAllProducts() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_keyProducts);
+  }
+
+  // Reset total data lokal toko (produk, mutasi, shift, kasbon)
+  Future<void> resetAllStoreData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_keyProducts);
+    await prefs.remove(_keyMutations);
+    await prefs.remove(_keyShifts);
+    await prefs.remove(_keyKasbon);
   }
 }

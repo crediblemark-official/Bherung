@@ -5,6 +5,7 @@ import 'product_card.dart';
 
 class ProductCatalogView extends StatelessWidget {
   final List<Product> filteredProducts;
+  final int totalStoreProducts;
   final bool isListView;
   final int Function(String productId) getCartQuantity;
   final ValueChanged<Product> onAddToCart;
@@ -12,10 +13,13 @@ class ProductCatalogView extends StatelessWidget {
   final ValueChanged<Product> onDecrement;
   final VoidCallback onResetSearch;
   final Future<void> Function()? onRefresh;
+  final VoidCallback? onOpenSettings;
+  final VoidCallback? onQuickAdd;
 
   const ProductCatalogView({
     super.key,
     required this.filteredProducts,
+    this.totalStoreProducts = 0,
     required this.isListView,
     required this.getCartQuantity,
     required this.onAddToCart,
@@ -23,6 +27,8 @@ class ProductCatalogView extends StatelessWidget {
     required this.onDecrement,
     required this.onResetSearch,
     this.onRefresh,
+    this.onOpenSettings,
+    this.onQuickAdd,
   });
 
   @override
@@ -119,6 +125,72 @@ class ProductCatalogView extends StatelessWidget {
   }
 
   Widget _buildEmptyState() {
+    // Jika toko benar-benar masih belum memiliki produk sama sekali (Fresh Store)
+    if (totalStoreProducts == 0) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryDark.withOpacity(0.06),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.storefront_rounded, size: 40, color: AppTheme.primaryDark),
+              ),
+              const SizedBox(height: 14),
+              const Text(
+                'Etalase Toko Masih Kosong',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.primaryDark),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Hubungkan Google Spreadsheet toko Anda di menu Pengaturan\natau tambahkan produk baru untuk mulai transaksi.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 11.5, color: AppTheme.textMuted, height: 1.4),
+              ),
+              const SizedBox(height: 18),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.center,
+                children: [
+                  if (onOpenSettings != null)
+                    ElevatedButton.icon(
+                      onPressed: onOpenSettings,
+                      icon: const Icon(Icons.cable_rounded, size: 16),
+                      label: const Text('Buka Pengaturan Spreadsheet', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryTeal,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  if (onQuickAdd != null)
+                    OutlinedButton.icon(
+                      onPressed: onQuickAdd,
+                      icon: const Icon(Icons.add_rounded, size: 16),
+                      label: const Text('Tambah Produk Manual', style: TextStyle(fontSize: 11.5)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.primaryDark,
+                        side: const BorderSide(color: AppTheme.borderColor),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Jika produk ada tapi filter pencarian/kategori tidak menemukan hasil
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -135,7 +207,7 @@ class ProductCatalogView extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             const Text(
-              'Barang Sembako Tidak Ditemukan',
+              'Barang Tidak Ditemukan',
               style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textDark),
             ),
             const SizedBox(height: 3),

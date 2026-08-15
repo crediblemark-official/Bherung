@@ -978,6 +978,7 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
                                 )
                               : ProductCatalogView(
                                   filteredProducts: _filteredProducts,
+                                  totalStoreProducts: _products.length,
                                   isListView: _isListView,
                                   getCartQuantity: _getCartQuantity,
                                   onAddToCart: _addToCart,
@@ -997,6 +998,8 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
                                     });
                                   },
                                   onRefresh: _handlePullToRefresh,
+                                  onOpenSettings: _showSettingsDialog,
+                                  onQuickAdd: () => _showQuickAddProductDialog(),
                                 ),
                         ),
                         // Quick Cart Bar on mobile inside body (Above Bottom Bar, not pushing FAB)

@@ -201,6 +201,95 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     setState(() {});
   }
 
+  // Muat Data Demo Produk untuk Simulator / Uji Coba
+  Future<void> _handleLoadDemoProducts() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: const Row(
+          children: [
+            Icon(Icons.science_rounded, color: AppTheme.primaryTeal, size: 22),
+            SizedBox(width: 8),
+            Text('Muat Data Demo Toko', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: const Text(
+          'Aplikasi akan memuat 17 produk sembako & rokok contoh untuk mode uji coba transaksi. Lanjutkan?',
+          style: TextStyle(fontSize: 12),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryTeal, foregroundColor: Colors.white),
+            child: const Text('Ya, Muat Data Demo'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final demoList = await InventoryStorageService().loadDemoProducts();
+      widget.products.clear();
+      widget.products.addAll(demoList);
+      widget.onDataChanged();
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Berhasil memuat ${demoList.length} produk demo ke etalase toko!'),
+          backgroundColor: AppTheme.successGreen,
+        ),
+      );
+      setState(() {});
+    }
+  }
+
+  // Reset & Kosongkan Data Lokal Toko
+  Future<void> _handleResetLocalStore() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: AppTheme.dangerRed, size: 22),
+            SizedBox(width: 8),
+            Text('Kosongkan Data Lokal Toko', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.dangerRed)),
+          ],
+        ),
+        content: const Text(
+          'Seluruh produk lokal, histori mutasi, dan catatan shift yang tersimpan di HP ini akan dikosongkan kembali ke kondisi awal bersih. Data di Google Spreadsheet Anda tetap aman.\n\nLanjutkan reset?',
+          style: TextStyle(fontSize: 12),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.dangerRed, foregroundColor: Colors.white),
+            child: const Text('Ya, Kosongkan Data'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await InventoryStorageService().clearAllProducts();
+      widget.products.clear();
+      widget.onDataChanged();
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Katalog lokal telah dikosongkan. Siap untuk sinkronisasi resmi Spreadsheet.'),
+          backgroundColor: AppTheme.primaryDark,
+        ),
+      );
+      setState(() {});
+    }
+  }
+
   void _openAddOrEditBankDialog([BankAccount? existing, int? index]) {
     final nameCtrl = TextEditingController(text: existing?.bankName ?? 'BCA');
     final numCtrl = TextEditingController(text: existing?.accountNumber ?? '');
@@ -692,6 +781,65 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                       ),
                       style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // 5. Pemeliharaan & Data Demo (Khusus Uji Coba)
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppTheme.borderColor),
+            boxShadow: AppTheme.softShadow,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.build_circle_outlined, color: AppTheme.primaryDark, size: 16),
+                  SizedBox(width: 6),
+                  Text('Mode Uji Coba & Pemeliharaan Database', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                ],
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Gunakan fitur ini untuk mencoba sistem kasir sebelum toko resmi dibuka, atau reset katalog untuk mulai bersih dari Google Spreadsheet.',
+                style: TextStyle(fontSize: 10.5, color: AppTheme.textMuted),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _handleLoadDemoProducts,
+                      icon: const Icon(Icons.science_outlined, size: 14, color: AppTheme.primaryTeal),
+                      label: const Text('Muat Data Demo', style: TextStyle(fontSize: 11, color: AppTheme.primaryTeal, fontWeight: FontWeight.bold)),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppTheme.primaryTeal),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _handleResetLocalStore,
+                      icon: const Icon(Icons.delete_sweep_outlined, size: 14, color: AppTheme.dangerRed),
+                      label: const Text('Kosongkan Katalog', style: TextStyle(fontSize: 11, color: AppTheme.dangerRed, fontWeight: FontWeight.bold)),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppTheme.dangerRed),
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),

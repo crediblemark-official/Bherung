@@ -1,11 +1,18 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:bherung/main.dart';
+import 'package:bherung/models/sample_data.dart';
 
 void main() {
   testWidgets('POS Toko Madura & Sembako smoke test', (WidgetTester tester) async {
-    SharedPreferences.setMockInitialValues({});
+    // Seed initial products in mock storage for smoke testing
+    final mockProducts = sampleProducts.take(3).map((p) => p.toJson()).toList();
+    SharedPreferences.setMockInitialValues({
+      'bherung_products_json_v1': jsonEncode(mockProducts),
+    });
+
     tester.view.physicalSize = const Size(1280, 800);
     tester.view.devicePixelRatio = 1.0;
 
