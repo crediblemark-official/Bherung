@@ -28,64 +28,74 @@ class CurvedNotchedBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BottomAppBar(
-      shape: const CircularNotchedRectangle(),
-      notchMargin: 8.0,
-      color: AppTheme.primaryDark,
-      elevation: 12,
-      padding: EdgeInsets.zero,
-      height: 58,
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.primaryDark,
+        border: const Border(
+          top: BorderSide(color: Color(0xFF2A313C), width: 1),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.35),
+            blurRadius: 14,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
       child: SafeArea(
         top: false,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            // Left Group
-            Expanded(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildBarItem(
-                    icon: Icons.storefront_rounded,
-                    label: 'Kasir',
-                    isActive: true,
-                    onTap: () {},
-                  ),
-                  _buildBarItem(
-                    icon: Icons.inventory_2_rounded,
-                    label: 'Stok',
-                    isActive: false,
-                    onTap: onOpenStockControl,
-                  ),
-                ],
+        child: SizedBox(
+          height: 60,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              // Left Group
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildBarItem(
+                      icon: Icons.storefront_rounded,
+                      label: 'Kasir',
+                      isActive: true,
+                      onTap: () {},
+                    ),
+                    _buildBarItem(
+                      icon: Icons.inventory_2_rounded,
+                      label: 'Stok',
+                      isActive: false,
+                      onTap: onOpenStockControl,
+                    ),
+                  ],
+                ),
               ),
-            ),
 
-            // Space for the center notched floating button
-            const SizedBox(width: 68),
+              // Center Floating Scan Button Spacer
+              const SizedBox(width: 64),
 
-            // Right Group
-            Expanded(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildBarItem(
-                    icon: Icons.sync_alt_rounded,
-                    label: 'Shift',
-                    isActive: false,
-                    onTap: onOpenShiftHandover,
-                  ),
-                  _buildBarItem(
-                    icon: Icons.menu_book_rounded,
-                    label: 'Kasbon',
-                    isActive: false,
-                    badgeCount: activeKasbonCount,
-                    onTap: onOpenKasbon,
-                  ),
-                ],
+              // Right Group
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildBarItem(
+                      icon: Icons.sync_alt_rounded,
+                      label: 'Shift',
+                      isActive: false,
+                      onTap: onOpenShiftHandover,
+                    ),
+                    _buildBarItem(
+                      icon: Icons.menu_book_rounded,
+                      label: 'Kasbon',
+                      isActive: false,
+                      badgeCount: activeKasbonCount,
+                      onTap: onOpenKasbon,
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -98,57 +108,60 @@ class CurvedNotchedBottomBar extends StatelessWidget {
     required VoidCallback onTap,
     int? badgeCount,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(
-                  icon,
-                  size: 20,
-                  color: isActive ? AppTheme.secondaryTeal : Colors.white70,
-                ),
-                if (badgeCount != null && badgeCount > 0)
-                  Positioned(
-                    right: -7,
-                    top: -4,
-                    child: Container(
-                      padding: const EdgeInsets.all(3),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFEF4444),
-                        shape: BoxShape.circle,
-                      ),
-                      constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
-                      child: Text(
-                        '$badgeCount',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 8.5,
-                          fontWeight: FontWeight.bold,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Icon(
+                    icon,
+                    size: 21,
+                    color: isActive ? AppTheme.goldAccent : Colors.white60,
+                  ),
+                  if (badgeCount != null && badgeCount > 0)
+                    Positioned(
+                      right: -7,
+                      top: -4,
+                      child: Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: const BoxDecoration(
+                          color: AppTheme.dangerRed,
+                          shape: BoxShape.circle,
                         ),
-                        textAlign: TextAlign.center,
+                        constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
+                        child: Text(
+                          '$badgeCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 8.5,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
                       ),
                     ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-                color: isActive ? AppTheme.secondaryTeal : Colors.white60,
+                ],
               ),
-            ),
-          ],
+              const SizedBox(height: 3),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+                  color: isActive ? AppTheme.goldAccent : Colors.white60,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -168,17 +181,14 @@ class NotchedCenterFloatingButton extends StatelessWidget {
     return Container(
       width: 58,
       height: 58,
+      margin: const EdgeInsets.only(top: 22),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF0D9488), Color(0xFF059669)],
-        ),
+        gradient: AppTheme.goldGradient,
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0D9488).withValues(alpha: 0.45),
-            blurRadius: 10,
+            color: AppTheme.primaryGold.withValues(alpha: 0.45),
+            blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
@@ -192,12 +202,12 @@ class NotchedCenterFloatingButton extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 24),
+                Icon(Icons.qr_code_scanner_rounded, color: AppTheme.primaryDark, size: 24),
                 SizedBox(height: 1),
                 Text(
                   'SCAN',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: AppTheme.primaryDark,
                     fontSize: 8.5,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 0.5,

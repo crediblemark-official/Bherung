@@ -22,6 +22,24 @@ class AppUser {
 
   bool get isOwner => role == UserRoleType.owner;
 
+  AppUser copyWith({
+    String? id,
+    String? name,
+    String? phone,
+    UserRoleType? role,
+    String? pin,
+    bool? isActive,
+  }) {
+    return AppUser(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      phone: phone ?? this.phone,
+      role: role ?? this.role,
+      pin: pin ?? this.pin,
+      isActive: isActive ?? this.isActive,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,

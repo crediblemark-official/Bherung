@@ -11,6 +11,7 @@ class ProductCatalogView extends StatelessWidget {
   final ValueChanged<Product> onIncrement;
   final ValueChanged<Product> onDecrement;
   final VoidCallback onResetSearch;
+  final Future<void> Function()? onRefresh;
 
   const ProductCatalogView({
     super.key,
@@ -21,18 +22,26 @@ class ProductCatalogView extends StatelessWidget {
     required this.onIncrement,
     required this.onDecrement,
     required this.onResetSearch,
+    this.onRefresh,
   });
 
   @override
   Widget build(BuildContext context) {
-    final double screenWidth = MediaQuery.of(context).size.width;
+    Widget content;
 
     if (filteredProducts.isEmpty) {
-      return _buildEmptyState();
-    }
-
-    if (isListView) {
-      return ListView.separated(
+      content = LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: _buildEmptyState(),
+          ),
+        ),
+      );
+    } else if (isListView) {
+      content = ListView.separated(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         itemCount: filteredProducts.length,
         separatorBuilder: (context, index) => const SizedBox(height: 5),
@@ -48,39 +57,65 @@ class ProductCatalogView extends StatelessWidget {
           );
         },
       );
+    } else {
+      content = LayoutBuilder(
+        builder: (context, constraints) {
+          final double width = constraints.maxWidth;
+          // Penyesuaian kolom & rasio aspek agar kartu padat & tulisan besar jelas
+          final int crossAxisCount = width > 1300
+              ? 5
+              : width > 980
+                  ? 4
+                  : width > 650
+                      ? 3
+                      : 2;
+
+          final double childAspectRatio = width > 1300
+              ? 1.40
+              : width > 980
+                  ? 1.35
+                  : width > 650
+                      ? 1.22
+                      : 1.08;
+
+          return GridView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              childAspectRatio: childAspectRatio,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+            ),
+            itemCount: filteredProducts.length,
+            itemBuilder: (context, index) {
+              final product = filteredProducts[index];
+              final qty = getCartQuantity(product.id);
+              return ProductCard(
+                product: product,
+                cartQuantity: qty,
+                onTap: () => onAddToCart(product),
+                onIncrement: () => onIncrement(product),
+                onDecrement: () => onDecrement(product),
+              );
+            },
+          );
+        },
+      );
     }
 
-    return GridView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: screenWidth > 1300
-            ? 5
-            : screenWidth > 900
-                ? 4
-                : 3, // 3 Kolom Grid di Mobile & Tablet
-        childAspectRatio: screenWidth > 1200
-            ? 1.25
-            : screenWidth > 900
-                ? 1.12
-                : screenWidth > 600
-                    ? 0.92
-                    : 0.76, // Proporsi tinggi ideal untuk 3 kolom di layar HP
-        crossAxisSpacing: 6,
-        mainAxisSpacing: 6,
-      ),
-      itemCount: filteredProducts.length,
-      itemBuilder: (context, index) {
-        final product = filteredProducts[index];
-        final qty = getCartQuantity(product.id);
-        return ProductCard(
-          product: product,
-          cartQuantity: qty,
-          onTap: () => onAddToCart(product),
-          onIncrement: () => onIncrement(product),
-          onDecrement: () => onDecrement(product),
-        );
-      },
-    );
+    if (onRefresh != null) {
+      return RefreshIndicator(
+        onRefresh: onRefresh!,
+        color: AppTheme.primaryTeal,
+        backgroundColor: Colors.white,
+        displacement: 28,
+        strokeWidth: 2.5,
+        child: content,
+      );
+    }
+
+    return content;
   }
 
   Widget _buildEmptyState() {
@@ -105,7 +140,8 @@ class ProductCatalogView extends StatelessWidget {
             ),
             const SizedBox(height: 3),
             const Text(
-              'Coba scan ulang barcode atau gunakan kata kunci lain.',
+              'Coba scan ulang barcode atau gunakan kata kunci lain.\nTarik ke bawah untuk menyinkronkan dengan Google Sheets.',
+              textAlign: TextAlign.center,
               style: TextStyle(fontSize: 11, color: AppTheme.textMuted),
             ),
             const SizedBox(height: 8),

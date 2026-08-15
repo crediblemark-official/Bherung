@@ -26,7 +26,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Bherung POS Kasir Toko Sembako',
+      title: 'Bherung',
       debugShowCheckedModeBanner: false,
       scrollBehavior: AppCustomScrollBehavior(),
       theme: AppTheme.lightTheme,

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/product.dart';
+import '../models/store_profile.dart';
 import '../services/apps_script_service.dart';
 import '../services/inventory_storage_service.dart';
 import '../services/barcode_master_lookup_service.dart';
@@ -9,12 +10,6 @@ import '../widgets/header_bar.dart';
 import '../widgets/search_filter_bar.dart';
 import '../widgets/product_catalog_view.dart';
 import '../widgets/cart_sidebar.dart';
-import '../widgets/payment_dialog.dart';
-import '../widgets/kasbon_dialog.dart';
-import '../widgets/held_orders_dialog.dart';
-import '../widgets/user_guide_dialog.dart';
-import '../widgets/restock_inventory_dialog.dart';
-import '../widgets/role_switcher_dialog.dart';
 import '../widgets/mobile_bottom_nav.dart';
 import 'stock_control_screen.dart';
 import 'shift_handover_screen.dart';
@@ -22,6 +17,12 @@ import 'quick_add_product_screen.dart';
 import 'app_menu_screen.dart';
 import 'settings_screen.dart';
 import 'scanner_screen.dart';
+import 'payment_screen.dart';
+import 'role_switcher_screen.dart';
+import 'restock_screen.dart';
+import 'kasbon_screen.dart';
+import 'held_orders_screen.dart';
+import 'user_guide_screen.dart';
 
 class PosDashboardScreen extends StatefulWidget {
   const PosDashboardScreen({super.key});
@@ -58,8 +59,9 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
   List<KasbonRecord> _kasbonRecords = [];
 
   // Store Profile Info
-  String _storeName = 'TOKO MADURA BHERUNG';
-  final String _storeTagline = '24 JAM';
+  StoreProfile _storeProfile = const StoreProfile();
+  String _storeName = 'Bherung';
+  String _storeTagline = '24 JAM';
 
   final TextEditingController _searchController = TextEditingController();
 
@@ -75,11 +77,11 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
   void initState() {
     super.initState();
     _currentUser = const AppUser(
-      id: 'usr-02',
-      name: 'Ahmad (Kasir)',
-      phone: '0857-1122-3344',
+      id: 'usr-01',
+      name: 'Kasir Toko',
+      phone: '',
       role: UserRoleType.staff,
-      pin: '1111',
+      pin: '1234',
     );
     _loadPersistedStorageData();
     _clockTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -98,6 +100,7 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
     final loadedShifts = await storage.loadShifts();
     final loadedUsers = await storage.loadUsers();
     final loadedKasbon = await storage.loadKasbon();
+    final loadedProfile = await storage.loadStoreProfile();
 
     if (mounted) {
       setState(() {
@@ -106,11 +109,162 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
         _shiftRecords = loadedShifts;
         _users = loadedUsers;
         _kasbonRecords = loadedKasbon;
+        _storeProfile = loadedProfile;
+        _storeName = loadedProfile.name;
+        _storeTagline = loadedProfile.tagline;
         if (_users.isNotEmpty) {
           _currentUser = _users.firstWhere((u) => !u.isOwner, orElse: () => _users.first);
         }
         _isLoadingData = false;
       });
+    }
+
+    // Ambil seluruh data sistem terbaru dari Google Spreadsheet jika terhubung
+    if (AppsScriptService().isConnected) {
+      final syncResult = await AppsScriptService().syncAllDataFromSpreadsheet();
+      if (syncResult.success && mounted) {
+        setState(() {
+          if (syncResult.products != null && syncResult.products!.isNotEmpty) {
+            _products = syncResult.products!;
+            storage.saveProducts(_products);
+          }
+          if (syncResult.users != null && syncResult.users!.isNotEmpty) {
+            _users = syncResult.users!;
+            storage.saveUsers(_users);
+            if (!_users.any((u) => u.id == _currentUser.id)) {
+              _currentUser = _users.firstWhere((u) => !u.isOwner, orElse: () => _users.first);
+            }
+          }
+          if (syncResult.kasbon != null) {
+            _kasbonRecords = syncResult.kasbon!;
+            storage.saveKasbon(_kasbonRecords);
+          }
+          if (syncResult.shifts != null && syncResult.shifts!.isNotEmpty) {
+            _shiftRecords = syncResult.shifts!;
+            storage.saveShifts(_shiftRecords);
+          }
+          if (syncResult.mutations != null && syncResult.mutations!.isNotEmpty) {
+            _stockMutations = syncResult.mutations!;
+            storage.saveMutations(_stockMutations);
+          }
+          if (syncResult.storeProfile != null) {
+            _storeProfile = syncResult.storeProfile!;
+            _storeName = _storeProfile.name;
+            _storeTagline = _storeProfile.tagline;
+            storage.saveStoreProfile(_storeProfile);
+          }
+          if (syncResult.todaySales != null && syncResult.todaySales! > 0) {
+            _totalSalesToday = syncResult.todaySales!;
+            _completedTransactions = syncResult.todayTrxCount ?? _completedTransactions;
+          }
+        });
+      }
+    }
+  }
+
+  // Pull-to-Refresh: Sinkronisasi SELURUH DATA (Katalog, Stok, Kasbon, Pengguna, Shift, Mutasi, Profil Toko, Transaksi, & Antrean Offline)
+  Future<void> _handlePullToRefresh() async {
+    final appsScript = AppsScriptService();
+    final storage = InventoryStorageService();
+
+    if (appsScript.isConnected) {
+      final syncResult = await appsScript.syncAllDataFromSpreadsheet();
+
+      if (mounted) {
+        if (syncResult.success) {
+          setState(() {
+            if (syncResult.products != null && syncResult.products!.isNotEmpty) {
+              _products = syncResult.products!;
+              storage.saveProducts(_products);
+            }
+            if (syncResult.users != null && syncResult.users!.isNotEmpty) {
+              _users = syncResult.users!;
+              storage.saveUsers(_users);
+              if (!_users.any((u) => u.id == _currentUser.id)) {
+                _currentUser = _users.firstWhere((u) => !u.isOwner, orElse: () => _users.first);
+              }
+            }
+            if (syncResult.kasbon != null) {
+              _kasbonRecords = syncResult.kasbon!;
+              storage.saveKasbon(_kasbonRecords);
+            }
+            if (syncResult.shifts != null && syncResult.shifts!.isNotEmpty) {
+              _shiftRecords = syncResult.shifts!;
+              storage.saveShifts(_shiftRecords);
+            }
+            if (syncResult.mutations != null && syncResult.mutations!.isNotEmpty) {
+              _stockMutations = syncResult.mutations!;
+              storage.saveMutations(_stockMutations);
+            }
+            if (syncResult.storeProfile != null) {
+              _storeProfile = syncResult.storeProfile!;
+              _storeName = _storeProfile.name;
+              _storeTagline = _storeProfile.tagline;
+              storage.saveStoreProfile(_storeProfile);
+            }
+            if (syncResult.todaySales != null && syncResult.todaySales! > 0) {
+              _totalSalesToday = syncResult.todaySales!;
+              _completedTransactions = syncResult.todayTrxCount ?? _completedTransactions;
+            }
+          });
+
+          final String summaryInfo = [
+            if (syncResult.products != null) '${syncResult.products!.length} produk',
+            if (syncResult.kasbon != null) '${syncResult.kasbon!.length} kasbon',
+            if (syncResult.users != null) '${syncResult.users!.length} user',
+            if (syncResult.syncedOfflineCount > 0) '${syncResult.syncedOfflineCount} offline terkirim',
+          ].join(' • ');
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.cloud_done_rounded, color: Colors.white, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Seluruh data tersinkronisasi dengan Spreadsheet! ($summaryInfo)',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: AppTheme.primaryTeal,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(syncResult.message),
+              backgroundColor: AppTheme.dangerRed,
+            ),
+          );
+        }
+      }
+    } else {
+      // Mode offline: muat ulang seluruh cache dari local storage
+      await _loadPersistedStorageData();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.cloud_off_rounded, color: Colors.white, size: 18),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Seluruh data lokal dimuat ulang (Mode Offline). Sambungkan Google Sheets di Pengaturan untuk sync otomatis.',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Color(0xFF475569),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 
@@ -206,7 +360,7 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
       setState(() => _searchQuery = '');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('✓ Barcode [$cleanCode]: "${foundProduct.name}" ditambahkan ke keranjang.'),
+          content: Text('Barcode [$cleanCode]: "${foundProduct.name}" ditambahkan ke keranjang.'),
           duration: const Duration(milliseconds: 1200),
           backgroundColor: AppTheme.primaryTeal,
         ),
@@ -241,7 +395,7 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('✨ Otomatis Dikenali: "${autoProduct.name}" (${AppTheme.formatRupiah(autoProduct.price)}) langsung masuk keranjang!'),
+            content: Text('Otomatis Dikenali: "${autoProduct.name}" (${AppTheme.formatRupiah(autoProduct.price)}) langsung masuk keranjang!'),
             backgroundColor: AppTheme.successGreen,
             duration: const Duration(seconds: 2),
           ),
@@ -315,7 +469,7 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
 
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('✓ Produk "${newProduct.name}" berhasil didaftarkan dan tersimpan permanen.'),
+                content: Text('Produk "${newProduct.name}" berhasil didaftarkan dan tersimpan permanen.'),
                 backgroundColor: AppTheme.successGreen,
               ),
             );
@@ -325,32 +479,34 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
     );
   }
 
-  // Restock / Kulakan Dialog
+  // Restock / Kulakan Screen (Full Screen)
   void _showRestockDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) => RestockInventoryDialog(
-        products: _products,
-        onRestockCompleted: (updatedProduct, mutation) {
-          setState(() {
-            final idx = _products.indexWhere((p) => p.id == updatedProduct.id);
-            if (idx != -1) {
-              _products[idx] = updatedProduct;
-            }
-            _stockMutations.insert(0, mutation);
-          });
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (ctx) => RestockScreen(
+          products: _products,
+          onRestockCompleted: (updatedProduct, mutation) {
+            setState(() {
+              final idx = _products.indexWhere((p) => p.id == updatedProduct.id);
+              if (idx != -1) {
+                _products[idx] = updatedProduct;
+              }
+              _stockMutations.insert(0, mutation);
+            });
 
-          // Simpan ke storage lokal permanen
-          InventoryStorageService().saveProducts(_products);
-          InventoryStorageService().saveMutations(_stockMutations);
+            // Simpan ke storage lokal permanen
+            InventoryStorageService().saveProducts(_products);
+            InventoryStorageService().saveMutations(_stockMutations);
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('✓ Stok "${updatedProduct.name}" bertambah menjadi ${updatedProduct.stock} ${updatedProduct.unit}.'),
-              backgroundColor: AppTheme.successGreen,
-            ),
-          );
-        },
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Stok "${updatedProduct.name}" bertambah menjadi ${updatedProduct.stock} ${updatedProduct.unit}.'),
+                backgroundColor: AppTheme.successGreen,
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -369,8 +525,8 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
     );
   }
 
-  // Serah Terima Shift Penjaga & Rekonsiliasi Kas (Full Screen)
-  void _showShiftHandoverDialog() {
+  // Serah Terima Shift Penjaga & Rekonsiliasi Kas (Full Screen Terintegrasi)
+  void _showShiftHandoverDialog([AppUser? initialIncomingUser]) {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -379,12 +535,19 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
           currentShiftSales: _totalSalesToday,
           currentShiftTransactions: _completedTransactions,
           products: _products,
-          onShiftHandoverCompleted: (shiftRecord) {
+          users: _users,
+          initialIncomingUser: initialIncomingUser,
+          defaultStartingCash: _storeProfile.defaultStartingCash,
+          storeName: _storeProfile.name,
+          onShiftHandoverCompleted: (shiftRecord, nextUser) {
             setState(() {
               _shiftRecords.insert(0, shiftRecord);
               // Reset shift counter untuk penjaga shift berikutnya
               _completedTransactions = 0;
               _totalSalesToday = 0;
+              if (nextUser != null) {
+                _currentUser = nextUser;
+              }
             });
 
             // Simpan rekap shift ke storage lokal
@@ -393,7 +556,7 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                  '✓ Serah terima shift berhasil dicatat! Selisih kas: ${AppTheme.formatRupiah(shiftRecord.cashDifference)}',
+                  'Serah terima shift berhasil! Shift beralih ke: ${_currentUser.name} (Selisih: ${AppTheme.formatRupiah(shiftRecord.cashDifference)})',
                 ),
                 backgroundColor: shiftRecord.cashDifference == 0 ? AppTheme.successGreen : AppTheme.warningOrange,
                 duration: const Duration(seconds: 4),
@@ -405,32 +568,87 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
     );
   }
 
-  // Role & User Account Switcher
+  // Role & User Account Switcher (Full Screen Terintegrasi Oper Shift & GAS Cloud)
   void _showRoleSwitcherDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) => RoleSwitcherDialog(
-        currentUser: _currentUser,
-        users: _users,
-        onUserSelected: (user) {
-          setState(() => _currentUser = user);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Beralih ke akun: ${user.name} (${user.isOwner ? "👑 Owner" : "🏪 Kasir"})'),
-              backgroundColor: AppTheme.primaryTeal,
-            ),
-          );
-        },
-        onUserAdded: (newUser) {
-          setState(() => _users.add(newUser));
-          InventoryStorageService().saveUsers(_users);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Akun penjaga baru "${newUser.name}" berhasil ditambahkan.'),
-              backgroundColor: AppTheme.successGreen,
-            ),
-          );
-        },
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (ctx) => RoleSwitcherScreen(
+          currentUser: _currentUser,
+          users: _users,
+          currentShiftSales: _totalSalesToday,
+          currentShiftTransactions: _completedTransactions,
+          onStartShiftHandover: (targetUser) {
+            _showShiftHandoverDialog(targetUser);
+          },
+          onUserSelected: (user) {
+            setState(() => _currentUser = user);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Beralih ke akun: ${user.name} (${user.isOwner ? "Owner" : "Kasir"})'),
+                backgroundColor: AppTheme.primaryGold,
+              ),
+            );
+          },
+          onUserAdded: (newUser) {
+            setState(() => _users.add(newUser));
+            InventoryStorageService().saveUsers(_users);
+            if (AppsScriptService().isConnected) {
+              AppsScriptService().syncAllUsers(_users);
+            }
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Akun penjaga baru "${newUser.name}" berhasil ditambahkan & tersimpan.'),
+                backgroundColor: AppTheme.successGreen,
+              ),
+            );
+          },
+          onUserUpdated: (updatedUser) {
+            setState(() {
+              final idx = _users.indexWhere((u) => u.id == updatedUser.id);
+              if (idx != -1) {
+                _users[idx] = updatedUser;
+              }
+              if (_currentUser.id == updatedUser.id) {
+                _currentUser = updatedUser;
+              }
+            });
+            InventoryStorageService().saveUsers(_users);
+            if (AppsScriptService().isConnected) {
+              AppsScriptService().syncAllUsers(_users);
+            }
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Data akun "${updatedUser.name}" berhasil diperbarui.'),
+                backgroundColor: AppTheme.successGreen,
+              ),
+            );
+          },
+          onUserDeleted: (deletedUser) {
+            setState(() {
+              _users.removeWhere((u) => u.id == deletedUser.id);
+            });
+            InventoryStorageService().saveUsers(_users);
+            if (AppsScriptService().isConnected) {
+              AppsScriptService().syncAllUsers(_users);
+            }
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Akun "${deletedUser.name}" telah dihapus.'),
+                backgroundColor: AppTheme.warningOrange,
+              ),
+            );
+          },
+          onUsersSynced: (syncedUsers) {
+            setState(() {
+              _users = syncedUsers;
+              if (!_users.any((u) => u.id == _currentUser.id)) {
+                _currentUser = _users.first;
+              }
+            });
+            InventoryStorageService().saveUsers(_users);
+          },
+        ),
       ),
     );
   }
@@ -485,33 +703,36 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
     );
   }
 
+  // Daftar Nota Ditahan (Full Screen)
   void _showHeldOrdersDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => HeldOrdersDialog(
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (ctx) => HeldOrdersScreen(
           heldOrders: _heldOrders,
           onRestoreOrder: (order) => _restoreHeldOrder(order),
           onDeleteOrder: (order) {
             setState(() => _heldOrders.remove(order));
-            setDialogState(() {});
           },
         ),
       ),
     );
   }
 
+  // Buku Kasbon Pelanggan (Full Screen)
   void _showBukuKasbonDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) => BukuKasbonDialog(
-        kasbonRecords: _kasbonRecords,
-        onKasbonPaid: (kasbon) {
-          setState(() {
-            _totalSalesToday += kasbon.amount;
-          });
-          InventoryStorageService().saveKasbon(_kasbonRecords);
-        },
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (ctx) => KasbonScreen(
+          kasbonRecords: _kasbonRecords,
+          onKasbonPaid: (kasbon) {
+            setState(() {
+              _totalSalesToday += kasbon.amount;
+            });
+            InventoryStorageService().saveKasbon(_kasbonRecords);
+          },
+        ),
       ),
     );
   }
@@ -524,8 +745,16 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
         builder: (ctx) => SettingsScreen(
           products: _products,
           storeName: _storeName,
+          storeProfile: _storeProfile,
           onStoreNameChanged: (newName) {
             setState(() => _storeName = newName);
+          },
+          onStoreProfileChanged: (newProfile) {
+            setState(() {
+              _storeProfile = newProfile;
+              _storeName = newProfile.name;
+              _storeTagline = newProfile.tagline;
+            });
           },
           onDataChanged: () => setState(() {}),
         ),
@@ -533,31 +762,36 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
     );
   }
 
+  // Buku Panduan Kasir & Toko (Full Screen)
   void _showUserGuideDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) => const UserGuideDialog(),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (ctx) => const UserGuideScreen(),
+      ),
     );
   }
 
+  // Kasir Pembayaran & Kasbon (Full Screen)
   void _openCheckoutDialog() {
     final double subtotal = _cartItems.fold(0, (sum, item) => sum + item.totalPrice);
     final double discount = subtotal * (_discountPercent / 100);
     final double total = subtotal - discount;
     final String trxId = 'TRX-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => PaymentDialog(
-        totalAmount: total,
-        subtotal: subtotal,
-        discountAmount: discount,
-        cartItems: _cartItems,
-        transactionType: _selectedTransactionType,
-        customerName: _customerName,
-        onSuccess: ({required bool isKasbon, String? customerName, String? customerPhone, DateTime? dueDate}) {
-          final itemsCopy = List<CartItem>.from(_cartItems.map((e) => e.copyWith()));
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PaymentScreen(
+          totalAmount: total,
+          subtotal: subtotal,
+          discountAmount: discount,
+          cartItems: _cartItems,
+          transactionType: _selectedTransactionType,
+          customerName: _customerName,
+          storeProfile: _storeProfile,
+          onSuccess: ({required bool isKasbon, String? customerName, String? customerPhone, DateTime? dueDate}) {
+            final itemsCopy = List<CartItem>.from(_cartItems.map((e) => e.copyWith()));
           final finalCustName = customerName ?? (_customerName.isNotEmpty ? _customerName : 'Umum');
 
           setState(() {
@@ -644,8 +878,9 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
           _clearCart();
         },
       ),
-    );
-  }
+    ),
+  );
+}
 
   // Full-Screen Menu Toko & Pengaturan
   void _openAppMenuScreen() {
@@ -761,6 +996,7 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
                                       _selectedCategoryId = 'all';
                                     });
                                   },
+                                  onRefresh: _handlePullToRefresh,
                                 ),
                         ),
                         // Quick Cart Bar on mobile inside body (Above Bottom Bar, not pushing FAB)

@@ -614,7 +614,7 @@ class _CartSidebarState extends State<CartSidebar> {
                                         borderRadius: BorderRadius.circular(3),
                                       ),
                                       child: Text(
-                                        '📝 ${item.note}',
+                                        'Catatan: ${item.note}',
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: const TextStyle(
@@ -751,17 +751,17 @@ class _CartSidebarState extends State<CartSidebar> {
               ),
             ),
 
-          // 5. Total & Bayar Button (Net kelontong)
+          // 5. Total & Bayar Button (Luxury Black & Gold style)
           Container(
-            padding: const EdgeInsets.all(10),
-            decoration: const BoxDecoration(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
               color: Colors.white,
-              border: Border(top: BorderSide(color: AppTheme.borderColor, width: 1)),
+              border: const Border(top: BorderSide(color: AppTheme.borderColor, width: 1)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 6,
-                  offset: Offset(0, -2),
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 10,
+                  offset: const Offset(0, -3),
                 ),
               ],
             ),
@@ -772,29 +772,29 @@ class _CartSidebarState extends State<CartSidebar> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Subtotal', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                      const Text('Subtotal', style: TextStyle(fontSize: 11.5, color: AppTheme.textMuted, fontWeight: FontWeight.w600)),
                       Text(
                         AppTheme.formatRupiah(subtotal),
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.textDark),
+                        style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppTheme.textDark),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 3),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
                         'Diskon (${widget.discountPercent.toInt()}%)',
-                        style: const TextStyle(fontSize: 11, color: AppTheme.dangerRed),
+                        style: const TextStyle(fontSize: 11.5, color: AppTheme.dangerRed, fontWeight: FontWeight.w600),
                       ),
                       Text(
                         '- ${AppTheme.formatRupiah(discountAmount)}',
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.dangerRed),
+                        style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: AppTheme.dangerRed),
                       ),
                     ],
                   ),
                   const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 4),
+                    padding: EdgeInsets.symmetric(vertical: 6),
                     child: Divider(height: 1, color: AppTheme.borderColor),
                   ),
                 ],
@@ -803,47 +803,53 @@ class _CartSidebarState extends State<CartSidebar> {
                   children: [
                     const Text(
                       'TOTAL BAYAR',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppTheme.textDark),
+                      style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w900, color: AppTheme.textDark, letterSpacing: 0.2),
                     ),
                     Text(
                       AppTheme.formatRupiah(grandTotal),
                       style: const TextStyle(
-                        fontSize: 16,
+                        fontSize: 18,
                         fontWeight: FontWeight.w900,
-                        color: AppTheme.primaryTeal,
+                        color: AppTheme.goldMuted,
                         letterSpacing: -0.3,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
 
                 // Checkout Button
                 SizedBox(
                   width: double.infinity,
-                  height: 38,
+                  height: 42,
                   child: ElevatedButton(
                     onPressed: widget.cartItems.isEmpty ? null : widget.onCheckout,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: widget.cartItems.isEmpty ? AppTheme.bgSubtle : AppTheme.primaryTeal,
-                      foregroundColor: widget.cartItems.isEmpty ? AppTheme.textSubtle : Colors.white,
-                      elevation: widget.cartItems.isEmpty ? 0 : 2,
+                      backgroundColor: widget.cartItems.isEmpty ? AppTheme.bgSubtle : AppTheme.primaryGold,
+                      foregroundColor: widget.cartItems.isEmpty ? AppTheme.textSubtle : AppTheme.primaryDark,
+                      elevation: widget.cartItems.isEmpty ? 0 : 3,
+                      shadowColor: AppTheme.primaryGold.withValues(alpha: 0.4),
                       padding: EdgeInsets.zero,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.payments_rounded, size: 16),
-                        const SizedBox(width: 5),
+                        Icon(
+                          Icons.payments_rounded,
+                          size: 18,
+                          color: widget.cartItems.isEmpty ? AppTheme.textSubtle : AppTheme.primaryDark,
+                        ),
+                        const SizedBox(width: 6),
                         Text(
                           widget.cartItems.isEmpty
                               ? 'BELANJAAN KOSONG'
                               : 'BAYAR  •  ${AppTheme.formatRupiah(grandTotal)}',
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.2,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.3,
+                            color: widget.cartItems.isEmpty ? AppTheme.textSubtle : AppTheme.primaryDark,
                           ),
                         ),
                       ],

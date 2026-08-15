@@ -7,7 +7,11 @@ class ShiftHandoverScreen extends StatefulWidget {
   final double currentShiftSales;
   final int currentShiftTransactions;
   final List<Product> products;
-  final Function(ShiftRecord) onShiftHandoverCompleted;
+  final List<AppUser> users;
+  final AppUser? initialIncomingUser;
+  final double defaultStartingCash;
+  final String storeName;
+  final Function(ShiftRecord shiftRecord, AppUser? nextUser) onShiftHandoverCompleted;
 
   const ShiftHandoverScreen({
     super.key,
@@ -15,6 +19,10 @@ class ShiftHandoverScreen extends StatefulWidget {
     required this.currentShiftSales,
     required this.currentShiftTransactions,
     required this.products,
+    this.users = const [],
+    this.initialIncomingUser,
+    this.defaultStartingCash = 200000,
+    this.storeName = 'Bherung',
     required this.onShiftHandoverCompleted,
   });
 
@@ -23,17 +31,21 @@ class ShiftHandoverScreen extends StatefulWidget {
 }
 
 class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
-  final TextEditingController _startingCashController = TextEditingController(text: '200000');
+  late final TextEditingController _startingCashController;
   final TextEditingController _physicalCashController = TextEditingController();
-  final TextEditingController _nextCashierController = TextEditingController(text: 'Madura Shift Malam (Hasan)');
+  final TextEditingController _nextCashierController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
 
   final Map<String, TextEditingController> _auditControllers = {};
   late List<Product> _sensitiveProducts;
+  AppUser? _selectedNextUser;
 
   @override
   void initState() {
     super.initState();
+    _startingCashController = TextEditingController(
+      text: widget.defaultStartingCash.toInt().toString(),
+    );
     _sensitiveProducts = widget.products.where((p) => p.isSensitiveItem || p.categoryId == 'rokok').toList();
     if (_sensitiveProducts.isEmpty) {
       _sensitiveProducts = widget.products.take(4).toList();
@@ -42,7 +54,21 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
       _auditControllers[p.id] = TextEditingController(text: p.stock.toString());
     }
     // Default perkiraan uang fisik = kas awal + penjualan tunai
-    _physicalCashController.text = (200000 + widget.currentShiftSales).toInt().toString();
+    _physicalCashController.text = (widget.defaultStartingCash + widget.currentShiftSales).toInt().toString();
+
+    // Inisialisasi kasir penerima
+    if (widget.initialIncomingUser != null) {
+      _selectedNextUser = widget.initialIncomingUser;
+      _nextCashierController.text = widget.initialIncomingUser!.name;
+    } else if (widget.users.isNotEmpty) {
+      _selectedNextUser = widget.users.firstWhere(
+        (u) => u.name != widget.currentCashier,
+        orElse: () => widget.users.first,
+      );
+      _nextCashierController.text = _selectedNextUser?.name ?? 'Penjaga Shift Selanjutnya';
+    } else {
+      _nextCashierController.text = 'Penjaga Shift Selanjutnya';
+    }
   }
 
   @override
@@ -62,6 +88,13 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
   double get _expectedCash => _startingCash + widget.currentShiftSales;
   double get _cashDiff => _physicalCash - _expectedCash;
 
+  void _selectNextUser(AppUser user) {
+    setState(() {
+      _selectedNextUser = user;
+      _nextCashierController.text = user.name;
+    });
+  }
+
   void _submit() {
     final List<SensitiveProductAudit> audits = [];
     for (final p in _sensitiveProducts) {
@@ -75,10 +108,12 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
       ));
     }
 
+    final recipientName = _selectedNextUser?.name ?? _nextCashierController.text.trim();
+
     final shiftRecord = ShiftRecord(
       id: 'SHIFT-${DateTime.now().millisecondsSinceEpoch}',
       cashierName: widget.currentCashier,
-      shiftName: 'Shift Siang-Sore (24 Jam)',
+      shiftName: 'Shift Operan ${widget.storeName}',
       startTime: DateTime.now().subtract(const Duration(hours: 8)),
       endTime: DateTime.now(),
       startingCashDrawer: _startingCash,
@@ -90,10 +125,10 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
       cashDifference: _cashDiff,
       stockAudits: audits,
       handoverNotes: _notesController.text.trim(),
-      nextCashierName: _nextCashierController.text.trim(),
+      nextCashierName: recipientName,
     );
 
-    widget.onShiftHandoverCompleted(shiftRecord);
+    widget.onShiftHandoverCompleted(shiftRecord, _selectedNextUser);
     Navigator.pop(context);
   }
 
@@ -103,32 +138,40 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
       backgroundColor: AppTheme.bgLight,
       appBar: AppBar(
         backgroundColor: AppTheme.primaryDark,
-        elevation: 1,
-        toolbarHeight: 46,
+        elevation: 0,
+        toolbarHeight: 50,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
           onPressed: () => Navigator.pop(context),
           tooltip: 'Kembali ke Kasir',
-          visualDensity: VisualDensity.compact,
         ),
         titleSpacing: 0,
         title: Row(
           children: [
+            Container(
+              padding: const EdgeInsets.all(5),
+              decoration: BoxDecoration(
+                gradient: AppTheme.goldGradient,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Icon(Icons.sync_alt_rounded, color: AppTheme.primaryDark, size: 16),
+            ),
+            const SizedBox(width: 8),
             const Text(
-              'Serah Terima Shift',
-              style: TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w900),
+              'Serah Terima Shift Kasir',
+              style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900),
             ),
             const SizedBox(width: 8),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
               decoration: BoxDecoration(
-                color: const Color(0xFF0D9488).withValues(alpha: 0.3),
+                color: AppTheme.primaryGold.withValues(alpha: 0.18),
                 borderRadius: BorderRadius.circular(5),
-                border: Border.all(color: AppTheme.secondaryTeal.withValues(alpha: 0.4)),
+                border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.4)),
               ),
               child: Text(
                 'Kasir: ${widget.currentCashier}',
-                style: const TextStyle(color: Color(0xFF5EEAD4), fontSize: 10, fontWeight: FontWeight.bold),
+                style: const TextStyle(color: AppTheme.goldAccent, fontSize: 10.5, fontWeight: FontWeight.bold),
               ),
             ),
           ],
@@ -141,14 +184,24 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 children: [
-                  // 1. Ringkasan Shift Aktif
+                  // 1. Ringkasan Shift Aktif Banner (Obsidian & Gold)
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppTheme.borderColor),
-                      boxShadow: AppTheme.softShadow,
+                      gradient: const LinearGradient(
+                        colors: [AppTheme.primaryDark, AppTheme.surfaceDark],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppTheme.borderDark),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.15),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
                     ),
                     child: Row(
                       children: [
@@ -156,26 +209,26 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('Total Transaksi Shift:', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
-                              const SizedBox(height: 2),
+                              const Text('Total Transaksi Shift Ini:', style: TextStyle(fontSize: 11, color: AppTheme.textSubtle)),
+                              const SizedBox(height: 3),
                               Text(
                                 '${widget.currentShiftTransactions} Transaksi',
-                                style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.white),
                               ),
                             ],
                           ),
                         ),
-                        Container(height: 30, width: 1, color: AppTheme.borderColor),
+                        Container(height: 32, width: 1, color: AppTheme.borderDark),
                         const SizedBox(width: 14),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('Penjualan Sistem:', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
-                              const SizedBox(height: 2),
+                              const Text('Total Omzet Shift:', style: TextStyle(fontSize: 11, color: AppTheme.textSubtle)),
+                              const SizedBox(height: 3),
                               Text(
                                 AppTheme.formatRupiah(widget.currentShiftSales),
-                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: AppTheme.primaryTeal),
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: AppTheme.goldAccent),
                               ),
                             ],
                           ),
@@ -187,24 +240,34 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
 
                   // 2. Rekonsiliasi Uang Fisik Laci
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: AppTheme.borderColor),
                       boxShadow: AppTheme.softShadow,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Row(
+                        Row(
                           children: [
-                            Icon(Icons.point_of_sale_rounded, color: AppTheme.primaryTeal, size: 18),
-                            SizedBox(width: 6),
-                            Text('1. Rekonsiliasi Uang Fisik Laci Kasir', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                            Container(
+                              padding: const EdgeInsets.all(5),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryGold.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Icon(Icons.point_of_sale_rounded, color: AppTheme.goldMuted, size: 16),
+                            ),
+                            const SizedBox(width: 8),
+                            const Text(
+                              '1. Rekonsiliasi Uang Fisik Laci Kasir',
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppTheme.textDark),
+                            ),
                           ],
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 12),
 
                         Row(
                           children: [
@@ -213,17 +276,17 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Text('Modal Kas Awal (Rp)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.textDark)),
-                                  const SizedBox(height: 4),
+                                  const SizedBox(height: 5),
                                   TextField(
                                     controller: _startingCashController,
                                     keyboardType: TextInputType.number,
                                     onChanged: (_) => setState(() {}),
-                                    style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
                                     decoration: InputDecoration(
                                       isDense: true,
                                       prefixText: 'Rp ',
                                       prefixStyle: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
                                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                                     ),
                                   ),
@@ -236,17 +299,17 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Text('Uang Fisik di Laci (Rp) *', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.textDark)),
-                                  const SizedBox(height: 4),
+                                  const SizedBox(height: 5),
                                   TextField(
                                     controller: _physicalCashController,
                                     keyboardType: TextInputType.number,
                                     onChanged: (_) => setState(() {}),
-                                    style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
                                     decoration: InputDecoration(
                                       isDense: true,
                                       prefixText: 'Rp ',
                                       prefixStyle: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
                                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                                     ),
                                   ),
@@ -255,11 +318,11 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 12),
 
                         // Indikator Status Selisih Kas
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
                           decoration: BoxDecoration(
                             color: _cashDiff == 0
                                 ? const Color(0xFFECFDF5)
@@ -276,8 +339,8 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                             children: [
                               Text(
                                 _cashDiff == 0
-                                    ? '✓ Kas Sesuai / Pas (Target: ${AppTheme.formatRupiah(_expectedCash)})'
-                                    : (_cashDiff > 0 ? '✓ Kas Lebih (+)' : '⚠ Kas Selisih / Kurang (-)'),
+                                    ? 'Kas Sesuai / Pas (Target: ${AppTheme.formatRupiah(_expectedCash)})'
+                                    : (_cashDiff > 0 ? 'Kas Lebih (+)' : 'Kas Selisih / Kurang (-)'),
                                 style: TextStyle(
                                   fontSize: 11.5,
                                   fontWeight: FontWeight.bold,
@@ -306,24 +369,34 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
 
                   // 3. Audit Fisik Barang Sensitif (Rokok & Sembako)
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: AppTheme.borderColor),
                       boxShadow: AppTheme.softShadow,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Row(
+                        Row(
                           children: [
-                            Icon(Icons.inventory_2_rounded, color: AppTheme.warningOrange, size: 18),
-                            SizedBox(width: 6),
-                            Text('2. Hitung Fisik Barang Sensitif (Rokok & Sembako)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                            Container(
+                              padding: const EdgeInsets.all(5),
+                              decoration: BoxDecoration(
+                                color: AppTheme.warningOrange.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Icon(Icons.inventory_2_rounded, color: AppTheme.warningOrange, size: 16),
+                            ),
+                            const SizedBox(width: 8),
+                            const Text(
+                              '2. Hitung Fisik Barang Sensitif (Rokok & Sembako)',
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppTheme.textDark),
+                            ),
                           ],
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 3),
                         const Text(
                           'Pastikan jumlah fisik di etalase cocok dengan stok sistem:',
                           style: TextStyle(fontSize: 10.5, color: AppTheme.textMuted),
@@ -356,14 +429,14 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                                 ),
                                 const SizedBox(width: 8),
                                 SizedBox(
-                                  width: 70,
-                                  height: 32,
+                                  width: 74,
+                                  height: 34,
                                   child: TextField(
                                     controller: controller,
                                     keyboardType: TextInputType.number,
                                     textAlign: TextAlign.center,
                                     onChanged: (_) => setState(() {}),
-                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                    style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
                                     decoration: InputDecoration(
                                       isDense: true,
                                       suffixText: prod.unit,
@@ -381,7 +454,7 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
-                                    diff == 0 ? '✓ Pas' : '${diff > 0 ? "+" : ""}$diff',
+                                    diff == 0 ? 'Pas' : '${diff > 0 ? "+" : ""}$diff',
                                     style: TextStyle(
                                       fontSize: 10.5,
                                       fontWeight: FontWeight.bold,
@@ -398,38 +471,104 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                   ),
                   const SizedBox(height: 14),
 
-                  // 4. Informasi Serah Terima & Catatan
+                  // 4. Kasir Penerima Shift & Catatan Serah Terima (Terintegrasi Akun)
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: AppTheme.borderColor),
                       boxShadow: AppTheme.softShadow,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('3. Penerima Shift & Catatan Handover', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 8),
-                        TextField(
-                          controller: _nextCashierController,
-                          style: const TextStyle(fontSize: 12),
-                          decoration: InputDecoration(
-                            labelText: 'Diserahkan Kepada (Penjaga Berikutnya)',
-                            labelStyle: const TextStyle(fontSize: 11),
-                            isDense: true,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                          ),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(5),
+                              decoration: BoxDecoration(
+                                gradient: AppTheme.goldGradient,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Icon(Icons.person_pin_rounded, color: AppTheme.primaryDark, size: 16),
+                            ),
+                            const SizedBox(width: 8),
+                            const Text(
+                              '3. Pilih Kasir Penerima Shift Baru',
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppTheme.textDark),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Pilih akun kasir yang bertugas di shift selanjutnya:',
+                          style: TextStyle(fontSize: 10.5, color: AppTheme.textMuted),
+                        ),
+                        const SizedBox(height: 10),
+
+                        // User account selection chips
+                        if (widget.users.isNotEmpty) ...[
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: widget.users.map((user) {
+                              final isSelected = _selectedNextUser?.id == user.id;
+                              final isCurrent = user.name == widget.currentCashier;
+
+                              return InkWell(
+                                onTap: () => _selectNextUser(user),
+                                borderRadius: BorderRadius.circular(8),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 150),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                                  decoration: BoxDecoration(
+                                    gradient: isSelected ? AppTheme.goldGradient : null,
+                                    color: isSelected ? null : (isCurrent ? AppTheme.bgSubtle : Colors.white),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: isSelected ? AppTheme.primaryGold : AppTheme.borderColor,
+                                      width: isSelected ? 1.5 : 1,
+                                    ),
+                                    boxShadow: isSelected ? AppTheme.softShadow : null,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        user.isOwner ? Icons.admin_panel_settings_rounded : Icons.person_rounded,
+                                        size: 15,
+                                        color: isSelected ? AppTheme.primaryDark : (user.isOwner ? const Color(0xFFD97706) : AppTheme.primaryTeal),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        user.name,
+                                        style: TextStyle(
+                                          fontSize: 11.5,
+                                          fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
+                                          color: isSelected ? AppTheme.primaryDark : AppTheme.textDark,
+                                        ),
+                                      ),
+                                      if (isCurrent) ...[
+                                        const SizedBox(width: 4),
+                                        const Text('(Kasir Saat Ini)', style: TextStyle(fontSize: 9.5, color: AppTheme.textMuted)),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                          const SizedBox(height: 10),
+                        ],
+
                         TextField(
                           controller: _notesController,
                           maxLines: 2,
                           style: const TextStyle(fontSize: 12),
                           decoration: InputDecoration(
-                            labelText: 'Catatan Khusus (cth: uang rokok kurang 5rb, gas 3kg titipan ibu RT)',
+                            labelText: 'Catatan Khusus Serah Terima (Opsional)',
+                            hintText: 'cth: Uang rokok kurang 5rb, gas 3kg titipan ibu RT, koin kembalian menipis...',
                             labelStyle: const TextStyle(fontSize: 11),
                             isDense: true,
                             contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -446,27 +585,34 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
             // Sticky Bottom Completion Bar
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: Colors.white,
+                border: const Border(top: BorderSide(color: AppTheme.borderColor)),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 6,
-                    offset: Offset(0, -2),
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, -3),
                   ),
                 ],
               ),
               child: SizedBox(
                 width: double.infinity,
-                height: 42,
+                height: 44,
                 child: ElevatedButton.icon(
                   onPressed: _submit,
                   icon: const Icon(Icons.check_circle_rounded, size: 18),
-                  label: const Text('Selesaikan Serah Terima Shift', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  label: Text(
+                    _selectedNextUser != null
+                        ? 'SELESAIKAN & SERAHKAN KE ${_selectedNextUser!.name.toUpperCase()}'
+                        : 'SELESAIKAN SERAH TERIMA SHIFT',
+                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12.5, letterSpacing: 0.2),
+                  ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryTeal,
-                    foregroundColor: Colors.white,
+                    backgroundColor: AppTheme.primaryGold,
+                    foregroundColor: AppTheme.primaryDark,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    elevation: 2,
                   ),
                 ),
               ),

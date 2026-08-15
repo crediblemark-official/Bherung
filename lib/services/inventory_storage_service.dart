@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/product.dart';
+import '../models/store_profile.dart';
 
 class InventoryStorageService {
   static final InventoryStorageService _instance = InventoryStorageService._internal();
@@ -13,6 +14,7 @@ class InventoryStorageService {
   static const String _keyShifts = 'bherung_shifts_json_v1';
   static const String _keyUsers = 'bherung_users_json_v1';
   static const String _keyKasbon = 'bherung_kasbon_json_v1';
+  static const String _keyStoreProfile = 'bherung_store_profile_json_v1';
 
   // 1. Load Products (Persistent Local Storage)
   Future<List<Product>> loadProducts() async {
@@ -115,32 +117,16 @@ class InventoryStorageService {
       debugPrint('Error loading users: $e');
     }
 
-    // Default users
-    final defaultUsers = [
+    // Fallback minimal jika belum ada cache dan belum terhubung ke Google Sheets
+    return [
       const AppUser(
         id: 'usr-01',
-        name: 'Pak Haji Samsul',
-        phone: '0812-9988-7766',
+        name: 'Kasir Toko',
+        phone: '',
         role: UserRoleType.owner,
         pin: '1234',
       ),
-      const AppUser(
-        id: 'usr-02',
-        name: 'Ahmad (Kasir)',
-        phone: '0857-1122-3344',
-        role: UserRoleType.staff,
-        pin: '1111',
-      ),
-      const AppUser(
-        id: 'usr-03',
-        name: 'Hasan (Shift Malam)',
-        phone: '0878-5566-7788',
-        role: UserRoleType.staff,
-        pin: '2222',
-      ),
     ];
-    await saveUsers(defaultUsers);
-    return defaultUsers;
   }
 
   Future<void> saveUsers(List<AppUser> users) async {
@@ -167,34 +153,7 @@ class InventoryStorageService {
       debugPrint('Error loading kasbon: $e');
     }
 
-    return [
-      KasbonRecord(
-        id: 'KSB-01',
-        customerName: 'Pak Haji Samsul (RT 03)',
-        customerPhone: '0812-3344-5566',
-        amount: 145000,
-        items: [
-          CartItem(product: sampleProducts[0], quantity: 1),
-          CartItem(product: sampleProducts[2], quantity: 2),
-        ],
-        createdAt: DateTime.now().subtract(const Duration(days: 3)),
-        dueDate: DateTime.now().add(const Duration(days: 4)),
-        isPaid: false,
-      ),
-      KasbonRecord(
-        id: 'KSB-02',
-        customerName: 'Bu Rini Warung Sebelah',
-        customerPhone: '0857-9988-1122',
-        amount: 85000,
-        items: [
-          CartItem(product: sampleProducts[4], quantity: 2),
-          CartItem(product: sampleProducts[7], quantity: 8),
-        ],
-        createdAt: DateTime.now().subtract(const Duration(days: 1)),
-        dueDate: DateTime.now().add(const Duration(days: 6)),
-        isPaid: false,
-      ),
-    ];
+    return [];
   }
 
   Future<void> saveKasbon(List<KasbonRecord> records) async {
@@ -204,6 +163,34 @@ class InventoryStorageService {
       await prefs.setString(_keyKasbon, jsonEncode(jsonList));
     } catch (e) {
       debugPrint('Error saving kasbon: $e');
+    }
+  }
+
+  // 6. Load & Save Store Profile
+  Future<StoreProfile> loadStoreProfile() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? jsonStr = prefs.getString(_keyStoreProfile);
+
+      if (jsonStr != null && jsonStr.trim().isNotEmpty) {
+        final dynamic decoded = jsonDecode(jsonStr);
+        if (decoded is Map<String, dynamic>) {
+          return StoreProfile.fromJson(decoded);
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading store profile: $e');
+    }
+
+    return const StoreProfile();
+  }
+
+  Future<void> saveStoreProfile(StoreProfile profile) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_keyStoreProfile, jsonEncode(profile.toJson()));
+    } catch (e) {
+      debugPrint('Error saving store profile: $e');
     }
   }
 

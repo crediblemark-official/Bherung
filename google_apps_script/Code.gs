@@ -3,10 +3,14 @@
  * BHERUNG POS - GOOGLE APPS SCRIPT BACKEND (TOKO SEMBAKO & MADURA 24 JAM)
  * =======================================================================
  * 
- * Script ini mengelola database Spreadsheet untuk aplikasi POS Bherung:
- * 1. Sheet "Produk"       : Katalog produk sembako, barcode, stok, harga ecer & grosir.
- * 2. Sheet "Transaksi"    : Rekap riwayat transaksi penjualan & detail belanjaan.
- * 3. Sheet "Buku_Kasbon"  : Catatan utang kasbon pelanggan & status jatuh tempo.
+ * Script ini mengelola SELURUH DATABASE Spreadsheet untuk aplikasi POS Bherung:
+ * 1. Sheet "Produk"         : Master katalog produk, barcode SKU, stok, harga eceran & grosir.
+ * 2. Sheet "Transaksi"      : Rekap riwayat transaksi penjualan & rincian belanjaan.
+ * 3. Sheet "Buku_Kasbon"    : Catatan utang kasbon pelanggan & status jatuh tempo.
+ * 4. Sheet "Pengguna_Kasir" : Akun penjaga toko, role/peran, dan PIN akses.
+ * 5. Sheet "Shift_Rekap"    : Catatan rekonsiliasi kas operan shift kasir 24 jam.
+ * 6. Sheet "Mutasi_Stok"    : Log kartu mutasi keluar-masuk barang & kulakan.
+ * 7. Sheet "Profil_Toko"    : Identitas toko, kas awal default, QRIS, & rekening bank.
  */
 
 // Custom Menu di Bilah Atas Spreadsheet saat dibuka oleh Pemilik Toko
@@ -15,7 +19,7 @@ function onOpen() {
     .createMenu('🏪 Bherung POS')
     .addItem('🔑 1. Otorisasi & Aktifkan Database Kasir', 'authorizeAndGetId')
     .addItem('📦 2. Isi Katalog Sembako Awal (17 Barang)', 'seedDefaultProducts')
-    .addItem('🔄 3. Rapikan Format Tabel', 'formatDatabaseSheets')
+    .addItem('🔄 3. Rapikan Format Seluruh Tabel', 'formatDatabaseSheets')
     .addSeparator()
     .addItem('📊 Cek Rekap Omset Hari Ini', 'calculateTodaySales')
     .addToUi();
@@ -76,6 +80,10 @@ function formatDatabaseSheets() {
   getOrCreateSheet(ss, 'Produk');
   getOrCreateSheet(ss, 'Transaksi');
   getOrCreateSheet(ss, 'Buku_Kasbon');
+  getOrCreateSheet(ss, 'Pengguna_Kasir');
+  getOrCreateSheet(ss, 'Shift_Rekap');
+  getOrCreateSheet(ss, 'Mutasi_Stok');
+  getOrCreateSheet(ss, 'Profil_Toko');
 }
 
 /**
@@ -149,6 +157,7 @@ function doGet(e) {
       });
     }
 
+    // 1. GET Produk
     if (action === 'getProducts') {
       const sheet = getOrCreateSheet(ss, 'Produk');
       const data = sheet.getDataRange().getValues();
@@ -167,9 +176,10 @@ function doGet(e) {
         description: String(r[9] || '')
       }));
 
-      return jsonResponse({ status: 'success', data: products });
+      return jsonResponse({ status: 'success', products: products, data: products });
     }
 
+    // 2. GET Kasbon
     if (action === 'getKasbon') {
       const sheet = getOrCreateSheet(ss, 'Buku_Kasbon');
       const data = sheet.getDataRange().getValues();
@@ -187,6 +197,136 @@ function doGet(e) {
       }));
 
       return jsonResponse({ status: 'success', data: kasbonList });
+    }
+
+    // 3. GET Pengguna Kasir
+    if (action === 'getUsers') {
+      const sheet = getOrCreateSheet(ss, 'Pengguna_Kasir');
+      const data = sheet.getDataRange().getValues();
+      const rows = data.slice(1);
+
+      const users = rows.map(r => ({
+        id: String(r[0]),
+        name: String(r[1]),
+        phone: String(r[2] || ''),
+        role: String(r[3]).toLowerCase() === 'owner' ? 'owner' : 'staff',
+        pin: String(r[4] || '1234'),
+        isActive: String(r[5]).toLowerCase() !== 'false'
+      }));
+
+      return jsonResponse({ status: 'success', users: users, data: users });
+    }
+
+    // 4. GET Rekap Shift
+    if (action === 'getShifts') {
+      const sheet = getOrCreateSheet(ss, 'Shift_Rekap');
+      const data = sheet.getDataRange().getValues();
+      const rows = data.slice(1);
+
+      const shifts = rows.map(r => ({
+        id: String(r[0]),
+        cashierName: String(r[1]),
+        shiftName: String(r[2] || 'Shift Operan'),
+        startTime: r[3] instanceof Date ? r[3].toISOString() : String(r[3]),
+        endTime: r[4] instanceof Date ? r[4].toISOString() : String(r[4]),
+        startingCashDrawer: Number(r[5]) || 0,
+        totalSystemSales: Number(r[6]) || 0,
+        physicalCashCounted: Number(r[7]) || 0,
+        cashDifference: Number(r[8]) || 0,
+        handoverNotes: String(r[9] || ''),
+        nextCashierName: String(r[10] || '')
+      }));
+
+      return jsonResponse({ status: 'success', shifts: shifts, data: shifts });
+    }
+
+    // 5. GET Mutasi Stok
+    if (action === 'getMutations') {
+      const sheet = getOrCreateSheet(ss, 'Mutasi_Stok');
+      const data = sheet.getDataRange().getValues();
+      const rows = data.slice(1);
+
+      const mutations = rows.map(r => ({
+        id: String(r[0]),
+        productId: String(r[1]),
+        productName: String(r[2]),
+        type: String(r[3]),
+        qtyChange: Number(r[4]) || 0,
+        previousStock: Number(r[5]) || 0,
+        newStock: Number(r[6]) || 0,
+        timestamp: r[7] instanceof Date ? r[7].toISOString() : String(r[7]),
+        note: String(r[8] || ''),
+        cashierName: String(r[9] || '')
+      }));
+
+      return jsonResponse({ status: 'success', mutations: mutations, data: mutations });
+    }
+
+    // 6. GET Profil Toko
+    if (action === 'getStoreProfile') {
+      const sheet = getOrCreateSheet(ss, 'Profil_Toko');
+      const data = sheet.getDataRange().getValues();
+      if (data.length > 1) {
+        const r = data[1];
+        let bankAccounts = [];
+        try {
+          bankAccounts = JSON.parse(r[5] || '[]');
+        } catch (_) {}
+
+        return jsonResponse({
+          status: 'success',
+          profile: {
+            name: String(r[0] || 'Bherung'),
+            tagline: String(r[1] || '24 JAM'),
+            defaultStartingCash: Number(r[2]) || 200000,
+            qrisName: String(r[3] || ''),
+            qrisNmid: String(r[4] || ''),
+            bankAccounts: bankAccounts
+          }
+        });
+      }
+      return jsonResponse({ status: 'success', profile: null });
+    }
+
+    // 7. GET Transaksi Hari Ini & Riwayat Penjualan
+    if (action === 'getTransactions') {
+      const sheet = getOrCreateSheet(ss, 'Transaksi');
+      const data = sheet.getDataRange().getValues();
+      const rows = data.slice(1);
+      const todayStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+
+      let todaySales = 0;
+      let todayTrxCount = 0;
+
+      const transactions = rows.slice(-100).reverse().map(r => {
+        const rowDate = r[1] instanceof Date ? Utilities.formatDate(r[1], Session.getScriptTimeZone(), 'yyyy-MM-dd') : String(r[1]);
+        const totalAmount = Number(r[7]) || 0;
+        if (rowDate === todayStr) {
+          todaySales += totalAmount;
+          todayTrxCount++;
+        }
+
+        return {
+          id: String(r[0]),
+          date: rowDate,
+          time: String(r[2]),
+          transactionType: String(r[3]),
+          customerName: String(r[4]),
+          subtotal: Number(r[5]) || 0,
+          discountAmount: Number(r[6]) || 0,
+          totalAmount: totalAmount,
+          paymentMethod: String(r[8]),
+          cashierName: String(r[9]),
+          itemsSummary: String(r[10] || '')
+        };
+      });
+
+      return jsonResponse({
+        status: 'success',
+        todaySales: todaySales,
+        todayTrxCount: todayTrxCount,
+        transactions: transactions
+      });
     }
 
     return jsonResponse({ status: 'error', message: 'Action GET tidak dikenali: ' + action }, 400);
@@ -321,6 +461,97 @@ function doPost(e) {
       });
     }
 
+    // 5. Batch Sync Pengguna / Kasir ke Spreadsheet
+    if (action === 'syncUsers') {
+      const users = body.users || [];
+      const sheetUsers = getOrCreateSheet(ss, 'Pengguna_Kasir', true);
+
+      users.forEach(u => {
+        sheetUsers.appendRow([
+          u.id,
+          u.name,
+          u.phone || '',
+          u.role || 'staff',
+          u.pin || '1234',
+          u.isActive !== false ? 'AKTIF' : 'NONAKTIF'
+        ]);
+      });
+
+      return jsonResponse({
+        status: 'success',
+        message: `Berhasil menyinkronkan ${users.length} akun penjaga toko ke Spreadsheet!`
+      });
+    }
+
+    // 6. Simpan Rekap Shift ke Spreadsheet
+    if (action === 'addShift') {
+      const shift = body.data;
+      const sheetShifts = getOrCreateSheet(ss, 'Shift_Rekap');
+
+      sheetShifts.appendRow([
+        shift.id || ('SHIFT-' + new Date().getTime()),
+        shift.cashierName || 'Kasir',
+        shift.shiftName || 'Shift Operan',
+        shift.startTime || new Date().toISOString(),
+        shift.endTime || new Date().toISOString(),
+        Number(shift.startingCashDrawer) || 0,
+        Number(shift.totalSystemSales) || 0,
+        Number(shift.physicalCashCounted) || 0,
+        Number(shift.cashDifference) || 0,
+        shift.handoverNotes || '',
+        shift.nextCashierName || ''
+      ]);
+
+      return jsonResponse({
+        status: 'success',
+        message: 'Rekap shift berhasil dicatat ke Spreadsheet!'
+      });
+    }
+
+    // 7. Simpan Mutasi Stok ke Spreadsheet
+    if (action === 'addMutation') {
+      const mut = body.data;
+      const sheetMut = getOrCreateSheet(ss, 'Mutasi_Stok');
+
+      sheetMut.appendRow([
+        mut.id || ('MUT-' + new Date().getTime()),
+        mut.productId || '',
+        mut.productName || '',
+        mut.type || 'adjustment',
+        Number(mut.qtyChange) || 0,
+        Number(mut.previousStock) || 0,
+        Number(mut.newStock) || 0,
+        mut.timestamp || new Date().toISOString(),
+        mut.note || '',
+        mut.cashierName || ''
+      ]);
+
+      return jsonResponse({
+        status: 'success',
+        message: 'Mutasi stok berhasil dicatat ke Spreadsheet!'
+      });
+    }
+
+    // 8. Sync Profil Toko ke Spreadsheet
+    if (action === 'syncStoreProfile') {
+      const profile = body.profile || {};
+      const sheetProfile = getOrCreateSheet(ss, 'Profil_Toko', true);
+
+      sheetProfile.appendRow([
+        profile.name || 'Bherung',
+        profile.tagline || '24 JAM',
+        Number(profile.defaultStartingCash) || 200000,
+        profile.qrisName || '',
+        profile.qrisNmid || '',
+        JSON.stringify(profile.bankAccounts || [])
+      ]);
+
+      return jsonResponse({
+        status: 'success',
+        message: 'Profil toko berhasil disinkronkan ke Spreadsheet!'
+      });
+    }
+
     return jsonResponse({ status: 'error', message: 'Action POST tidak dikenali: ' + action }, 400);
 
   } catch (err) {
@@ -346,6 +577,23 @@ function getOrCreateSheet(ss, sheetName, clearIfExists = false) {
     } else if (sheetName === 'Buku_Kasbon') {
       sheet.appendRow(['ID_Kasbon', 'Nama_Pelanggan', 'No_HP', 'Total_Utang', 'Tanggal_Catat', 'Jatuh_Tempo', 'Status', 'Detail_Barang']);
       sheet.getRange('A1:H1').setBackground('#D97706').setFontColor('#FFFFFF').setFontWeight('bold');
+    } else if (sheetName === 'Pengguna_Kasir') {
+      sheet.appendRow(['ID_User', 'Nama_Kasir', 'No_HP', 'Peran_Role', 'PIN_Akses', 'Status_Aktif']);
+      sheet.getRange('A1:F1').setBackground('#F59E0B').setFontColor('#0F172A').setFontWeight('bold');
+      
+      // Default Akun Kasir & Owner Toko di Google Spreadsheet
+      sheet.appendRow(['usr-owner', 'Pemilik Toko (Owner)', '0812-9988-7766', 'owner', '1234', 'AKTIF']);
+      sheet.appendRow(['usr-01', 'Ahmad (Kasir)', '0857-1122-3344', 'staff', '1111', 'AKTIF']);
+      sheet.appendRow(['usr-02', 'Hasan (Shift Malam)', '0878-5566-7788', 'staff', '2222', 'AKTIF']);
+    } else if (sheetName === 'Shift_Rekap') {
+      sheet.appendRow(['ID_Shift', 'Nama_Kasir', 'Nama_Shift', 'Waktu_Mulai', 'Waktu_Selesai', 'Kas_Awal', 'Total_Penjualan', 'Kas_Fisik', 'Selisih', 'Catatan', 'Kasir_Penerima']);
+      sheet.getRange('A1:K1').setBackground('#1E293B').setFontColor('#38BDF8').setFontWeight('bold');
+    } else if (sheetName === 'Mutasi_Stok') {
+      sheet.appendRow(['ID_Mutasi', 'ID_Produk', 'Nama_Produk', 'Tipe_Mutasi', 'Jumlah', 'Stok_Awal', 'Stok_Akhir', 'Waktu', 'Keterangan', 'Nama_Kasir']);
+      sheet.getRange('A1:J1').setBackground('#334155').setFontColor('#FDE047').setFontWeight('bold');
+    } else if (sheetName === 'Profil_Toko') {
+      sheet.appendRow(['Nama_Toko', 'Tagline', 'Modal_Kas_Awal', 'QRIS_Merchant', 'QRIS_NMID', 'Rekening_Bank_JSON']);
+      sheet.getRange('A1:F1').setBackground('#047857').setFontColor('#FFFFFF').setFontWeight('bold');
     }
   }
 
@@ -375,9 +623,7 @@ function updateStockFromTransaction(ss, items) {
 
 function initDatabaseSpreadsheet() {
   const ss = SpreadsheetApp.create('BHERUNG POS - Database Toko');
-  getOrCreateSheet(ss, 'Produk');
-  getOrCreateSheet(ss, 'Transaksi');
-  getOrCreateSheet(ss, 'Buku_Kasbon');
+  formatDatabaseSheets();
   return ss;
 }
 

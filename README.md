@@ -108,6 +108,74 @@ lib/
 
 ---
 
+---
+
+## 📊 Panduan Lengkap Setup Database Google Spreadsheet
+
+Aplikasi Bherung POS menggunakan Google Spreadsheet sebagai database cloud *real-time* yang aman dan gratis. Ikuti 5 langkah mudah berikut:
+
+### Langkah 1: Salin Link Template & Buat Salinan di Google Drive
+1. Buka menu **Pengaturan (⚙️) > Tab 1: Google Sheets** di aplikasi Bherung POS.
+2. Klik tombol **`📋 Salin Link Template Google Sheets`**.
+3. Buka link tersebut di browser, lalu klik tombol **"Buat salinan" (*Make a copy*)** agar spreadsheet template tersimpan di Google Drive pribadi Anda.
+
+<p align="center">
+  <img src="assets/docs/step0_salin_template.png" width="48%" alt="Salin Link Template" />
+</p>
+
+---
+
+### Langkah 2: Atur Hak Akses Link Menjadi "Editor"
+1. Pada Google Spreadsheet hasil salinan Anda, klik tombol **Bagikan (Share)** di pojok kanan atas.
+2. Pada bagian **Akses umum**, ubah menjadi **Siapa saja yang memiliki link (Anyone with the link)**.
+3. Ubah peran hak aksesnya menjadi **Editor** *(Wajib Editor agar aplikasi kasir bisa mencatat transaksi, memotong stok, dan mencatat kasbon)*.
+
+<p align="center">
+  <img src="assets/docs/step1_akses_siapa_saja.png" width="45%" alt="Siapa saja yang memiliki link" />
+  &nbsp;
+  <img src="assets/docs/step2_pilih_editor.png" width="45%" alt="Pilih Peran Editor" />
+</p>
+
+---
+
+### Langkah 3: Jalankan Menu Otorisasi di Spreadsheet
+1. Buka menu khusus **🏪 Bherung POS** di bilah menu atas Spreadsheet.
+2. Klik opsi **🔑 1. Otorisasi & Aktifkan Database Kasir**.
+
+<p align="center">
+  <img src="assets/docs/step3_menu_otorisasi.png" width="60%" alt="Menu Bherung POS" />
+</p>
+
+---
+
+### Langkah 4: Izinkan Hak Akses Keamanan Google
+1. Saat muncul dialog **"Otorisasi diperlukan"**, klik **Oke**.
+2. Pilih akun Google pemilik toko Anda.
+3. Saat muncul layar **"Google belum memverifikasi aplikasi ini"**, klik teks **Lanjutan (Advanced)** di kiri bawah.
+4. Klik tautan **Buka Untitled project (tidak aman)**, lalu klik **Lanjutkan / Izinkan**. *(Langkah ini hanya perlu dilakukan 1x di awal pembuatan)*.
+
+<p align="center">
+  <img src="assets/docs/step4_dialog_izin.png" width="45%" alt="Dialog Izin Otorisasi" />
+  &nbsp;
+  <img src="assets/docs/step5_lanjutan_otorisasi.png" width="45%" alt="Lanjutan Otorisasi Google" />
+</p>
+
+---
+
+### Langkah 5: Hubungkan ke Aplikasi Kasir Bherung POS
+1. Setelah otorisasi berhasil, salin ID Spreadsheet yang muncul pada dialog, atau salin URL Spreadsheet dari address bar browser.
+2. Buka menu **Pengaturan (⚙️) > Tab 1: Google Sheets** di aplikasi Bherung POS.
+3. Tempelkan link / ID tersebut, lalu tekan tombol emas **"Hubungkan & Simpan Database"**.
+4. Database toko Anda kini aktif, tersinkronisasi 24 jam, dan siap melayani transaksi!
+
+<p align="center">
+  <img src="assets/docs/step4_otorisasi_sukses.png" width="48%" alt="Otorisasi Berhasil & ID Spreadsheet" />
+  &nbsp;
+  <img src="assets/docs/step6_layar_pengaturan.png" width="48%" alt="Layar Pengaturan Bherung POS" />
+</p>
+
+---
+
 ## 🚀 Panduan Menjalankan Aplikasi
 
 ### 1. Prasyarat

@@ -24,7 +24,7 @@ class PosHeaderBar extends StatelessWidget {
 
   const PosHeaderBar({
     super.key,
-    this.storeName = 'TOKO MADURA BHERUNG',
+    this.storeName = 'Bherung',
     this.storeTagline = '24 JAM',
     required this.currentTime,
     required this.completedTransactions,
@@ -51,81 +51,99 @@ class PosHeaderBar extends StatelessWidget {
     final isCloudConnected = AppsScriptService().isConnected;
 
     return Container(
-      height: 48,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      height: 50,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: const BoxDecoration(
         color: AppTheme.primaryDark,
+        border: Border(
+          bottom: BorderSide(color: AppTheme.borderDark, width: 1),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black26,
-            blurRadius: 4,
-            offset: Offset(0, 1),
+            color: Colors.black45,
+            blurRadius: 6,
+            offset: Offset(0, 2),
           ),
         ],
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final isMobileOrTablet = constraints.maxWidth < 950;
+          final isVerySmall = constraints.maxWidth < 420;
 
           return Row(
             children: [
-              // Logo & Brand
-              Container(
-                padding: const EdgeInsets.all(5),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF0D9488), Color(0xFF059669)],
-                  ),
-                  borderRadius: BorderRadius.circular(6),
+              // Logo & Brand with Gold Accent (Expanded & Flexible)
+              Expanded(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        gradient: AppTheme.goldGradient,
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.primaryGold.withValues(alpha: 0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(Icons.store_mall_directory_rounded, color: AppTheme.primaryDark, size: 16),
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        storeName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 13.5,
+                          letterSpacing: 0.3,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (storeTagline.isNotEmpty && !isVerySmall) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryGold.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(5),
+                          border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.4)),
+                        ),
+                        child: Text(
+                          storeTagline.toUpperCase(),
+                          style: const TextStyle(color: AppTheme.goldAccent, fontSize: 8.5, fontWeight: FontWeight.w900, letterSpacing: 0.4),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-                child: const Icon(Icons.store_mall_directory_rounded, color: Colors.white, size: 16),
               ),
+
               const SizedBox(width: 8),
-              Text(
-                isMobileOrTablet && storeName.length > 14 ? '${storeName.substring(0, 14)}...' : storeName,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 13.5,
-                  letterSpacing: 0.3,
-                ),
-              ),
-              const SizedBox(width: 6),
-
-              // Store Tagline Badge (misal: 24 JAM / KELONTONG)
-              if (storeTagline.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEF4444).withValues(alpha: 0.25),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFFEF4444)),
-                  ),
-                  child: Text(
-                    storeTagline.toUpperCase(),
-                    style: const TextStyle(color: Color(0xFFFCA5A5), fontSize: 9, fontWeight: FontWeight.w900),
-                  ),
-                ),
-
-              const Spacer(),
 
               // Right Navigation
               if (isMobileOrTablet) ...[
                 // Mobile/Tablet: Role Pill + Hamburger Menu Button
                 InkWell(
                   onTap: onOpenRoleSwitcher,
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(8),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4.5),
                     decoration: BoxDecoration(
                       color: currentUser.isOwner
-                          ? const Color(0xFFD97706).withValues(alpha: 0.25)
-                          : Colors.white.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(6),
+                          ? AppTheme.primaryGold.withValues(alpha: 0.18)
+                          : Colors.white.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                         color: currentUser.isOwner
-                            ? Colors.amberAccent.withValues(alpha: 0.5)
-                            : Colors.white24,
+                            ? AppTheme.primaryGold.withValues(alpha: 0.5)
+                            : Colors.white12,
                       ),
                     ),
                     child: Row(
@@ -134,15 +152,15 @@ class PosHeaderBar extends StatelessWidget {
                         Icon(
                           currentUser.isOwner ? Icons.admin_panel_settings_rounded : Icons.person_rounded,
                           size: 13,
-                          color: currentUser.isOwner ? Colors.amberAccent : Colors.white70,
+                          color: currentUser.isOwner ? AppTheme.goldAccent : Colors.white70,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           currentUser.name.split(' ').first,
                           style: TextStyle(
-                            color: currentUser.isOwner ? Colors.amberAccent : Colors.white,
+                            color: currentUser.isOwner ? AppTheme.goldAccent : Colors.white,
                             fontSize: 11,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
                       ],
@@ -151,21 +169,25 @@ class PosHeaderBar extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
 
-                // Hamburger Menu Button (☰)
+                // Hamburger Menu Button
                 Builder(
-                  builder: (ctx) => IconButton(
-                    icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 22),
-                    onPressed: () {
+                  builder: (ctx) => InkWell(
+                    onTap: () {
                       if (onOpenDrawer != null) {
                         onOpenDrawer!();
                       } else {
                         Scaffold.of(ctx).openDrawer();
                       }
                     },
-                    tooltip: 'Menu Utama',
-                    visualDensity: VisualDensity.compact,
-                    padding: const EdgeInsets.all(4),
-                    constraints: const BoxConstraints(),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.menu_rounded, color: Colors.white, size: 20),
+                    ),
                   ),
                 ),
               ] else ...[
@@ -175,22 +197,23 @@ class PosHeaderBar extends StatelessWidget {
                   children: [
                     // Live Clock
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(6),
+                        color: AppTheme.surfaceDark,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppTheme.borderDark),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.schedule_rounded, size: 12, color: Colors.white70),
-                          const SizedBox(width: 4),
+                          const Icon(Icons.schedule_rounded, size: 13, color: AppTheme.primaryGold),
+                          const SizedBox(width: 6),
                           Text(
                             '$hourStr:$minStr:$secStr',
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w800,
                               fontFamily: 'monospace',
                             ),
                           ),
@@ -201,20 +224,20 @@ class PosHeaderBar extends StatelessWidget {
 
                     // Shift Sales Pill
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF047857).withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.4)),
+                        color: AppTheme.primaryGold.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.35)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.monetization_on_rounded, size: 13, color: Color(0xFF34D399)),
-                          const SizedBox(width: 4),
+                          const Icon(Icons.monetization_on_rounded, size: 14, color: AppTheme.goldAccent),
+                          const SizedBox(width: 5),
                           Text(
                             AppTheme.formatRupiah(totalSalesToday),
-                            style: const TextStyle(color: Color(0xFF34D399), fontSize: 11, fontWeight: FontWeight.w900),
+                            style: const TextStyle(color: AppTheme.goldAccent, fontSize: 11.5, fontWeight: FontWeight.w900),
                           ),
                         ],
                       ),
@@ -224,18 +247,18 @@ class PosHeaderBar extends StatelessWidget {
                     // Role Switcher
                     InkWell(
                       onTap: onOpenRoleSwitcher,
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(8),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                         decoration: BoxDecoration(
                           color: currentUser.isOwner
-                              ? const Color(0xFFD97706).withValues(alpha: 0.25)
-                              : Colors.white.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(6),
+                              ? AppTheme.primaryGold.withValues(alpha: 0.15)
+                              : AppTheme.surfaceDark,
+                          borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: currentUser.isOwner
-                                ? Colors.amberAccent.withValues(alpha: 0.5)
-                                : Colors.white24,
+                                ? AppTheme.primaryGold.withValues(alpha: 0.5)
+                                : AppTheme.borderDark,
                           ),
                         ),
                         child: Row(
@@ -244,15 +267,15 @@ class PosHeaderBar extends StatelessWidget {
                             Icon(
                               currentUser.isOwner ? Icons.admin_panel_settings_rounded : Icons.person_rounded,
                               size: 13,
-                              color: currentUser.isOwner ? Colors.amberAccent : Colors.white70,
+                              color: currentUser.isOwner ? AppTheme.goldAccent : Colors.white70,
                             ),
-                            const SizedBox(width: 4),
+                            const SizedBox(width: 5),
                             Text(
                               currentUser.name,
                               style: TextStyle(
-                                color: currentUser.isOwner ? Colors.amberAccent : Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
+                                color: currentUser.isOwner ? AppTheme.goldAccent : Colors.white,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w800,
                               ),
                             ),
                           ],
@@ -264,16 +287,16 @@ class PosHeaderBar extends StatelessWidget {
                     // Cloud Online Status
                     InkWell(
                       onTap: onOpenSettings,
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(8),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                         decoration: BoxDecoration(
                           color: isCloudConnected
-                              ? const Color(0xFF059669).withValues(alpha: 0.3)
-                              : Colors.white.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(6),
+                              ? AppTheme.successGreen.withValues(alpha: 0.15)
+                              : AppTheme.surfaceDark,
+                          borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: isCloudConnected ? const Color(0xFF10B981) : Colors.white24,
+                            color: isCloudConnected ? AppTheme.successGreen.withValues(alpha: 0.4) : AppTheme.borderDark,
                           ),
                         ),
                         child: Row(
@@ -282,32 +305,38 @@ class PosHeaderBar extends StatelessWidget {
                             Icon(
                               isCloudConnected ? Icons.cloud_done_rounded : Icons.cloud_off_rounded,
                               size: 13,
-                              color: isCloudConnected ? const Color(0xFF34D399) : Colors.white70,
+                              color: isCloudConnected ? AppTheme.successGreen : Colors.white70,
                             ),
-                            const SizedBox(width: 4),
+                            const SizedBox(width: 5),
                             Text(
                               isCloudConnected ? 'Cloud Online' : 'Pengaturan',
-                              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                              style: const TextStyle(color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.w700),
                             ),
                           ],
                         ),
                       ),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 8),
 
-                    // Hamburger Menu Button (☰)
+                    // Hamburger Menu Button
                     Builder(
-                      builder: (ctx) => IconButton(
-                        icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 22),
-                        onPressed: () {
+                      builder: (ctx) => InkWell(
+                        onTap: () {
                           if (onOpenDrawer != null) {
                             onOpenDrawer!();
                           } else {
                             Scaffold.of(ctx).openDrawer();
                           }
                         },
-                        tooltip: 'Menu Utama',
-                        visualDensity: VisualDensity.compact,
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.menu_rounded, color: Colors.white, size: 20),
+                        ),
                       ),
                     ),
                   ],

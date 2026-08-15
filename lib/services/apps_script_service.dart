@@ -3,7 +3,36 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/product.dart';
+import '../models/store_profile.dart';
 import '../theme/app_theme.dart';
+
+class SyncAllResult {
+  final bool success;
+  final String message;
+  final List<Product>? products;
+  final List<AppUser>? users;
+  final List<KasbonRecord>? kasbon;
+  final List<ShiftRecord>? shifts;
+  final List<StockMutation>? mutations;
+  final StoreProfile? storeProfile;
+  final int syncedOfflineCount;
+  final double? todaySales;
+  final int? todayTrxCount;
+
+  const SyncAllResult({
+    required this.success,
+    required this.message,
+    this.products,
+    this.users,
+    this.kasbon,
+    this.shifts,
+    this.mutations,
+    this.storeProfile,
+    this.syncedOfflineCount = 0,
+    this.todaySales,
+    this.todayTrxCount,
+  });
+}
 
 class AppsScriptService {
   static final AppsScriptService _instance = AppsScriptService._internal();
@@ -15,7 +44,7 @@ class AppsScriptService {
       'https://script.google.com/macros/s/AKfycbyEU2-yYkYFPhWxQxuBte_I7ENLQWkqinu_Cvt1Xk28A2R01O-HjtN510S2U7_mAsCe/exec';
 
   String _webAppUrl = masterBackendUrl;
-  String _spreadsheetId = ''; // Default KOSONG (tidak ada hardcode toko orang lain)
+  String _spreadsheetId = '';
   String _rawInput = '';
   bool _isConnected = false;
   String _spreadsheetName = 'Mode Offline (Belum Terhubung)';
@@ -361,7 +390,7 @@ class AppsScriptService {
     return syncedCount;
   }
 
-  // 7. Ambil Seluruh Data Master Katalog Produk dari Google Spreadsheet Toko
+  // 7. Ambil Seluruh Data Master Katalog Produk dari Google Spreadsheet
   Future<List<Product>?> fetchProductsFromSpreadsheet() async {
     if (!isConnected) return null;
 
@@ -372,8 +401,8 @@ class AppsScriptService {
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = jsonDecode(response.body);
-        if (data['status'] == 'success' && data['products'] is List) {
-          final List rawList = data['products'];
+        final List? rawList = (data['products'] is List) ? data['products'] : (data['data'] is List ? data['data'] : null);
+        if (data['status'] == 'success' && rawList != null) {
           final List<Product> fetchedProducts = [];
 
           for (final item in rawList) {
@@ -407,6 +436,337 @@ class AppsScriptService {
     } catch (e) {
       debugPrint('Error fetching products from spreadsheet: $e');
       return null;
+    }
+  }
+
+  // 8. Sync Seluruh Data Akun Penjaga Toko / Kasir ke Google Spreadsheet Toko
+  Future<Map<String, dynamic>> syncAllUsers(List<AppUser> users) async {
+    if (!isConnected) {
+      return {'success': false, 'message': 'Belum terhubung ke Google Spreadsheet.'};
+    }
+
+    try {
+      final uri = Uri.parse(_webAppUrl);
+      final payload = {
+        'action': 'syncUsers',
+        'spreadsheetId': _spreadsheetId,
+        'users': users.map((u) => u.toJson()).toList(),
+      };
+
+      final response = await _sendWithRedirect(
+        uri,
+        method: 'POST',
+        body: jsonEncode(payload),
+      );
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = jsonDecode(response.body);
+        return {'success': data['status'] == 'success', 'message': data['message'] ?? 'Berhasil sinkronisasi akun pengguna ke Spreadsheet!'};
+      }
+      return {'success': false, 'message': 'Gagal sync pengguna (${response.statusCode})'};
+    } catch (e) {
+      return {'success': false, 'message': 'Error sync pengguna: $e'};
+    }
+  }
+
+  // 9. Ambil Seluruh Data Akun Penjaga Toko / Kasir dari Google Spreadsheet Toko
+  Future<List<AppUser>?> fetchUsersFromSpreadsheet() async {
+    if (!isConnected) return null;
+
+    try {
+      final queryParam = _spreadsheetId.isNotEmpty ? '&spreadsheetId=$_spreadsheetId' : '';
+      final uri = Uri.parse('$_webAppUrl?action=getUsers$queryParam');
+      final response = await _sendWithRedirect(uri, method: 'GET');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = jsonDecode(response.body);
+        final List? rawList = (data['users'] is List) ? data['users'] : (data['data'] is List ? data['data'] : null);
+        if (data['status'] == 'success' && rawList != null) {
+          final List<AppUser> fetchedUsers = [];
+
+          for (final item in rawList) {
+            if (item is Map) {
+              fetchedUsers.add(AppUser.fromJson(Map<String, dynamic>.from(item)));
+            }
+          }
+          if (fetchedUsers.isNotEmpty) {
+            return fetchedUsers;
+          }
+        }
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error fetching users from spreadsheet: $e');
+      return null;
+    }
+  }
+
+  // 10. Ambil Seluruh Data Buku Kasbon dari Google Spreadsheet Toko
+  Future<List<KasbonRecord>?> fetchKasbonFromSpreadsheet() async {
+    if (!isConnected) return null;
+
+    try {
+      final queryParam = _spreadsheetId.isNotEmpty ? '&spreadsheetId=$_spreadsheetId' : '';
+      final uri = Uri.parse('$_webAppUrl?action=getKasbon$queryParam');
+      final response = await _sendWithRedirect(uri, method: 'GET');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == 'success' && data['data'] is List) {
+          final List rawList = data['data'];
+          final List<KasbonRecord> fetchedKasbon = [];
+
+          for (final item in rawList) {
+            if (item is Map) {
+              DateTime createdAt = DateTime.now();
+              if (item['createdAt'] != null) {
+                createdAt = DateTime.tryParse(item['createdAt'].toString()) ?? DateTime.now();
+              }
+              DateTime? dueDate;
+              if (item['dueDate'] != null && item['dueDate'].toString() != '-') {
+                dueDate = DateTime.tryParse(item['dueDate'].toString());
+              }
+
+              fetchedKasbon.add(
+                KasbonRecord(
+                  id: item['id']?.toString() ?? 'KSB-${DateTime.now().millisecondsSinceEpoch}',
+                  customerName: item['customerName']?.toString() ?? 'Pelanggan',
+                  customerPhone: item['customerPhone']?.toString() ?? '',
+                  amount: (item['amount'] is num) ? (item['amount'] as num).toDouble() : double.tryParse(item['amount']?.toString() ?? '0') ?? 0,
+                  createdAt: createdAt,
+                  dueDate: dueDate,
+                  isPaid: item['isPaid'] == true,
+                  items: [],
+                ),
+              );
+            }
+          }
+          return fetchedKasbon;
+        }
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error fetching kasbon from spreadsheet: $e');
+      return null;
+    }
+  }
+
+  // 11. Simpan & Ambil Rekap Shift ke/dari Google Spreadsheet
+  Future<bool> sendShiftRecord(ShiftRecord shift) async {
+    if (!isConnected) return false;
+    try {
+      final uri = Uri.parse(_webAppUrl);
+      final response = await _sendWithRedirect(
+        uri,
+        method: 'POST',
+        body: jsonEncode({
+          'action': 'addShift',
+          'spreadsheetId': _spreadsheetId,
+          'data': shift.toJson(),
+        }),
+      );
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = jsonDecode(response.body);
+        return data['status'] == 'success';
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<List<ShiftRecord>?> fetchShiftsFromSpreadsheet() async {
+    if (!isConnected) return null;
+    try {
+      final queryParam = _spreadsheetId.isNotEmpty ? '&spreadsheetId=$_spreadsheetId' : '';
+      final uri = Uri.parse('$_webAppUrl?action=getShifts$queryParam');
+      final response = await _sendWithRedirect(uri, method: 'GET');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = jsonDecode(response.body);
+        final List? rawList = (data['shifts'] is List) ? data['shifts'] : (data['data'] is List ? data['data'] : null);
+        if (data['status'] == 'success' && rawList != null) {
+          final List<ShiftRecord> list = [];
+          for (final item in rawList) {
+            if (item is Map) {
+              list.add(ShiftRecord.fromJson(Map<String, dynamic>.from(item)));
+            }
+          }
+          return list;
+        }
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // 12. Simpan & Ambil Mutasi Stok ke/dari Google Spreadsheet
+  Future<bool> sendStockMutation(StockMutation mutation) async {
+    if (!isConnected) return false;
+    try {
+      final uri = Uri.parse(_webAppUrl);
+      final response = await _sendWithRedirect(
+        uri,
+        method: 'POST',
+        body: jsonEncode({
+          'action': 'addMutation',
+          'spreadsheetId': _spreadsheetId,
+          'data': mutation.toJson(),
+        }),
+      );
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = jsonDecode(response.body);
+        return data['status'] == 'success';
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<List<StockMutation>?> fetchMutationsFromSpreadsheet() async {
+    if (!isConnected) return null;
+    try {
+      final queryParam = _spreadsheetId.isNotEmpty ? '&spreadsheetId=$_spreadsheetId' : '';
+      final uri = Uri.parse('$_webAppUrl?action=getMutations$queryParam');
+      final response = await _sendWithRedirect(uri, method: 'GET');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = jsonDecode(response.body);
+        final List? rawList = (data['mutations'] is List) ? data['mutations'] : (data['data'] is List ? data['data'] : null);
+        if (data['status'] == 'success' && rawList != null) {
+          final List<StockMutation> list = [];
+          for (final item in rawList) {
+            if (item is Map) {
+              list.add(StockMutation.fromJson(Map<String, dynamic>.from(item)));
+            }
+          }
+          return list;
+        }
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // 13. Simpan & Ambil Profil Toko, QRIS, & Rekening ke/dari Google Spreadsheet
+  Future<bool> sendStoreProfile(StoreProfile profile) async {
+    if (!isConnected) return false;
+    try {
+      final uri = Uri.parse(_webAppUrl);
+      final response = await _sendWithRedirect(
+        uri,
+        method: 'POST',
+        body: jsonEncode({
+          'action': 'syncStoreProfile',
+          'spreadsheetId': _spreadsheetId,
+          'profile': profile.toJson(),
+        }),
+      );
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = jsonDecode(response.body);
+        return data['status'] == 'success';
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<StoreProfile?> fetchStoreProfileFromSpreadsheet() async {
+    if (!isConnected) return null;
+    try {
+      final queryParam = _spreadsheetId.isNotEmpty ? '&spreadsheetId=$_spreadsheetId' : '';
+      final uri = Uri.parse('$_webAppUrl?action=getStoreProfile$queryParam');
+      final response = await _sendWithRedirect(uri, method: 'GET');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == 'success' && data['profile'] is Map) {
+          return StoreProfile.fromJson(Map<String, dynamic>.from(data['profile']));
+        }
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // 14. Ambil Rekap Penjualan & Transaksi Hari Ini
+  Future<Map<String, dynamic>?> fetchTodaySalesFromSpreadsheet() async {
+    if (!isConnected) return null;
+    try {
+      final queryParam = _spreadsheetId.isNotEmpty ? '&spreadsheetId=$_spreadsheetId' : '';
+      final uri = Uri.parse('$_webAppUrl?action=getTransactions$queryParam');
+      final response = await _sendWithRedirect(uri, method: 'GET');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == 'success') {
+          return {
+            'todaySales': (data['todaySales'] is num) ? (data['todaySales'] as num).toDouble() : 0.0,
+            'todayTrxCount': (data['todayTrxCount'] is num) ? (data['todayTrxCount'] as num).toInt() : 0,
+            'transactions': data['transactions'],
+          };
+        }
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // 15. SINKRONISASI SELURUH DATA SISTEM (ALL DATA FULL SYNC)
+  Future<SyncAllResult> syncAllDataFromSpreadsheet() async {
+    if (!isConnected) {
+      return const SyncAllResult(
+        success: false,
+        message: 'Aplikasi dalam Mode Offline (belum terhubung ke Google Spreadsheet).',
+      );
+    }
+
+    try {
+      // Jalankan seluruh pengambilan data secara paralel untuk kecepatan maksimal
+      final results = await Future.wait([
+        fetchProductsFromSpreadsheet(),
+        fetchUsersFromSpreadsheet(),
+        fetchKasbonFromSpreadsheet(),
+        fetchShiftsFromSpreadsheet(),
+        fetchMutationsFromSpreadsheet(),
+        fetchStoreProfileFromSpreadsheet(),
+        fetchTodaySalesFromSpreadsheet(),
+        flushOfflineQueue(),
+      ]);
+
+      final products = results[0] as List<Product>?;
+      final users = results[1] as List<AppUser>?;
+      final kasbon = results[2] as List<KasbonRecord>?;
+      final shifts = results[3] as List<ShiftRecord>?;
+      final mutations = results[4] as List<StockMutation>?;
+      final profile = results[5] as StoreProfile?;
+      final salesData = results[6] as Map<String, dynamic>?;
+      final offlineCount = results[7] as int;
+
+      return SyncAllResult(
+        success: true,
+        message: 'Seluruh data sistem berhasil disinkronkan dengan Google Spreadsheet!',
+        products: products,
+        users: users,
+        kasbon: kasbon,
+        shifts: shifts,
+        mutations: mutations,
+        storeProfile: profile,
+        syncedOfflineCount: offlineCount,
+        todaySales: salesData?['todaySales'] as double?,
+        todayTrxCount: salesData?['todayTrxCount'] as int?,
+      );
+    } catch (e) {
+      return SyncAllResult(
+        success: false,
+        message: 'Gagal sinkronisasi data: $e',
+      );
     }
   }
 

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/product.dart';
+import '../services/apps_script_service.dart';
+import '../services/inventory_storage_service.dart';
 import '../theme/app_theme.dart';
 
 class StockControlScreen extends StatefulWidget {
@@ -31,6 +33,37 @@ class _StockControlScreenState extends State<StockControlScreen> with SingleTick
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleRefresh() async {
+    final appsScript = AppsScriptService();
+    if (appsScript.isConnected) {
+      final cloudProducts = await appsScript.fetchProductsFromSpreadsheet();
+      if (cloudProducts != null && mounted) {
+        setState(() {
+          widget.products.clear();
+          widget.products.addAll(cloudProducts);
+        });
+        InventoryStorageService().saveProducts(widget.products);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Berhasil memuat ${cloudProducts.length} data stok dari Google Spreadsheet!'),
+            backgroundColor: AppTheme.primaryTeal,
+          ),
+        );
+      }
+    } else {
+      final localProducts = await InventoryStorageService().loadProducts();
+      final localMutations = await InventoryStorageService().loadMutations();
+      if (mounted) {
+        setState(() {
+          widget.products.clear();
+          widget.products.addAll(localProducts);
+          widget.mutations.clear();
+          widget.mutations.addAll(localMutations);
+        });
+      }
+    }
   }
 
   @override
@@ -179,21 +212,26 @@ class _StockControlScreenState extends State<StockControlScreen> with SingleTick
         ),
       ),
       body: SafeArea(
-        child: TabBarView(
-          controller: _tabController,
-          children: [
-            // Tab 1: Slow-Moving Products
-            _buildSlowMovingTab(isMobile),
+        child: RefreshIndicator(
+          onRefresh: _handleRefresh,
+          color: AppTheme.primaryTeal,
+          backgroundColor: Colors.white,
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              // Tab 1: Slow-Moving Products
+              _buildSlowMovingTab(isMobile),
 
-            // Tab 2: Expiry Monitoring
-            _buildExpiryTab(nearExpiryProducts, isMobile),
+              // Tab 2: Expiry Monitoring
+              _buildExpiryTab(nearExpiryProducts, isMobile),
 
-            // Tab 3: Low Stock Alert
-            _buildLowStockTab(lowStockProducts, isMobile),
+              // Tab 3: Low Stock Alert
+              _buildLowStockTab(lowStockProducts, isMobile),
 
-            // Tab 4: Stock Mutations Log
-            _buildMutationsTab(),
-          ],
+              // Tab 4: Stock Mutations Log
+              _buildMutationsTab(),
+            ],
+          ),
         ),
       ),
     );

@@ -28,25 +28,15 @@ class _CameraBarcodeScannerDialogState extends State<CameraBarcodeScannerDialog>
   bool _useNativeScanner = false;
   String? _lastScannedCode;
 
-  final List<Map<String, String>> _sampleBarcodes = [
-    {'name': 'Beras Ramos 5kg', 'code': '8991001'},
-    {'name': 'Minyak Bimoli 2L', 'code': '8991003'},
-    {'name': 'Telur Fresh 1kg', 'code': '8991005'},
-    {'name': 'Indomie Goreng', 'code': '8991008'},
-    {'name': 'Gudang Garam Surya', 'code': '8991012'},
-    {'name': 'Le Minerale Dingin', 'code': '8991015'},
-    {'name': 'Baru (Belum Ada)', 'code': '89998881234'},
-  ];
-
   @override
   void initState() {
     super.initState();
     _laserAnimController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
+      duration: const Duration(milliseconds: 1800),
     )..repeat(reverse: true);
 
-    // Hanya gunakan native camera controller jika bukan Web atau jika platform channel tersedia
+    // Gunakan native camera controller jika didukung
     if (!kIsWeb) {
       try {
         _controller = MobileScannerController(
@@ -74,9 +64,11 @@ class _CameraBarcodeScannerDialogState extends State<CameraBarcodeScannerDialog>
   void _safeToggleTorch() async {
     if (_controller == null || !_cameraInitialized) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Senter kamera hanya aktif saat menggunakan kamera HP fisik.'),
-          duration: Duration(milliseconds: 1200),
+        SnackBar(
+          content: const Text('Senter kamera hanya aktif saat menggunakan kamera HP fisik.'),
+          backgroundColor: AppTheme.surfaceDark,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(milliseconds: 1400),
         ),
       );
       return;
@@ -109,8 +101,7 @@ class _CameraBarcodeScannerDialogState extends State<CameraBarcodeScannerDialog>
 
     widget.onBarcodeDetected(cleanCode);
 
-    // Debounce to allow continuous smooth scan
-    Future.delayed(const Duration(milliseconds: 1400), () {
+    Future.delayed(const Duration(milliseconds: 1300), () {
       if (mounted) {
         setState(() {
           _isProcessing = false;
@@ -126,63 +117,90 @@ class _CameraBarcodeScannerDialogState extends State<CameraBarcodeScannerDialog>
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: Container(
         width: 480,
-        height: 620,
+        height: 600,
         decoration: BoxDecoration(
-          color: const Color(0xFF0F172A),
+          color: AppTheme.primaryDark,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: const [
+          boxShadow: [
             BoxShadow(
-              color: Colors.black54,
+              color: Colors.black.withValues(alpha: 0.7),
+              blurRadius: 28,
+              offset: const Offset(0, 12),
+            ),
+            BoxShadow(
+              color: AppTheme.primaryGold.withValues(alpha: 0.15),
               blurRadius: 20,
-              offset: Offset(0, 10),
+              spreadRadius: -2,
             ),
           ],
-          border: Border.all(color: AppTheme.primaryTeal.withValues(alpha: 0.5), width: 1.5),
+          border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.4), width: 1.5),
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
           children: [
             // Scanner Header
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              color: const Color(0xFF1E293B),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: const BoxDecoration(
+                color: AppTheme.surfaceDark,
+                border: Border(
+                  bottom: BorderSide(color: AppTheme.borderDark, width: 1),
+                ),
+              ),
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(6),
+                    padding: const EdgeInsets.all(7),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryTeal.withValues(alpha: 0.2),
+                      gradient: AppTheme.goldGradient,
                       borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.primaryGold.withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
-                    child: const Icon(Icons.qr_code_scanner_rounded, color: AppTheme.secondaryTeal, size: 20),
+                    child: const Icon(Icons.qr_code_scanner_rounded, color: AppTheme.primaryDark, size: 18),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 12),
                   const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Kamera Scanner Barcode HP',
+                          'Scan Barcode Kamera',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.2,
                           ),
                         ),
+                        SizedBox(height: 2),
                         Text(
-                          'Scan cepat: Arahkan kamera ke barcode bawaan produk',
+                          'Arahkan kamera tepat ke barcode kemasan produk',
                           style: TextStyle(
-                            color: Colors.white60,
-                            fontSize: 10.5,
+                            color: AppTheme.textSubtle,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded, color: Colors.white70),
-                    onPressed: () => Navigator.pop(context),
-                    visualDensity: VisualDensity.compact,
+                  InkWell(
+                    onTap: () => Navigator.pop(context),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.close_rounded, color: Colors.white70, size: 18),
+                    ),
                   ),
                 ],
               ),
@@ -218,24 +236,36 @@ class _CameraBarcodeScannerDialogState extends State<CameraBarcodeScannerDialog>
                   // Last Scanned Notification Pill
                   if (_lastScannedCode != null)
                     Positioned(
-                      top: 14,
-                      left: 16,
-                      right: 16,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      top: 16,
+                      left: 20,
+                      right: 20,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0F172A).withValues(alpha: 0.95),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppTheme.secondaryTeal),
+                          color: AppTheme.surfaceDark.withValues(alpha: 0.95),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppTheme.primaryGold, width: 1.2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.primaryGold.withValues(alpha: 0.25),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.check_circle_rounded, color: AppTheme.successGreen, size: 16),
-                            const SizedBox(width: 8),
+                            const Icon(Icons.check_circle_rounded, color: AppTheme.primaryGold, size: 18),
+                            const SizedBox(width: 10),
                             Expanded(
                               child: Text(
-                                'Barcode Masuk: $_lastScannedCode',
-                                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                'Terdeteksi: $_lastScannedCode',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                ),
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
@@ -247,128 +277,62 @@ class _CameraBarcodeScannerDialogState extends State<CameraBarcodeScannerDialog>
               ),
             ),
 
-            // Quick Test Barcode Pills (For ultra-fast cashier testing)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              color: const Color(0xFF0F172A),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Simulasi Scan Barcode (Klik Cepat):',
-                        style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        'Scan ➔ Scan ➔ Bayar',
-                        style: TextStyle(color: AppTheme.secondaryTeal, fontSize: 10, fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(),
-                    child: Row(
-                      children: _sampleBarcodes.map((item) {
-                        final isNew = item['code'] == '89998881234';
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 6),
-                          child: InkWell(
-                            onTap: () => _handleBarcode(item['code']!),
-                            borderRadius: BorderRadius.circular(6),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                              decoration: BoxDecoration(
-                                color: isNew ? const Color(0xFF0D9488).withValues(alpha: 0.3) : const Color(0xFF1E293B),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                  color: isNew ? AppTheme.secondaryTeal : AppTheme.borderColor.withValues(alpha: 0.3),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    isNew ? Icons.add_circle_outline_rounded : Icons.barcode_reader,
-                                    size: 12,
-                                    color: isNew ? AppTheme.secondaryTeal : Colors.amberAccent,
-                                  ),
-                                  const SizedBox(width: 5),
-                                  Text(
-                                    item['name']!,
-                                    style: TextStyle(
-                                      color: isNew ? const Color(0xFF5EEAD4) : Colors.white,
-                                      fontSize: 11,
-                                      fontWeight: isNew ? FontWeight.bold : FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
             // Scanner Control Footer
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              color: const Color(0xFF1E293B),
+              decoration: const BoxDecoration(
+                color: AppTheme.surfaceDark,
+                border: Border(
+                  top: BorderSide(color: AppTheme.borderDark, width: 1),
+                ),
+              ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   // Senter / Flash Torch Toggle
-                  IconButton(
-                    onPressed: _safeToggleTorch,
-                    icon: Icon(
-                      _torchEnabled ? Icons.flash_on_rounded : Icons.flash_off_rounded,
-                      color: _torchEnabled ? Colors.amber : Colors.white70,
-                      size: 20,
-                    ),
+                  _buildFooterIconButton(
+                    icon: _torchEnabled ? Icons.flash_on_rounded : Icons.flash_off_rounded,
+                    color: _torchEnabled ? AppTheme.goldAccent : Colors.white70,
                     tooltip: 'Senter Kamera',
+                    onTap: _safeToggleTorch,
                   ),
+                  const SizedBox(width: 8),
 
                   // Switch Camera (Depan / Belakang)
-                  IconButton(
-                    onPressed: _safeSwitchCamera,
-                    icon: const Icon(Icons.cameraswitch_rounded, color: Colors.white70, size: 20),
+                  _buildFooterIconButton(
+                    icon: Icons.cameraswitch_rounded,
+                    color: Colors.white70,
                     tooltip: 'Ganti Kamera',
+                    onTap: _safeSwitchCamera,
                   ),
+                  const SizedBox(width: 8),
 
                   // Mode Toggle Manual
-                  IconButton(
-                    onPressed: () {
+                  _buildFooterIconButton(
+                    icon: _showManualInput ? Icons.camera_alt_rounded : Icons.keyboard_alt_rounded,
+                    color: _showManualInput ? AppTheme.primaryGold : Colors.white70,
+                    tooltip: 'Mode Keyboard / Scanner USB',
+                    onTap: () {
                       setState(() {
                         _showManualInput = !_showManualInput;
                       });
                     },
-                    icon: Icon(
-                      _showManualInput ? Icons.camera_alt_rounded : Icons.keyboard_rounded,
-                      color: AppTheme.secondaryTeal,
-                      size: 20,
-                    ),
-                    tooltip: 'Ketik Barcode Manual / USB Gun Scanner',
                   ),
 
                   const Spacer(),
 
                   // Tombol Selesai
-                  ElevatedButton(
+                  ElevatedButton.icon(
                     onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.check_rounded, size: 16),
+                    label: const Text('Selesai'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryTeal,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      backgroundColor: AppTheme.primaryGold,
+                      foregroundColor: AppTheme.primaryDark,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5),
                     ),
-                    child: const Text('Selesai', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                   ),
                 ],
               ),
@@ -379,95 +343,130 @@ class _CameraBarcodeScannerDialogState extends State<CameraBarcodeScannerDialog>
     );
   }
 
+  Widget _buildFooterIconButton({
+    required IconData icon,
+    required Color color,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          ),
+          child: Icon(icon, color: color, size: 18),
+        ),
+      ),
+    );
+  }
+
   Widget _buildInteractiveScannerView() {
     return Container(
-      color: const Color(0xFF0B1120),
+      color: AppTheme.surfaceDarker,
       child: Column(
         children: [
           const SizedBox(height: 16),
 
-          // Scanner Target Frame with animated red laser line
+          // Scanner Target Frame with Modern Gold HUD Brackets & Laser
           Expanded(
             child: Center(
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Viewfinder Frame
-                  Container(
-                    width: 270,
-                    height: 170,
-                    decoration: BoxDecoration(
-                      color: Colors.black45,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: _isProcessing ? AppTheme.successGreen : AppTheme.secondaryTeal,
-                        width: 2.5,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: (_isProcessing ? AppTheme.successGreen : AppTheme.primaryTeal).withValues(alpha: 0.2),
-                          blurRadius: 16,
-                          spreadRadius: 2,
-                        ),
-                      ],
+                  // Viewfinder Frame with Gold Glow & Custom Corners
+                  CustomPaint(
+                    painter: _ScannerHudCornerPainter(
+                      color: _isProcessing ? AppTheme.successGreen : AppTheme.primaryGold,
                     ),
-                    child: Stack(
-                      children: [
-                        // Animated Scanning Laser Bar
-                        if (!_isProcessing)
-                          AnimatedBuilder(
-                            animation: _laserAnimController,
-                            builder: (context, child) {
-                              return Positioned(
-                                top: _laserAnimController.value * 140 + 10,
-                                left: 10,
-                                right: 10,
-                                child: Container(
-                                  height: 2.5,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFEF4444),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(0xFFEF4444).withValues(alpha: 0.8),
-                                        blurRadius: 8,
-                                        spreadRadius: 1,
+                    child: Container(
+                      width: 280,
+                      height: 180,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Stack(
+                        children: [
+                          // Animated Gold Laser Sweep
+                          if (!_isProcessing)
+                            AnimatedBuilder(
+                              animation: _laserAnimController,
+                              builder: (context, child) {
+                                return Positioned(
+                                  top: _laserAnimController.value * 150 + 12,
+                                  left: 12,
+                                  right: 12,
+                                  child: Container(
+                                    height: 2.5,
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        colors: [
+                                          Colors.transparent,
+                                          AppTheme.goldAccent,
+                                          AppTheme.primaryGold,
+                                          AppTheme.goldAccent,
+                                          Colors.transparent,
+                                        ],
                                       ),
-                                    ],
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: AppTheme.primaryGold.withValues(alpha: 0.8),
+                                          blurRadius: 10,
+                                          spreadRadius: 2,
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              );
-                            },
-                          ),
+                                );
+                              },
+                            ),
 
-                        if (_isProcessing)
-                          const Center(
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.check_circle_rounded, color: AppTheme.successGreen, size: 24),
-                                SizedBox(width: 8),
-                                Text(
-                                  '✓ Scan Berhasil!',
-                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14),
-                                ),
-                              ],
+                          if (_isProcessing)
+                            const Center(
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.check_circle_rounded, color: AppTheme.successGreen, size: 22),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Scan Berhasil',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 14,
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else
+                            const Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.qr_code_scanner_rounded, color: Colors.white24, size: 44),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    'Posisikan Barcode di Kotak Ini',
+                                    style: TextStyle(
+                                      color: Colors.white60,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          )
-                        else
-                          const Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.qr_code_scanner_rounded, color: Colors.white30, size: 48),
-                                SizedBox(height: 8),
-                                Text(
-                                  'Bidik Barcode Produk',
-                                  style: TextStyle(color: Colors.white60, fontSize: 12, fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -477,20 +476,20 @@ class _CameraBarcodeScannerDialogState extends State<CameraBarcodeScannerDialog>
 
           // Direct text / USB reader input field
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             child: TextField(
               controller: _manualInputController,
-              style: const TextStyle(color: Colors.white, fontSize: 14, letterSpacing: 0.5),
+              style: const TextStyle(color: Colors.white, fontSize: 13.5, letterSpacing: 0.4),
               decoration: InputDecoration(
-                hintText: 'Ketik nomor barcode atau tembak pakai scanner USB...',
-                hintStyle: const TextStyle(color: Colors.white38, fontSize: 11.5),
-                fillColor: const Color(0xFF1E293B),
+                hintText: 'Ketik barcode manual / tembak scanner USB...',
+                hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
+                fillColor: AppTheme.surfaceDark,
                 filled: true,
                 isDense: true,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                prefixIcon: const Icon(Icons.barcode_reader, color: AppTheme.primaryTeal, size: 18),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                prefixIcon: const Icon(Icons.barcode_reader, color: AppTheme.primaryGold, size: 18),
                 suffixIcon: IconButton(
-                  icon: const Icon(Icons.arrow_forward_rounded, color: AppTheme.secondaryTeal, size: 18),
+                  icon: const Icon(Icons.arrow_forward_rounded, color: AppTheme.primaryGold, size: 18),
                   onPressed: () {
                     _handleBarcode(_manualInputController.text);
                     _manualInputController.clear();
@@ -498,7 +497,15 @@ class _CameraBarcodeScannerDialogState extends State<CameraBarcodeScannerDialog>
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: AppTheme.primaryTeal),
+                  borderSide: const BorderSide(color: AppTheme.borderDark),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: AppTheme.primaryGold.withValues(alpha: 0.3)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: AppTheme.primaryGold, width: 1.5),
                 ),
               ),
               onSubmitted: (val) {
@@ -507,9 +514,63 @@ class _CameraBarcodeScannerDialogState extends State<CameraBarcodeScannerDialog>
               },
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
         ],
       ),
     );
   }
+}
+
+// Custom Painter for HUD Corner Brackets
+class _ScannerHudCornerPainter extends CustomPainter {
+  final Color color;
+
+  _ScannerHudCornerPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 3.0
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    const cornerLength = 24.0;
+    const radius = 12.0;
+
+    // Top-Left Corner
+    final tlPath = Path()
+      ..moveTo(0, cornerLength)
+      ..lineTo(0, radius)
+      ..arcToPoint(const Offset(radius, 0), radius: const Radius.circular(radius))
+      ..lineTo(cornerLength, 0);
+    canvas.drawPath(tlPath, paint);
+
+    // Top-Right Corner
+    final trPath = Path()
+      ..moveTo(size.width - cornerLength, 0)
+      ..lineTo(size.width - radius, 0)
+      ..arcToPoint(Offset(size.width, radius), radius: const Radius.circular(radius))
+      ..lineTo(size.width, cornerLength);
+    canvas.drawPath(trPath, paint);
+
+    // Bottom-Left Corner
+    final blPath = Path()
+      ..moveTo(0, size.height - cornerLength)
+      ..lineTo(0, size.height - radius)
+      ..arcToPoint(Offset(radius, size.height), radius: const Radius.circular(radius))
+      ..lineTo(cornerLength, size.height);
+    canvas.drawPath(blPath, paint);
+
+    // Bottom-Right Corner
+    final brPath = Path()
+      ..moveTo(size.width - cornerLength, size.height)
+      ..lineTo(size.width - radius, size.height)
+      ..arcToPoint(Offset(size.width, size.height - radius), radius: const Radius.circular(radius))
+      ..lineTo(size.width, size.height - cornerLength);
+    canvas.drawPath(brPath, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _ScannerHudCornerPainter oldDelegate) => oldDelegate.color != color;
 }

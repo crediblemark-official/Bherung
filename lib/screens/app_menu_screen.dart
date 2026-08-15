@@ -52,54 +52,75 @@ class AppMenuScreen extends StatelessWidget {
       backgroundColor: AppTheme.bgLight,
       appBar: AppBar(
         backgroundColor: AppTheme.primaryDark,
-        elevation: 1,
-        toolbarHeight: 46,
+        elevation: 2,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
           onPressed: () => Navigator.pop(context),
           tooltip: 'Kembali ke Kasir',
-          visualDensity: VisualDensity.compact,
         ),
         titleSpacing: 0,
         title: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(5),
+              padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF0D9488), Color(0xFF059669)],
-                ),
-                borderRadius: BorderRadius.circular(6),
+                gradient: AppTheme.goldGradient,
+                borderRadius: BorderRadius.circular(7),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.primaryGold.withValues(alpha: 0.3),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              child: const Icon(Icons.store_mall_directory_rounded, color: Colors.white, size: 16),
+              child: const Icon(Icons.store_mall_directory_rounded, color: AppTheme.primaryDark, size: 16),
             ),
             const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                storeName,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 13.5,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      storeName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                    if (storeTagline.isNotEmpty) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryGold.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(5),
+                          border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.4)),
+                        ),
+                        child: Text(
+                          storeTagline.toUpperCase(),
+                          style: const TextStyle(
+                            color: AppTheme.goldAccent,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-                overflow: TextOverflow.ellipsis,
-              ),
+                const Text(
+                  'Menu & Pusat Fitur POS',
+                  style: TextStyle(color: AppTheme.textSubtle, fontSize: 10, fontWeight: FontWeight.w500),
+                ),
+              ],
             ),
-            if (storeTagline.isNotEmpty) ...[
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEF4444).withValues(alpha: 0.25),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: const Color(0xFFEF4444)),
-                ),
-                child: Text(
-                  storeTagline.toUpperCase(),
-                  style: const TextStyle(color: Color(0xFFFCA5A5), fontSize: 9, fontWeight: FontWeight.w900),
-                ),
-              ),
-            ],
           ],
         ),
       ),
@@ -254,7 +275,7 @@ class AppMenuScreen extends StatelessWidget {
                   ),
                   title: Text(currentUser.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
                   subtitle: Text(
-                    currentUser.isOwner ? '👑 Pemilik Akun (Owner Toko)' : '👤 Penjaga Toko (Kasir)',
+                    currentUser.isOwner ? 'Pemilik Akun (Owner Toko)' : 'Penjaga Toko (Kasir)',
                     style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
                   ),
                   trailing: Container(

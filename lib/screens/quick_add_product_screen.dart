@@ -180,58 +180,73 @@ class _QuickAddProductScreenState extends State<QuickAddProductScreen> {
                 child: ListView(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   children: [
-                    // Barcode Banner with Camera Scanner Button
+                    // Barcode & Scanner Card (Sleek Obsidian & Gold Theme)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF0FDF4),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFBBF7D0)),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _codeController.text.isNotEmpty ? AppTheme.primaryGold : AppTheme.borderColor,
+                          width: _codeController.text.isNotEmpty ? 1.4 : 1,
+                        ),
+                        boxShadow: AppTheme.softShadow,
                       ),
-                      child: Row(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.qr_code_scanner_rounded, color: AppTheme.successGreen, size: 18),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Barcode:',
-                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF166534)),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: TextField(
-                              controller: _codeController,
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.5),
-                              decoration: const InputDecoration(
-                                isDense: true,
-                                border: InputBorder.none,
-                                hintText: 'Ketik atau scan barcode barang...',
-                                hintStyle: TextStyle(fontSize: 11, color: AppTheme.textMuted),
-                                contentPadding: EdgeInsets.zero,
+                          const Row(
+                            children: [
+                              Icon(Icons.qr_code_2_rounded, color: AppTheme.primaryGold, size: 18),
+                              SizedBox(width: 6),
+                              Text(
+                                'Barcode / Kode Barang SKU',
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textDark),
                               ),
-                            ),
+                            ],
                           ),
-                          const SizedBox(width: 6),
-                          InkWell(
-                            onTap: _scanBarcodeWithCamera,
-                            borderRadius: BorderRadius.circular(6),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: AppTheme.primaryTeal,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.camera_alt_rounded, color: Colors.white, size: 13),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    'Scan Kamera',
-                                    style: TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.bold),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextFormField(
+                                  controller: _codeController,
+                                  keyboardType: TextInputType.text,
+                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 0.5),
+                                  decoration: InputDecoration(
+                                    isDense: true,
+                                    hintText: 'Ketik angka barcode / scan...',
+                                    hintStyle: const TextStyle(fontSize: 11.5, color: AppTheme.textMuted, fontWeight: FontWeight.normal),
+                                    prefixIcon: const Icon(Icons.numbers_rounded, color: AppTheme.goldMuted, size: 18),
+                                    suffixIcon: _codeController.text.isNotEmpty
+                                        ? IconButton(
+                                            icon: const Icon(Icons.clear_rounded, size: 16),
+                                            onPressed: () {
+                                              _codeController.clear();
+                                              setState(() {});
+                                            },
+                                          )
+                                        : null,
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                                   ),
-                                ],
+                                  onChanged: (val) => setState(() {}),
+                                ),
                               ),
-                            ),
+                              const SizedBox(width: 8),
+                              ElevatedButton.icon(
+                                onPressed: _scanBarcodeWithCamera,
+                                icon: const Icon(Icons.camera_alt_rounded, size: 15),
+                                label: const Text('Scan HP', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11.5)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.primaryGold,
+                                  foregroundColor: AppTheme.primaryDark,
+                                  elevation: 1,
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),

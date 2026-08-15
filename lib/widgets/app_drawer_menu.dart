@@ -54,14 +54,17 @@ class AppDrawerMenu extends StatelessWidget {
         children: [
           // Drawer Header
           Container(
-            padding: const EdgeInsets.fromLTRB(16, 40, 16, 16),
+            padding: const EdgeInsets.fromLTRB(18, 44, 18, 18),
             decoration: const BoxDecoration(
               color: AppTheme.primaryDark,
+              border: Border(
+                bottom: BorderSide(color: AppTheme.borderDark, width: 1),
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black26,
-                  blurRadius: 6,
-                  offset: Offset(0, 2),
+                  color: Colors.black45,
+                  blurRadius: 10,
+                  offset: Offset(0, 3),
                 ),
               ],
             ),
@@ -73,12 +76,17 @@ class AppDrawerMenu extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(7),
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF0D9488), Color(0xFF059669)],
-                        ),
+                        gradient: AppTheme.goldGradient,
                         borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.primaryGold.withValues(alpha: 0.35),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
-                      child: const Icon(Icons.store_mall_directory_rounded, color: Colors.white, size: 20),
+                      child: const Icon(Icons.store_mall_directory_rounded, color: AppTheme.primaryDark, size: 20),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -90,31 +98,39 @@ class AppDrawerMenu extends StatelessWidget {
                             style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w900,
-                              fontSize: 14.5,
+                              fontSize: 15,
+                              letterSpacing: 0.2,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
                           if (storeTagline.isNotEmpty)
                             Container(
-                              margin: const EdgeInsets.only(top: 2),
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                              margin: const EdgeInsets.only(top: 3),
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFEF4444).withValues(alpha: 0.25),
+                                color: AppTheme.primaryGold.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(4),
-                                border: Border.all(color: const Color(0xFFEF4444)),
+                                border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.4)),
                               ),
                               child: Text(
                                 storeTagline.toUpperCase(),
-                                style: const TextStyle(color: Color(0xFFFCA5A5), fontSize: 8.5, fontWeight: FontWeight.w900),
+                                style: const TextStyle(color: AppTheme.goldAccent, fontSize: 8.5, fontWeight: FontWeight.w900),
                               ),
                             ),
                         ],
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded, color: Colors.white70),
-                      onPressed: () => Navigator.pop(context),
-                      visualDensity: VisualDensity.compact,
+                    InkWell(
+                      onTap: () => Navigator.pop(context),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.close_rounded, color: Colors.white70, size: 18),
+                      ),
                     ),
                   ],
                 ),
@@ -126,13 +142,14 @@ class AppDrawerMenu extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.black38,
+                        color: AppTheme.surfaceDark,
                         borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: AppTheme.borderDark),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.access_time_filled_rounded, color: Color(0xFF5EEAD4), size: 12),
+                          const Icon(Icons.access_time_filled_rounded, color: AppTheme.primaryGold, size: 12),
                           const SizedBox(width: 5),
                           Text(
                             '$hourStr:$minStr:$secStr',
@@ -151,23 +168,26 @@ class AppDrawerMenu extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: isCloudConnected
-                            ? const Color(0xFF047857).withValues(alpha: 0.3)
-                            : Colors.white10,
+                            ? AppTheme.successGreen.withValues(alpha: 0.2)
+                            : AppTheme.surfaceDark,
                         borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: isCloudConnected ? AppTheme.successGreen.withValues(alpha: 0.4) : AppTheme.borderDark,
+                        ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
                             isCloudConnected ? Icons.cloud_done_rounded : Icons.cloud_queue_rounded,
-                            color: isCloudConnected ? const Color(0xFF34D399) : Colors.white60,
+                            color: isCloudConnected ? AppTheme.successGreen : Colors.white60,
                             size: 13,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             isCloudConnected ? 'Cloud Online' : 'Lokal',
                             style: TextStyle(
-                              color: isCloudConnected ? const Color(0xFF34D399) : Colors.white60,
+                              color: isCloudConnected ? AppTheme.successGreen : Colors.white60,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                             ),
@@ -179,12 +199,13 @@ class AppDrawerMenu extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
 
-                // Omzet Shift Card
+                // Omzet Shift Card (Black & Gold)
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1E293B),
-                    borderRadius: BorderRadius.circular(8),
+                    color: AppTheme.surfaceDark,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppTheme.borderDark),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -192,23 +213,24 @@ class AppDrawerMenu extends StatelessWidget {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Omzet Shift Ini:', style: TextStyle(color: Colors.white60, fontSize: 10.5)),
-                          const SizedBox(height: 2),
+                          const Text('Omzet Shift Ini:', style: TextStyle(color: AppTheme.textSubtle, fontSize: 11)),
+                          const SizedBox(height: 3),
                           Text(
                             AppTheme.formatRupiah(totalSalesToday),
-                            style: const TextStyle(color: Color(0xFF6EE7B7), fontSize: 13.5, fontWeight: FontWeight.w900),
+                            style: const TextStyle(color: AppTheme.goldAccent, fontSize: 14.5, fontWeight: FontWeight.w900),
                           ),
                         ],
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryTeal.withValues(alpha: 0.25),
+                          color: AppTheme.primaryGold.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.3)),
                         ),
                         child: Text(
                           '$completedTransactions Trx',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
+                          style: const TextStyle(color: AppTheme.goldAccent, fontWeight: FontWeight.w800, fontSize: 11),
                         ),
                       ),
                     ],
@@ -239,7 +261,7 @@ class AppDrawerMenu extends StatelessWidget {
                   ),
                   title: Text(currentUser.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                   subtitle: Text(
-                    currentUser.isOwner ? '👑 Pemilik Akun (Owner)' : '👤 Penjaga Toko (Kasir)',
+                    currentUser.isOwner ? 'Pemilik Akun (Owner)' : 'Penjaga Toko (Kasir)',
                     style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
                   ),
                   trailing: const Icon(Icons.swap_horiz_rounded, size: 18, color: AppTheme.textMuted),
