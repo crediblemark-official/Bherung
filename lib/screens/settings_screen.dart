@@ -47,8 +47,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
   late List<BankAccount> _bankAccounts;
 
   bool _isTesting = false;
-  bool _isSyncingProducts = false;
-  bool _isPullingProducts = false;
+  bool _isFullSyncing = false;
   String? _statusMessage;
   bool _isStatusSuccess = false;
 
@@ -142,63 +141,47 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     widget.onDataChanged();
   }
 
-  Future<void> _handleSyncProducts() async {
+  // 1 Tombol Pintar Sinkronisasi Penuh Toko (Kirim Offline + Tarik Katalog Resmi)
+  Future<void> _handleFullSync() async {
     setState(() {
-      _isSyncingProducts = true;
+      _isFullSyncing = true;
       _statusMessage = null;
     });
 
-    final res = await _appsScriptService.syncAllProducts(widget.products);
+    // 1. Kirim antrean transaksi offline jika ada
+    int flushedCount = 0;
+    if (_appsScriptService.offlineQueueCount > 0) {
+      flushedCount = await _appsScriptService.flushOfflineQueue();
+    }
+
+    // 2. Tarik katalog produk resmi & data toko dari Spreadsheet
+    final syncResult = await _appsScriptService.syncAllDataFromSpreadsheet();
 
     if (!mounted) return;
     setState(() {
-      _isSyncingProducts = false;
-      _isStatusSuccess = res['success'] == true;
-      _statusMessage = res['message'];
-    });
-  }
-
-  Future<void> _handlePullProductsFromSpreadsheet() async {
-    setState(() {
-      _isPullingProducts = true;
-      _statusMessage = null;
+      _isFullSyncing = false;
     });
 
-    final fetched = await _appsScriptService.fetchProductsFromSpreadsheet();
-
-    if (!mounted) return;
-    setState(() {
-      _isPullingProducts = false;
-    });
-
-    if (fetched != null && fetched.isNotEmpty) {
-      widget.products.clear();
-      widget.products.addAll(fetched);
-      InventoryStorageService().saveProducts(widget.products);
+    if (syncResult.success) {
+      if (syncResult.products != null) {
+        widget.products.clear();
+        widget.products.addAll(syncResult.products!);
+        await InventoryStorageService().saveProducts(widget.products);
+      }
       widget.onDataChanged();
 
       setState(() {
         _isStatusSuccess = true;
-        _statusMessage = 'Berhasil mengimpor ${fetched.length} produk katalog master dari Google Spreadsheet!';
+        final productCount = syncResult.products?.length ?? widget.products.length;
+        _statusMessage = 'Sinkronisasi berhasil! $productCount produk resmi toko terhubung' +
+            (flushedCount > 0 ? ' & $flushedCount antrean offline terkirim.' : '.');
       });
     } else {
       setState(() {
         _isStatusSuccess = false;
-        _statusMessage = 'Gagal memuat katalog atau data produk di Spreadsheet kosong.';
+        _statusMessage = syncResult.message;
       });
     }
-  }
-
-  Future<void> _handleFlushQueue() async {
-    final count = await _appsScriptService.flushOfflineQueue();
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Berhasil menyinkronkan $count transaksi offline ke Spreadsheet!'),
-        backgroundColor: AppTheme.successGreen,
-      ),
-    );
-    setState(() {});
   }
 
   // Muat Data Demo Produk untuk Simulator / Uji Coba
@@ -715,85 +698,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
             ),
           ),
 
-        // 4. Alat Sinkronisasi Sembako & Transaksi Offline
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: AppTheme.borderColor),
-            boxShadow: AppTheme.softShadow,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Alat Sinkronisasi Sembako & Transaksi:',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: (!isConnected || _isPullingProducts) ? null : _handlePullProductsFromSpreadsheet,
-                  icon: _isPullingProducts
-                      ? const SizedBox(width: 13, height: 13, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Icon(Icons.download_rounded, size: 16),
-                  label: Text(
-                    _isPullingProducts ? 'Mengambil Data dari Spreadsheet...' : 'Tarik & Perbarui Katalog dari Spreadsheet',
-                    style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0D9488),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: (!isConnected || _isSyncingProducts) ? null : _handleSyncProducts,
-                      icon: _isSyncingProducts
-                          ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2))
-                          : const Icon(Icons.cloud_upload_outlined, size: 14),
-                      label: Text(
-                        _isSyncingProducts ? 'Mengunggah...' : 'Upload ${widget.products.length} Sembako',
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: !isConnected ? null : _handleFlushQueue,
-                      icon: const Icon(Icons.sync_rounded, size: 14),
-                      label: Text(
-                        'Kirim Offline (${_appsScriptService.offlineQueueCount})',
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-
-        // 5. Pemeliharaan & Data Demo (Khusus Uji Coba)
+        // 4. Sinkronisasi Penuh Database Toko (1 Tombol Otomatis)
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
@@ -807,14 +712,68 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
             children: [
               const Row(
                 children: [
-                  Icon(Icons.build_circle_outlined, color: AppTheme.primaryDark, size: 16),
+                  Icon(Icons.sync_alt_rounded, color: AppTheme.primaryTeal, size: 18),
                   SizedBox(width: 6),
-                  Text('Mode Uji Coba & Pemeliharaan Database', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  Text(
+                    'Sinkronisasi Database Toko:',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
                 ],
               ),
               const SizedBox(height: 4),
               const Text(
-                'Gunakan fitur ini untuk mencoba sistem kasir sebelum toko resmi dibuka, atau reset katalog untuk mulai bersih dari Google Spreadsheet.',
+                'Menarik seluruh katalog produk resmi dari Spreadsheet dan otomatis mengirimkan antrean nota transaksi offline.',
+                style: TextStyle(fontSize: 10.5, color: AppTheme.textMuted),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: (!isConnected || _isFullSyncing) ? null : _handleFullSync,
+                  icon: _isFullSyncing
+                      ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.sync_rounded, size: 16),
+                  label: Text(
+                    _isFullSyncing ? 'Sedang Menyinkronkan Database...' : 'Sinkronisasi Penuh Database Toko',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0D9488),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 9),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // 5. Mode Uji Coba & Demo (Khusus di HP / Tanpa Cloud)
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppTheme.borderColor),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.science_outlined, color: AppTheme.textDark, size: 16),
+                  SizedBox(width: 6),
+                  Text(
+                    'Mode Uji Coba & Demo (Lokal HP Saja)',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.textDark),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Data demo hanya disimpan di memori HP untuk latihan kasir, dan TIDAK AKAN dikirim ke Google Spreadsheet toko.',
                 style: TextStyle(fontSize: 10.5, color: AppTheme.textMuted),
               ),
               const SizedBox(height: 10),
@@ -823,8 +782,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: _handleLoadDemoProducts,
-                      icon: const Icon(Icons.science_outlined, size: 14, color: AppTheme.primaryTeal),
-                      label: const Text('Muat Data Demo', style: TextStyle(fontSize: 11, color: AppTheme.primaryTeal, fontWeight: FontWeight.bold)),
+                      icon: const Icon(Icons.play_arrow_outlined, size: 14, color: AppTheme.primaryTeal),
+                      label: const Text('Muat Demo di HP', style: TextStyle(fontSize: 11, color: AppTheme.primaryTeal, fontWeight: FontWeight.bold)),
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: AppTheme.primaryTeal),
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -837,7 +796,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                     child: OutlinedButton.icon(
                       onPressed: _handleResetLocalStore,
                       icon: const Icon(Icons.delete_sweep_outlined, size: 14, color: AppTheme.dangerRed),
-                      label: const Text('Kosongkan Katalog', style: TextStyle(fontSize: 11, color: AppTheme.dangerRed, fontWeight: FontWeight.bold)),
+                      label: const Text('Reset Data Demo', style: TextStyle(fontSize: 11, color: AppTheme.dangerRed, fontWeight: FontWeight.bold)),
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: AppTheme.dangerRed),
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),

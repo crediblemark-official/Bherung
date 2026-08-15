@@ -18,8 +18,7 @@ function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('🏪 Bherung POS')
     .addItem('🔑 1. Otorisasi & Aktifkan Database Kasir', 'authorizeAndGetId')
-    .addItem('📦 2. Isi Katalog Sembako Awal (17 Barang)', 'seedDefaultProducts')
-    .addItem('🔄 3. Rapikan Format Seluruh Tabel', 'formatDatabaseSheets')
+    .addItem('🔄 2. Rapikan Format Seluruh Tabel', 'formatDatabaseSheets')
     .addSeparator()
     .addItem('📊 Cek Rekap Omset Hari Ini', 'calculateTodaySales')
     .addToUi();
@@ -42,38 +41,7 @@ function authorizeAndGetId() {
 }
 
 /**
- * Fungsi 2: Mengisi 17 Katalog Sembako Awal
- */
-function seedDefaultProducts() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = getOrCreateSheet(ss, 'Produk', true);
-
-  const initialProducts = [
-    ['sbk-01', 'Beras Ramos Setra Pulen 5kg', '8991001', 'sembako', 72000, 70000, 5, 'sak', 40, 'Beras putih pulen wangi 5kg'],
-    ['sbk-02', 'Beras Pandan Wangi Curah 1kg', '8991002', 'sembako', 15000, 14000, 10, 'kg', 120, 'Beras timbangan ecer'],
-    ['sbk-03', 'Minyak Goreng Bimoli 2L Pouch', '8991003', 'sembako', 36000, 34500, 6, 'pouch', 50, 'Minyak sawit jernih 2L'],
-    ['sbk-04', 'Minyak Goreng Kita 1L Pouch', '8991004', 'sembako', 16500, 15500, 12, 'pouch', 80, 'Minyakita 1L'],
-    ['sbk-05', 'Telur Ayam Negeri Fresh (1 Kg)', '8991005', 'sembako', 28000, 26500, 10, 'kg', 65, 'Telur ayam segar ~16 butir'],
-    ['sbk-06', 'Gula Pasir Gulaku Kuning 1kg', '8991006', 'sembako', 17500, 16800, 10, 'kg', 45, 'Gula tebu murni 1kg'],
-    ['sbk-07', 'Tepung Terigu Segitiga Biru 1kg', '8991007', 'sembako', 12500, 11800, 10, 'kg', 35, 'Tepung terigu serbaguna'],
-    ['mie-01', 'Indomie Goreng Original 85g', '8998866', 'mie_makanan', 3500, 3200, 5, 'bks', 240, 'Mie instan goreng favorit'],
-    ['mie-02', 'Indomie Kuah Soto Mie 70g', '8998867', 'mie_makanan', 3500, 3200, 5, 'bks', 180, 'Mie kuah soto mie'],
-    ['mie-03', 'Indomie Kuah Ayam Bawang 70g', '8998868', 'mie_makanan', 3500, 3200, 5, 'bks', 150, 'Mie kuah ayam bawang'],
-    ['mnm-01', 'Le Minerale Botol Dingin 600ml', '8992770', 'minuman', 3500, 3000, 12, 'botol', 75, 'Air mineral dingin'],
-    ['mnm-02', 'Aqua Botol Dingin 600ml', '8992771', 'minuman', 4000, 3500, 12, 'botol', 90, 'Air mineral Aqua 600ml'],
-    ['mnm-04', 'Kopi Kapal Api Spesial Mix Renceng', '8992773', 'minuman', 15000, 14000, 5, 'renceng', 40, 'Kopi sachet 10 bungkus'],
-    ['rkk-01', 'Gudang Garam Surya 16 Bungkus', '8999901', 'rokok', 36000, 350000, 10, 'bks', 120, 'Rokok GG Surya 16'],
-    ['rkk-02', 'Sampoerna A Mild 16 Bungkus', '8999902', 'rokok', 35000, 340000, 10, 'bks', 100, 'Rokok Sampoerna A Mild 16'],
-    ['gas-01', 'Isi Ulang Gas LPG 3 Kg (Melon)', '8997001', 'gas_galon', 22000, 21000, 5, 'tabung', 30, 'Isi ulang gas elpiji 3kg'],
-    ['gas-02', 'Isi Ulang Galon Aqua 19 Liter Asli', '8997002', 'gas_galon', 20000, 19000, 5, 'galon', 25, 'Tukar galon Aqua 19L segel']
-  ];
-
-  initialProducts.forEach(p => sheet.appendRow(p));
-  SpreadsheetApp.getUi().alert('✅ 17 Barang Sembako berhasil diisikan ke Sheet Produk!');
-}
-
-/**
- * Fungsi 3: Merapikan Format Seluruh Tabel
+ * Fungsi 2: Merapikan Format Seluruh 7 Tabel Resmi Database Toko
  */
 function formatDatabaseSheets() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
