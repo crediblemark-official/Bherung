@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'category.dart';
 export 'transaction_type.dart';
 export 'category.dart';
 export 'cart_item.dart';
@@ -139,41 +140,10 @@ class Product {
   }
 
   factory Product.fromJson(Map<String, dynamic> json) {
-    // Helper to determine icon & color from category
-    IconData icon = Icons.inventory_2_rounded;
-    Color color = const Color(0xFF0D9488);
     final catId = json['categoryId']?.toString() ?? 'sembako';
-
-    switch (catId) {
-      case 'sembako':
-        icon = Icons.rice_bowl_rounded;
-        color = const Color(0xFFF59E0B);
-        break;
-      case 'mie_makanan':
-        icon = Icons.ramen_dining_rounded;
-        color = const Color(0xFFEA580C);
-        break;
-      case 'minuman':
-        icon = Icons.local_drink_rounded;
-        color = const Color(0xFF06B6D4);
-        break;
-      case 'bumbu':
-        icon = Icons.soup_kitchen_rounded;
-        color = const Color(0xFF10B981);
-        break;
-      case 'rokok':
-        icon = Icons.smoking_rooms_rounded;
-        color = const Color(0xFFEF4444);
-        break;
-      case 'sabun_rumah':
-        icon = Icons.cleaning_services_rounded;
-        color = const Color(0xFF6366F1);
-        break;
-      case 'gas_galon':
-        icon = Icons.propane_tank_rounded;
-        color = const Color(0xFF0284C7);
-        break;
-    }
+    final catInfo = Category.fromId(catId);
+    final IconData icon = catInfo.icon;
+    final Color color = catInfo.color;
 
     return Product(
       id: json['id']?.toString() ?? 'prd-${DateTime.now().millisecondsSinceEpoch}',

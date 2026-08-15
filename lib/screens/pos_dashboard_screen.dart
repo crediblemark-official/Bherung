@@ -53,7 +53,7 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
   List<AppUser> _users = [];
   late AppUser _currentUser;
 
-  final List<Category> _categories = List.from(sampleCategories);
+  List<Category> get _categories => Category.buildDynamicCategories(_products);
   final List<CartItem> _cartItems = [];
   final List<HeldOrder> _heldOrders = [];
   List<KasbonRecord> _kasbonRecords = [];
@@ -432,17 +432,9 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
       MaterialPageRoute(
         builder: (ctx) => QuickAddProductScreen(
           barcode: initialBarcode ?? '',
-          categories: _categories,
+          categories: _categories.length > 1 ? _categories : sampleCategories,
           onProductCreated: (newProduct) {
             setState(() {
-              if (!_categories.any((c) => c.id == newProduct.categoryId)) {
-                _categories.add(Category(
-                  id: newProduct.categoryId,
-                  name: newProduct.categoryId.replaceAll('_', ' ').toUpperCase(),
-                  icon: newProduct.icon,
-                  color: newProduct.color,
-                ));
-              }
               _products.insert(0, newProduct);
               _addToCart(newProduct); // Langsung masuk keranjang agar kasir kilat
             });
