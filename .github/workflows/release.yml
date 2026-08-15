@@ -63,10 +63,8 @@ jobs:
         run: |
           flutter build apk --release
           
-          # Buat direktori output rilis dan beri nama file yang rapi
           mkdir -p release-output
           
-          # Tentukan nama file rilis berdasarkan tag atau default
           VERSION_TAG="${{ github.ref_name }}"
           if [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ inputs.tag_name }}" ]]; then
             VERSION_TAG="${{ inputs.tag_name }}"
@@ -79,8 +77,15 @@ jobs:
           fi
           
           cp build/app/outputs/flutter-apk/app-release.apk "release-output/${RELEASE_APK_NAME}"
+          
+          # Hitung Ukuran File dan SHA-256 Checksum
+          FILE_SIZE=$(du -h "release-output/${RELEASE_APK_NAME}" | cut -f1)
+          SHA256_SUM=$(sha256sum "release-output/${RELEASE_APK_NAME}" | cut -d ' ' -f 1)
+          
           echo "RELEASE_APK_PATH=release-output/${RELEASE_APK_NAME}" >> $GITHUB_ENV
           echo "RELEASE_APK_NAME=${RELEASE_APK_NAME}" >> $GITHUB_ENV
+          echo "FILE_SIZE=${FILE_SIZE}" >> $GITHUB_ENV
+          echo "SHA256_SUM=${SHA256_SUM}" >> $GITHUB_ENV
 
       - name: 📤 Upload APK to Actions Artifacts
         uses: actions/upload-artifact@v4
@@ -105,7 +110,64 @@ jobs:
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
           echo "title=${TITLE}" >> $GITHUB_OUTPUT
 
-      - name: 🎉 Create GitHub Release & Attach APK
+      - name: 📝 Generate Informative Release Notes & Changelog
+        if: steps.release_info.outputs.tag != ''
+        id: gen_notes
+        run: |
+          # Ambil daftar commit dari tag sebelumnya atau 25 commit terakhir
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -n "$PREV_TAG" ]; then
+            COMMIT_LOG=$(git log "${PREV_TAG}..HEAD" --pretty=format:"- **%s** ([%h](https://github.com/${{ github.repository }}/commit/%H))" --no-merges)
+          else
+            COMMIT_LOG=$(git log -n 25 --pretty=format:"- **%s** ([%h](https://github.com/${{ github.repository }}/commit/%H))" --no-merges)
+          fi
+
+          cat << 'EOF' > release_notes.md
+          ## 🛒 Bherung POS — Rilis Aplikasi Kasir & Toko Kelontong 24 Jam
+
+          Selamat datang di rilis **Bherung POS**! Aplikasi Point of Sale (POS) modern, cepat, dan *offline-first* yang dirancang khusus untuk toko kelontong, sembako, dan Toko Madura 24 Jam.
+
+          ---
+
+          ### 📱 Informasi Berkas APK
+          | Parameter | Keterangan |
+          |---|---|
+          | **Nama File** | `${{ env.RELEASE_APK_NAME }}` |
+          | **Ukuran File** | `${{ env.FILE_SIZE }}` |
+          | **Target OS** | Android 6.0+ (Marshmallow ke atas) |
+          | **Arsitektur** | Universal (ARM64-v8a, ARMv7a, x86_64) |
+          | **SHA-256 Checksum** | `${{ env.SHA256_SUM }}` |
+
+          ---
+
+          ### 🌟 Fitur Unggulan Sistem
+          - ⚡ **Kasir Cepat & Grosir Otomatis**: Grid katalog responsif, kalkulasi potongan grosir langsung, dan fitur *Hold Order* (parkir transaksi).
+          - 📷 **Scanner Barcode Terintegrasi**: Pindai cepat dengan kamera HP / barcode reader fisik terhubung master database FMCG nasional.
+          - ☁️ **Sinkronisasi 2 Arah Google Spreadsheet**: 100% data toko (Katalog, Transaksi, Kasbon, Shift, Mutasi Stok, Profil Toko) terhubung *real-time* ke Google Drive pribadi.
+          - 🔄 **Serah Terima Shift 24 Jam**: Rekonsiliasi fisik laci uang, audit rokok/barang bernilai tinggi, dan histori shift kasir.
+          - 📖 **Buku Kasbon / Hutang**: Manajemen kasbon langganan, pelunasan bertahap, dan pengingat jatuh tempo.
+          - 📦 **Manajemen Stok & Mutasi**: Deteksi stok menipis (*low stock*), pantauan tanggal kedaluwarsa (*expiry date*), dan log mutasi inventori.
+          - 🎨 **Desain Elegan & Bersih**: Obsidian & Warm Gold UI theme yang nyaman di mata untuk operasional kasir siang & malam.
+
+          ---
+
+          ### 📋 Riwayat Perubahan (Commit Changelog)
+          EOF
+
+          echo "$COMMIT_LOG" >> release_notes.md
+
+          cat << 'EOF' >> release_notes.md
+
+          ---
+
+          ### 🚀 Panduan Instalasi di HP Android
+          1. Unduh berkas `${{ env.RELEASE_APK_NAME }}` pada bagian **Assets** di bawah.
+          2. Buka file yang telah diunduh di HP Anda.
+          3. Jika muncul konfirmasi keamanan, pilih **"Izinkan instalasi dari sumber ini" (*Install Unknown Apps*)**.
+          4. Buka aplikasi **Bherung POS**, atur database Google Spreadsheet di menu **Pengaturan**, dan aplikasi siap digunakan!
+          EOF
+
+      - name: 🎉 Publish GitHub Release with APK
         if: steps.release_info.outputs.tag != ''
         uses: softprops/action-gh-release@v2
         with:
@@ -114,24 +176,6 @@ jobs:
           draft: ${{ inputs.is_draft || false }}
           prerelease: ${{ inputs.is_prerelease || false }}
           files: ${{ env.RELEASE_APK_PATH }}
-          generate_release_notes: true
-          body: |
-            ### 🛒 Bherung POS — Rilis Aplikasi Kasir Android
-
-            Selamat menggunakan **Bherung POS**! File APK rilis siap dipasang pada perangkat smartphone Android atau tablet kasir.
-
-            #### 📲 Informasi Berkas:
-            - **Nama Berkas**: `${{ env.RELEASE_APK_NAME }}`
-            - **Arsitektur**: Universal (ARM64, ARMv7, x86_64)
-            - **Fitur Utama**:
-              - ⚡ Kasir cepat & kalkulator grosir otomatis
-              - 📷 Scanner Barcode Kamera HP
-              - ☁️ Sinkronisasi 2 Arah Google Spreadsheet Toko
-              - 🔄 Serah terima shift kasir 24 jam & audit rokok/laci
-              - 📖 Buku Kasbon & pembayaran tunai/QRIS
-              - 📦 Manajemen stok & peringatan stok menipis
-
-            ---
-            *Unduh file `.apk` di bagian Assets di bawah dan pasang langsung di HP Android Anda.*
+          body_path: release_notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
