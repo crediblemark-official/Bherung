@@ -978,42 +978,34 @@ def update_spreadsheet(spreadsheet_id=DEFAULT_SPREADSHEET_ID):
     print(f"📄 Target Spreadsheet ID: {spreadsheet_id}")
     print("🔒 Catatan: Seluruh kolom Barcode_SKU dikosongkan (\"\" / empty) sesuai instruksi.\n")
 
-    chunk_size = 15
+    payload = {
+        "action": "syncProducts",
+        "spreadsheetId": spreadsheet_id,
+        "products": PRODUCTS_2026
+    }
+
+    data_bytes = json.dumps(payload).encode('utf-8')
+    req = urllib.request.Request(
+        WEB_APP_URL,
+        data=data_bytes,
+        headers={'Content-Type': 'application/json'}
+    )
+
     opener = urllib.request.build_opener(GASRedirectHandler)
-
-    for i in range(0, len(PRODUCTS_2026), chunk_size):
-        chunk = PRODUCTS_2026[i:i + chunk_size]
-        batch_num = (i // chunk_size) + 1
-        total_batches = (len(PRODUCTS_2026) + chunk_size - 1) // chunk_size
-
-        print(f"📦 Mengirim Batch {batch_num}/{total_batches} ({len(chunk)} produk)...", end="", flush=True)
-
-        payload = {
-            "action": "syncProducts",
-            "spreadsheetId": spreadsheet_id,
-            "products": chunk
-        }
-
-        data_bytes = json.dumps(payload).encode('utf-8')
-        req = urllib.request.Request(
-            WEB_APP_URL,
-            data=data_bytes,
-            headers={'Content-Type': 'application/json'}
-        )
-
-        try:
-            with opener.open(req, timeout=30) as response:
-                res_body = response.read().decode('utf-8')
-                res_json = json.loads(res_body)
-                if res_json.get('status') == 'success':
-                    print(" ✅ Sukses!")
-                else:
-                    print(f" ⚠️ {res_json.get('message')}")
-        except Exception as e:
-            print(f" ❌ Gagal: {e}")
-
-    print(f"\n🎉 Selesai! Seluruh {len(PRODUCTS_2026)} produk 2026 telah terisi di tab 'Produk' Google Spreadsheet Anda.")
-    print("👉 Buka aplikasi Bherung POS dan klik '🔄 Sinkronisasi Penuh Database Toko' untuk langsung memuat data ke etalase kasir!")
+    try:
+        print("⏳ Sedang menulis 78 produk ke Google Spreadsheet...", end="", flush=True)
+        with opener.open(req, timeout=90) as response:
+            res_body = response.read().decode('utf-8')
+            res_json = json.loads(res_body)
+            if res_json.get('status') == 'success':
+                print(" ✅ Sukses!")
+                print(f"\n🎉 Berhasil! Seluruh {len(PRODUCTS_2026)} produk 2026 telah terisi lengkap di tab 'Produk' Google Spreadsheet Anda.")
+                print("👉 Silakan refresh tab Google Spreadsheet Anda dan buka Bherung POS untuk sinkronisasi!")
+            else:
+                print(f"\n⚠️ Respon: {res_json.get('message')}")
+    except Exception as e:
+        print(f"\n❌ Terjadi kesalahan saat mengirim: {e}")
+        sys.exit(1)
 
 
 if __name__ == '__main__':
