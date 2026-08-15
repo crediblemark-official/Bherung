@@ -173,8 +173,8 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
       setState(() {
         _isStatusSuccess = true;
         final productCount = syncResult.products?.length ?? widget.products.length;
-        _statusMessage = 'Sinkronisasi berhasil! $productCount produk resmi toko terhubung' +
-            (flushedCount > 0 ? ' & $flushedCount antrean offline terkirim.' : '.');
+        _statusMessage = 'Sinkronisasi berhasil! $productCount produk resmi toko terhubung'
+            '${flushedCount > 0 ? " & $flushedCount antrean offline terkirim." : "."}';
       });
     } else {
       setState(() {
