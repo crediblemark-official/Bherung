@@ -1,0 +1,1003 @@
+#!/usr/bin/env python3
+"""
+Script Eksternal untuk Mengisi & Memperbarui Tab 'Produk' di Google Spreadsheet
+Katalog Lengkap Toko Kelontong, Sembako, dan Toko Madura 24 Jam (Riset 2026)
+Kolom Barcode_SKU dikosongkan ("") sesuai permintaan.
+"""
+
+import json
+import urllib.request
+import urllib.parse
+import sys
+
+WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyEU2-yYkYFPhWxQxuBte_I7ENLQWkqinu_Cvt1Xk28A2R01O-HjtN510S2U7_mAsCe/exec'
+DEFAULT_SPREADSHEET_ID = '1DkrqCkxROO_9-X_G6GPBtDLNuRBKI-TMuUSTb9_Kzdg'
+
+# Data Katalog Lengkap 2026 (65 Produk FMCG Top-Selling, Barcode = "")
+PRODUCTS_2026 = [
+    # 1. BERAS & SEMBAKO
+    {
+        "id": "sbk-01",
+        "name": "Beras Ramos Setra Pulen 5kg",
+        "code": "",
+        "categoryId": "sembako",
+        "price": 74000,
+        "wholesalePrice": 72000,
+        "wholesaleMinQty": 5,
+        "unit": "sak",
+        "stock": 50,
+        "description": "Beras putih pulen wangi kualitas super 5kg"
+    },
+    {
+        "id": "sbk-02",
+        "name": "Beras Pandan Wangi Premium 5kg",
+        "code": "",
+        "categoryId": "sembako",
+        "price": 82000,
+        "wholesalePrice": 80000,
+        "wholesaleMinQty": 5,
+        "unit": "sak",
+        "stock": 35,
+        "description": "Beras aroma pandan alami pulen 5kg"
+    },
+    {
+        "id": "sbk-03",
+        "name": "Beras Ramos Curah 1kg",
+        "code": "",
+        "categoryId": "sembako",
+        "price": 15000,
+        "wholesalePrice": 14500,
+        "wholesaleMinQty": 10,
+        "unit": "kg",
+        "stock": 150,
+        "description": "Beras timbangan eceran kualitas pulen"
+    },
+    {
+        "id": "sbk-04",
+        "name": "Minyak Goreng Minyakita 1L Pouch",
+        "code": "",
+        "categoryId": "sembako",
+        "price": 16500,
+        "wholesalePrice": 15500,
+        "wholesaleMinQty": 12,
+        "unit": "pouch",
+        "stock": 120,
+        "description": "Minyak goreng subsidi pemerintah 1 liter kemasan pouch"
+    },
+    {
+        "id": "sbk-05",
+        "name": "Minyak Goreng Bimoli 2L Pouch",
+        "code": "",
+        "categoryId": "sembako",
+        "price": 38500,
+        "wholesalePrice": 37000,
+        "wholesaleMinQty": 6,
+        "unit": "pouch",
+        "stock": 60,
+        "description": "Minyak goreng kelapa sawit murni 2L"
+    },
+    {
+        "id": "sbk-06",
+        "name": "Minyak Goreng SunCo 2L Pouch",
+        "code": "",
+        "categoryId": "sembako",
+        "price": 39000,
+        "wholesalePrice": 37500,
+        "wholesaleMinQty": 6,
+        "unit": "pouch",
+        "stock": 50,
+        "description": "Minyak goreng bening tidak beku 2L"
+    },
+    {
+        "id": "sbk-07",
+        "name": "Minyak Goreng Tropical 2L Botol",
+        "code": "",
+        "categoryId": "sembako",
+        "price": 40000,
+        "wholesalePrice": 38500,
+        "wholesaleMinQty": 6,
+        "unit": "botol",
+        "stock": 40,
+        "description": "Minyak goreng 2x penyaringan 2 liter botol"
+    },
+    {
+        "id": "sbk-08",
+        "name": "Telur Ayam Negeri Fresh 1 Kg",
+        "code": "",
+        "categoryId": "sembako",
+        "price": 29000,
+        "wholesalePrice": 27500,
+        "wholesaleMinQty": 10,
+        "unit": "kg",
+        "stock": 80,
+        "description": "Telur ayam ras segar pilihan (~16 butir per kg)"
+    },
+    {
+        "id": "sbk-09",
+        "name": "Gula Pasir Gulaku Tebu Kuning 1kg",
+        "code": "",
+        "categoryId": "sembako",
+        "price": 18500,
+        "wholesalePrice": 17500,
+        "wholesaleMinQty": 10,
+        "unit": "kg",
+        "stock": 70,
+        "description": "Gula tebu murni kemasan kuning 1kg"
+    },
+    {
+        "id": "sbk-10",
+        "name": "Gula Pasir GMP Curah 1kg",
+        "code": "",
+        "categoryId": "sembako",
+        "price": 17500,
+        "wholesalePrice": 16800,
+        "wholesaleMinQty": 10,
+        "unit": "kg",
+        "stock": 100,
+        "description": "Gula pasir putih manis timbangan ecer"
+    },
+    {
+        "id": "sbk-11",
+        "name": "Gula Merah / Jawa Super 1kg",
+        "code": "",
+        "categoryId": "sembako",
+        "price": 22000,
+        "wholesalePrice": 20500,
+        "wholesaleMinQty": 5,
+        "unit": "kg",
+        "stock": 40,
+        "description": "Gula kelapa aren asli padat legit"
+    },
+    {
+        "id": "sbk-12",
+        "name": "Tepung Terigu Segitiga Biru 1kg",
+        "code": "",
+        "categoryId": "sembako",
+        "price": 13000,
+        "wholesalePrice": 12200,
+        "wholesaleMinQty": 10,
+        "unit": "kg",
+        "stock": 60,
+        "description": "Tepung terigu serbaguna Bogasari 1kg"
+    },
+    {
+        "id": "sbk-13",
+        "name": "Tepung Terigu Cakra Kembar 1kg",
+        "code": "",
+        "categoryId": "sembako",
+        "price": 14500,
+        "wholesalePrice": 13800,
+        "wholesaleMinQty": 10,
+        "unit": "kg",
+        "stock": 45,
+        "description": "Tepung terigu protein tinggi untuk roti & donat"
+    },
+    {
+        "id": "sbk-14",
+        "name": "Tepung Tapioka Rose Brand 500g",
+        "code": "",
+        "categoryId": "sembako",
+        "price": 8000,
+        "wholesalePrice": 7500,
+        "wholesaleMinQty": 10,
+        "unit": "bks",
+        "stock": 50,
+        "description": "Tepung kanji tapioka murni"
+    },
+    {
+        "id": "sbk-15",
+        "name": "Tepung Beras Rose Brand 500g",
+        "code": "",
+        "categoryId": "sembako",
+        "price": 8500,
+        "wholesalePrice": 7800,
+        "wholesaleMinQty": 10,
+        "unit": "bks",
+        "stock": 45,
+        "description": "Tepung beras putih murni higienis"
+    },
+
+    # 2. MIE & MAKANAN INSTAN
+    {
+        "id": "mie-01",
+        "name": "Indomie Goreng Original 85g",
+        "code": "",
+        "categoryId": "mie_makanan",
+        "price": 3500,
+        "wholesalePrice": 3200,
+        "wholesaleMinQty": 5,
+        "unit": "bks",
+        "stock": 240,
+        "description": "Mie instan goreng legendaris favorit pelanggan"
+    },
+    {
+        "id": "mie-02",
+        "name": "Indomie Kuah Soto Mie 70g",
+        "code": "",
+        "categoryId": "mie_makanan",
+        "price": 3500,
+        "wholesalePrice": 3200,
+        "wholesaleMinQty": 5,
+        "unit": "bks",
+        "stock": 180,
+        "description": "Mie kuah rasa soto mie gurih segar"
+    },
+    {
+        "id": "mie-03",
+        "name": "Indomie Kuah Ayam Bawang 70g",
+        "code": "",
+        "categoryId": "mie_makanan",
+        "price": 3500,
+        "wholesalePrice": 3200,
+        "wholesaleMinQty": 5,
+        "unit": "bks",
+        "stock": 150,
+        "description": "Mie instan kuah kaldu ayam bawang harum"
+    },
+    {
+        "id": "mie-04",
+        "name": "Indomie Kuah Kari Ayam 72g",
+        "code": "",
+        "categoryId": "mie_makanan",
+        "price": 3800,
+        "wholesalePrice": 3500,
+        "wholesaleMinQty": 5,
+        "unit": "bks",
+        "stock": 120,
+        "description": "Mie kuah kuah kental rasa kari ayam spesial"
+    },
+    {
+        "id": "mie-05",
+        "name": "Mie Sedaap Goreng Original 90g",
+        "code": "",
+        "categoryId": "mie_makanan",
+        "price": 3500,
+        "wholesalePrice": 3200,
+        "wholesaleMinQty": 5,
+        "unit": "bks",
+        "stock": 160,
+        "description": "Mie goreng kriuk bawang renyah"
+    },
+    {
+        "id": "mie-06",
+        "name": "Mie Sedaap Kuah Soto Madura 75g",
+        "code": "",
+        "categoryId": "mie_makanan",
+        "price": 3500,
+        "wholesalePrice": 3200,
+        "wholesaleMinQty": 5,
+        "unit": "bks",
+        "stock": 140,
+        "description": "Mie soto dengan serbuk koya gurih mantap"
+    },
+    {
+        "id": "mie-07",
+        "name": "Sarimi Isi 2 Goreng Ayam Kremes",
+        "code": "",
+        "categoryId": "mie_makanan",
+        "price": 4500,
+        "wholesalePrice": 4000,
+        "wholesaleMinQty": 5,
+        "unit": "bks",
+        "stock": 90,
+        "description": "Porsi dobel 2 keping mie goreng kenyang"
+    },
+    {
+        "id": "mie-08",
+        "name": "Pop Mie Kuah Ayam Bawang Cup",
+        "code": "",
+        "categoryId": "mie_makanan",
+        "price": 6000,
+        "wholesalePrice": 5500,
+        "wholesaleMinQty": 6,
+        "unit": "cup",
+        "stock": 60,
+        "description": "Mie seduh praktis cup rasa ayam bawang"
+    },
+    {
+        "id": "mie-09",
+        "name": "Pop Mie Goreng Pedas Gledek Cup",
+        "code": "",
+        "categoryId": "mie_makanan",
+        "price": 6500,
+        "wholesalePrice": 6000,
+        "wholesaleMinQty": 6,
+        "unit": "cup",
+        "stock": 50,
+        "description": "Mie cup goreng ekstra pedas"
+    },
+    {
+        "id": "mie-10",
+        "name": "BihunKu Instan Goreng Spesial 60g",
+        "code": "",
+        "categoryId": "mie_makanan",
+        "price": 4000,
+        "wholesalePrice": 3500,
+        "wholesaleMinQty": 5,
+        "unit": "bks",
+        "stock": 50,
+        "description": "Bihun instan lembut rendah kalori"
+    },
+    {
+        "id": "mie-11",
+        "name": "Sarden ABC Saus Tomat 155g (Kaleng Kecil)",
+        "code": "",
+        "categoryId": "mie_makanan",
+        "price": 11500,
+        "wholesalePrice": 10800,
+        "wholesaleMinQty": 6,
+        "unit": "kaleng",
+        "stock": 40,
+        "description": "Ikan sarden segar saus tomat siap saji"
+    },
+    {
+        "id": "mie-12",
+        "name": "Sarden ABC Saus Cabai 425g (Kaleng Besar)",
+        "code": "",
+        "categoryId": "mie_makanan",
+        "price": 26000,
+        "wholesalePrice": 24500,
+        "wholesaleMinQty": 4,
+        "unit": "kaleng",
+        "stock": 30,
+        "description": "Ikan sarden saus cabai pedas mantap porsi keluarga"
+    },
+    {
+        "id": "mie-13",
+        "name": "Kornet Sapi Pronas 198g Sachet / Kaleng",
+        "code": "",
+        "categoryId": "mie_makanan",
+        "price": 24000,
+        "wholesalePrice": 22500,
+        "wholesaleMinQty": 4,
+        "unit": "kaleng",
+        "stock": 25,
+        "description": "Daging kornet sapi olahan kualitas utama"
+    },
+
+    # 3. MINUMAN DINGIN & SACHET
+    {
+        "id": "mnm-01",
+        "name": "Le Minerale Botol Dingin 600ml",
+        "code": "",
+        "categoryId": "minuman",
+        "price": 3500,
+        "wholesalePrice": 3000,
+        "wholesaleMinQty": 12,
+        "unit": "botol",
+        "stock": 100,
+        "description": "Air mineral alami ada manis-manisnya dingin"
+    },
+    {
+        "id": "mnm-02",
+        "name": "Le Minerale Botol Dingin 1500ml",
+        "code": "",
+        "categoryId": "minuman",
+        "price": 6500,
+        "wholesalePrice": 5800,
+        "wholesaleMinQty": 6,
+        "unit": "botol",
+        "stock": 60,
+        "description": "Air mineral botol besar 1.5L dingin segar"
+    },
+    {
+        "id": "mnm-03",
+        "name": "Aqua Botol Dingin 600ml",
+        "code": "",
+        "categoryId": "minuman",
+        "price": 4000,
+        "wholesalePrice": 3500,
+        "wholesaleMinQty": 12,
+        "unit": "botol",
+        "stock": 120,
+        "description": "Air mineral murni pegunungan 600ml dingin"
+    },
+    {
+        "id": "mnm-04",
+        "name": "Aqua Botol Dingin 1500ml",
+        "code": "",
+        "categoryId": "minuman",
+        "price": 7000,
+        "wholesalePrice": 6200,
+        "wholesaleMinQty": 6,
+        "unit": "botol",
+        "stock": 60,
+        "description": "Air mineral botol jumbo 1.5L"
+    },
+    {
+        "id": "mnm-05",
+        "name": "Teh Pucuk Harum Dingin 350ml",
+        "code": "",
+        "categoryId": "minuman",
+        "price": 4000,
+        "wholesalePrice": 3500,
+        "wholesaleMinQty": 6,
+        "unit": "botol",
+        "stock": 80,
+        "description": "Teh melati manis segar dari pucuk teh pilihan"
+    },
+    {
+        "id": "mnm-06",
+        "name": "Teh Botol Sosro Kotak 250ml",
+        "code": "",
+        "categoryId": "minuman",
+        "price": 3500,
+        "wholesalePrice": 3000,
+        "wholesaleMinQty": 12,
+        "unit": "kotak",
+        "stock": 60,
+        "description": "Teh wangi melati kemasan kotak praktis"
+    },
+    {
+        "id": "mnm-07",
+        "name": "Floridina Orange Dingin 350ml",
+        "code": "",
+        "categoryId": "minuman",
+        "price": 3500,
+        "wholesalePrice": 3000,
+        "wholesaleMinQty": 12,
+        "unit": "botol",
+        "stock": 70,
+        "description": "Minuman jus jeruk dengan bulir jeruk asli"
+    },
+    {
+        "id": "mnm-08",
+        "name": "Golda Coffee Dolce Latte 200ml",
+        "code": "",
+        "categoryId": "minuman",
+        "price": 3500,
+        "wholesalePrice": 3000,
+        "wholesaleMinQty": 12,
+        "unit": "botol",
+        "stock": 75,
+        "description": "Kopi susu creamy khas Italia dingin"
+    },
+    {
+        "id": "mnm-09",
+        "name": "Bear Brand Susu Steril 189ml",
+        "code": "",
+        "categoryId": "minuman",
+        "price": 10500,
+        "wholesalePrice": 9800,
+        "wholesaleMinQty": 6,
+        "unit": "kaleng",
+        "stock": 50,
+        "description": "Susu sapi murni steril 100%"
+    },
+    {
+        "id": "mnm-10",
+        "name": "Pocari Sweat Botol Dingin 500ml",
+        "code": "",
+        "categoryId": "minuman",
+        "price": 8000,
+        "wholesalePrice": 7500,
+        "wholesaleMinQty": 6,
+        "unit": "botol",
+        "stock": 45,
+        "description": "Minuman isotonik pengganti ion tubuh"
+    },
+    {
+        "id": "mnm-11",
+        "name": "Ultra Milk UHT Cokelat 250ml",
+        "code": "",
+        "categoryId": "minuman",
+        "price": 6500,
+        "wholesalePrice": 6000,
+        "wholesaleMinQty": 6,
+        "unit": "kotak",
+        "stock": 50,
+        "description": "Susu cair segar UHT rasa cokelat"
+    },
+    {
+        "id": "mnm-12",
+        "name": "Kopi Kapal Api Spesial Mix (1 Renceng / 10 Sachet)",
+        "code": "",
+        "categoryId": "minuman",
+        "price": 15000,
+        "wholesalePrice": 14000,
+        "wholesaleMinQty": 5,
+        "unit": "renceng",
+        "stock": 50,
+        "description": "Kopi bubuk hitam + gula pas mantap"
+    },
+    {
+        "id": "mnm-13",
+        "name": "Kopi Good Day Mocacinno (1 Renceng / 10 Sachet)",
+        "code": "",
+        "categoryId": "minuman",
+        "price": 16500,
+        "wholesalePrice": 15200,
+        "wholesaleMinQty": 5,
+        "unit": "renceng",
+        "stock": 45,
+        "description": "Kopi instan rasa moka lezat"
+    },
+    {
+        "id": "mnm-14",
+        "name": "Kopi Luwak White Koffie (1 Renceng / 10 Sachet)",
+        "code": "",
+        "categoryId": "minuman",
+        "price": 15500,
+        "wholesalePrice": 14500,
+        "wholesaleMinQty": 5,
+        "unit": "renceng",
+        "stock": 40,
+        "description": "Kopi putih lembut aman di lambung"
+    },
+    {
+        "id": "mnm-15",
+        "name": "Nutrisari Jeruk Peras (1 Renceng / 10 Sachet)",
+        "code": "",
+        "categoryId": "minuman",
+        "price": 13000,
+        "wholesalePrice": 12000,
+        "wholesaleMinQty": 5,
+        "unit": "renceng",
+        "stock": 40,
+        "description": "Serbuk minuman sari buah jeruk bervitamin C"
+    },
+
+    # 4. BUMBU DAPUR & MASAK
+    {
+        "id": "bmb-01",
+        "name": "Kecap Manis Bango Refill 520ml",
+        "code": "",
+        "categoryId": "bumbu",
+        "price": 24500,
+        "wholesalePrice": 23000,
+        "wholesaleMinQty": 6,
+        "unit": "pouch",
+        "stock": 40,
+        "description": "Kecap manis kedelai hitam Mallika kental gurih"
+    },
+    {
+        "id": "bmb-02",
+        "name": "Kecap Manis ABC Refill 520ml",
+        "code": "",
+        "categoryId": "bumbu",
+        "price": 20000,
+        "wholesalePrice": 18800,
+        "wholesaleMinQty": 6,
+        "unit": "pouch",
+        "stock": 35,
+        "description": "Kecap manis kedelai mantap kemasan refill"
+    },
+    {
+        "id": "bmb-03",
+        "name": "Royco Rasa Ayam (1 Renceng / 12 Sachet)",
+        "code": "",
+        "categoryId": "bumbu",
+        "price": 6000,
+        "wholesalePrice": 5500,
+        "wholesaleMinQty": 5,
+        "unit": "renceng",
+        "stock": 60,
+        "description": "Bumbu penyedap rasa kaldu ayam lezat"
+    },
+    {
+        "id": "bmb-04",
+        "name": "Masako Rasa Sapi (1 Renceng / 12 Sachet)",
+        "code": "",
+        "categoryId": "bumbu",
+        "price": 6000,
+        "wholesalePrice": 5500,
+        "wholesaleMinQty": 5,
+        "unit": "renceng",
+        "stock": 50,
+        "description": "Bumbu ekstrak daging sapi gurih"
+    },
+    {
+        "id": "bmb-05",
+        "name": "Santan Kelapa Siap Pakai Kara 65ml",
+        "code": "",
+        "categoryId": "bumbu",
+        "price": 3500,
+        "wholesalePrice": 3200,
+        "wholesaleMinQty": 10,
+        "unit": "pcs",
+        "stock": 90,
+        "description": "Santan kelapa murni kental higienis segitiga"
+    },
+    {
+        "id": "bmb-06",
+        "name": "Saori Saus Tiram 133ml Botol",
+        "code": "",
+        "categoryId": "bumbu",
+        "price": 12000,
+        "wholesalePrice": 11200,
+        "wholesaleMinQty": 6,
+        "unit": "botol",
+        "stock": 30,
+        "description": "Saus tiram gurih oriental untuk tumisan"
+    },
+    {
+        "id": "bmb-07",
+        "name": "Ladaku Merica Bubuk (1 Renceng / 12 Sachet)",
+        "code": "",
+        "categoryId": "bumbu",
+        "price": 12000,
+        "wholesalePrice": 11000,
+        "wholesaleMinQty": 5,
+        "unit": "renceng",
+        "stock": 40,
+        "description": "Merica putih murni 100% harum pedas"
+    },
+    {
+        "id": "bmb-08",
+        "name": "Garam Dapur Beryodium Cap Kapal 250g",
+        "code": "",
+        "categoryId": "bumbu",
+        "price": 3000,
+        "wholesalePrice": 2500,
+        "wholesaleMinQty": 10,
+        "unit": "bks",
+        "stock": 80,
+        "description": "Garam meja beryodium putih bersih"
+    },
+    {
+        "id": "bmb-09",
+        "name": "Terasi Udang ABC (1 Pack / 20 Pcs)",
+        "code": "",
+        "categoryId": "bumbu",
+        "price": 12000,
+        "wholesalePrice": 11000,
+        "wholesaleMinQty": 5,
+        "unit": "pack",
+        "stock": 35,
+        "description": "Terasi udang rebon asli untuk sambal mantap"
+    },
+
+    # 5. ROKOK & TEMBAKAU
+    {
+        "id": "rkk-01",
+        "name": "Gudang Garam Surya 16 Bungkus",
+        "code": "",
+        "categoryId": "rokok",
+        "price": 36500,
+        "wholesalePrice": 355000,
+        "wholesaleMinQty": 10,
+        "unit": "bks",
+        "stock": 120,
+        "description": "Rokok filter GG Surya isi 16 batang"
+    },
+    {
+        "id": "rkk-02",
+        "name": "Sampoerna A Mild 16 Bungkus",
+        "code": "",
+        "categoryId": "rokok",
+        "price": 35500,
+        "wholesalePrice": 345000,
+        "wholesaleMinQty": 10,
+        "unit": "bks",
+        "stock": 100,
+        "description": "Rokok mild kretek isi 16 batang"
+    },
+    {
+        "id": "rkk-03",
+        "name": "Djarum Super 12 Bungkus",
+        "code": "",
+        "categoryId": "rokok",
+        "price": 25500,
+        "wholesalePrice": 248000,
+        "wholesaleMinQty": 10,
+        "unit": "bks",
+        "stock": 90,
+        "description": "Rokok kretek filter Djarum isi 12"
+    },
+    {
+        "id": "rkk-04",
+        "name": "Marlboro Filter Red 20 Bungkus",
+        "code": "",
+        "categoryId": "rokok",
+        "price": 46000,
+        "wholesalePrice": 450000,
+        "wholesaleMinQty": 10,
+        "unit": "bks",
+        "stock": 50,
+        "description": "Rokok putih impor Marlboro Merah 20"
+    },
+    {
+        "id": "rkk-05",
+        "name": "Marlboro Filter Black 20 Bungkus",
+        "code": "",
+        "categoryId": "rokok",
+        "price": 45000,
+        "wholesalePrice": 440000,
+        "wholesaleMinQty": 10,
+        "unit": "bks",
+        "stock": 50,
+        "description": "Rokok kretek filter rasa halus hitam isi 20"
+    },
+    {
+        "id": "rkk-06",
+        "name": "Esse Change Double 20 Bungkus",
+        "code": "",
+        "categoryId": "rokok",
+        "price": 44000,
+        "wholesalePrice": 430000,
+        "wholesaleMinQty": 10,
+        "unit": "bks",
+        "stock": 40,
+        "description": "Rokok kapsul ganda rasa segar buah & mint"
+    },
+    {
+        "id": "rkk-07",
+        "name": "Camel Yellow Filter 20 Bungkus",
+        "code": "",
+        "categoryId": "rokok",
+        "price": 32000,
+        "wholesalePrice": 310000,
+        "wholesaleMinQty": 10,
+        "unit": "bks",
+        "stock": 40,
+        "description": "Rokok Camel kuning filter isi 20"
+    },
+    {
+        "id": "rkk-08",
+        "name": "Dji Sam Soe 234 Kuning 12 Batang",
+        "code": "",
+        "categoryId": "rokok",
+        "price": 22000,
+        "wholesalePrice": 212000,
+        "wholesaleMinQty": 10,
+        "unit": "bks",
+        "stock": 70,
+        "description": "Rokok kretek tanpa filter legendaris 234"
+    },
+    {
+        "id": "rkk-09",
+        "name": "LA Bold 20 Bungkus",
+        "code": "",
+        "categoryId": "rokok",
+        "price": 34000,
+        "wholesalePrice": 330000,
+        "wholesaleMinQty": 10,
+        "unit": "bks",
+        "stock": 60,
+        "description": "Rokok kretek filter rasa mantap LA Bold"
+    },
+    {
+        "id": "rkk-10",
+        "name": "Djarum 76 Filter Gold 12",
+        "code": "",
+        "categoryId": "rokok",
+        "price": 18000,
+        "wholesalePrice": 172000,
+        "wholesaleMinQty": 10,
+        "unit": "bks",
+        "stock": 50,
+        "description": "Rokok kretek aroma khas Nusantara"
+    },
+
+    # 6. SABUN & KEBUTUHAN RUMAH TANGGA
+    {
+        "id": "sbn-01",
+        "name": "Sabun Cuci Piring Sunlight Jeruk Nipis 650ml",
+        "code": "",
+        "categoryId": "sabun_rumah",
+        "price": 14500,
+        "wholesalePrice": 13500,
+        "wholesaleMinQty": 6,
+        "unit": "pouch",
+        "stock": 50,
+        "description": "Cairan pencuci piring ekstrak jeruk nipis 100x bersihkan lemak"
+    },
+    {
+        "id": "sbn-02",
+        "name": "Sabun Cuci Piring Mama Lemon 680ml",
+        "code": "",
+        "categoryId": "sabun_rumah",
+        "price": 13500,
+        "wholesalePrice": 12500,
+        "wholesaleMinQty": 6,
+        "unit": "pouch",
+        "stock": 45,
+        "description": "Sabun cuci piring lemon segar antibakteri"
+    },
+    {
+        "id": "sbn-03",
+        "name": "Deterjen Bubuk Daia Bunga 850g",
+        "code": "",
+        "categoryId": "sabun_rumah",
+        "price": 19000,
+        "wholesalePrice": 18000,
+        "wholesaleMinQty": 6,
+        "unit": "bks",
+        "stock": 40,
+        "description": "Deterjen pembersih pakaian dengan wangi semerbak bunga"
+    },
+    {
+        "id": "sbn-04",
+        "name": "Deterjen Bubuk Rinso Molto Anti Noda 770g",
+        "code": "",
+        "categoryId": "sabun_rumah",
+        "price": 26000,
+        "wholesalePrice": 24500,
+        "wholesaleMinQty": 6,
+        "unit": "bks",
+        "stock": 35,
+        "description": "Deterjen konsentrat hilangkan noda dalam 1x kucek"
+    },
+    {
+        "id": "sbn-05",
+        "name": "SoKlin Liquid Deterjen Cair 750ml Pouch",
+        "code": "",
+        "categoryId": "sabun_rumah",
+        "price": 18500,
+        "wholesalePrice": 17500,
+        "wholesaleMinQty": 6,
+        "unit": "pouch",
+        "stock": 35,
+        "description": "Deterjen cair konsentrat harum tahan lama"
+    },
+    {
+        "id": "sbn-06",
+        "name": "Pewangi Pakaian Downy Mystique Refill 650ml",
+        "code": "",
+        "categoryId": "sabun_rumah",
+        "price": 28000,
+        "wholesalePrice": 26500,
+        "wholesaleMinQty": 4,
+        "unit": "pouch",
+        "stock": 25,
+        "description": "Pelembut & pewangi pakaian aroma parfum mewah"
+    },
+    {
+        "id": "sbn-07",
+        "name": "Sabun Mandi Batang Lifebuoy Total 10 (4x85g)",
+        "code": "",
+        "categoryId": "sabun_rumah",
+        "price": 16500,
+        "wholesalePrice": 15500,
+        "wholesaleMinQty": 6,
+        "unit": "pack",
+        "stock": 40,
+        "description": "Sabun perlindungan kuman dan bakteri 4 batang"
+    },
+    {
+        "id": "sbn-08",
+        "name": "Sabun Mandi Cair Dettol Pouch 410ml",
+        "code": "",
+        "categoryId": "sabun_rumah",
+        "price": 27500,
+        "wholesalePrice": 25500,
+        "wholesaleMinQty": 4,
+        "unit": "pouch",
+        "stock": 30,
+        "description": "Sabun cair antiseptik perlindungan kulit higienis"
+    },
+    {
+        "id": "sbn-09",
+        "name": "Pasta Gigi Pepsodent White 190g",
+        "code": "",
+        "categoryId": "sabun_rumah",
+        "price": 14500,
+        "wholesalePrice": 13500,
+        "wholesaleMinQty": 6,
+        "unit": "pcs",
+        "stock": 50,
+        "description": "Pasta gigi perlindungan gigi berlubang 190g"
+    },
+    {
+        "id": "sbn-10",
+        "name": "Obat Nyamuk Semprot Baygon 600ml Kaleng",
+        "code": "",
+        "categoryId": "sabun_rumah",
+        "price": 39000,
+        "wholesalePrice": 37000,
+        "wholesaleMinQty": 4,
+        "unit": "kaleng",
+        "stock": 25,
+        "description": "Aerosol pembasmi nyamuk dan serangga aroma citrus"
+    },
+
+    # 7. GAS LPG & AIR GALON
+    {
+        "id": "gas-01",
+        "name": "Isi Ulang Gas LPG 3 Kg (Melon)",
+        "code": "",
+        "categoryId": "gas_galon",
+        "price": 22000,
+        "wholesalePrice": 21000,
+        "wholesaleMinQty": 5,
+        "unit": "tabung",
+        "stock": 40,
+        "description": "Tukar tabung isi ulang gas elpiji 3kg bersubsidi"
+    },
+    {
+        "id": "gas-02",
+        "name": "Isi Ulang Gas Bright Gas 5.5 Kg",
+        "code": "",
+        "categoryId": "gas_galon",
+        "price": 95000,
+        "wholesalePrice": 92000,
+        "wholesaleMinQty": 3,
+        "unit": "tabung",
+        "stock": 15,
+        "description": "Tukar isi ulang tabung gas Bright Gas 5.5kg nonsubsidi"
+    },
+    {
+        "id": "gas-03",
+        "name": "Isi Ulang Gas Bright Gas 12 Kg",
+        "code": "",
+        "categoryId": "gas_galon",
+        "price": 215000,
+        "wholesalePrice": 210000,
+        "wholesaleMinQty": 2,
+        "unit": "tabung",
+        "stock": 10,
+        "description": "Tukar isi ulang tabung gas Bright Gas 12kg jumbo"
+    },
+    {
+        "id": "gas-04",
+        "name": "Isi Ulang Galon Aqua 19 Liter Asli Segel",
+        "code": "",
+        "categoryId": "gas_galon",
+        "price": 20000,
+        "wholesalePrice": 19000,
+        "wholesaleMinQty": 5,
+        "unit": "galon",
+        "stock": 35,
+        "description": "Tukar galon air mineral Aqua 19 liter tutup segel asli"
+    },
+    {
+        "id": "gas-05",
+        "name": "Isi Ulang Galon Le Minerale 15 Liter",
+        "code": "",
+        "categoryId": "gas_galon",
+        "price": 18500,
+        "wholesalePrice": 17500,
+        "wholesaleMinQty": 5,
+        "unit": "galon",
+        "stock": 30,
+        "description": "Galon Le Minerale 15L bebas BPA sekali pakai/tukar"
+    },
+    {
+        "id": "gas-06",
+        "name": "Isi Ulang Galon Cleo 19 Liter",
+        "code": "",
+        "categoryId": "gas_galon",
+        "price": 18000,
+        "wholesalePrice": 17000,
+        "wholesaleMinQty": 5,
+        "unit": "galon",
+        "stock": 25,
+        "description": "Air murni Cleo galon 19L tutup segel"
+    }
+]
+
+
+def update_spreadsheet(spreadsheet_id=DEFAULT_SPREADSHEET_ID):
+    print(f"🚀 Memulai pengisian {len(PRODUCTS_2026)} produk resmi 2026 ke Google Spreadsheet...")
+    print(f"📄 Target Spreadsheet ID: {spreadsheet_id}")
+    print("🔒 Catatan: Seluruh kolom Barcode_SKU dikosongkan (\"\" / empty) sesuai instruksi.")
+
+    payload = {
+        "action": "syncProducts",
+        "spreadsheetId": spreadsheet_id,
+        "products": PRODUCTS_2026
+    }
+
+    data_bytes = json.dumps(payload).encode('utf-8')
+    req = urllib.request.Request(
+        WEB_APP_URL,
+        data=data_bytes,
+        headers={'Content-Type': 'application/json'}
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=30) as response:
+            res_body = response.read().decode('utf-8')
+            res_json = json.loads(res_body)
+            print("\n✅ RESPON BERHASIL DARI GOOGLE APPS SCRIPT:")
+            print(json.dumps(res_json, indent=2, ensure_ascii=False))
+            print(f"\n🎉 Berhasil memperbarui {len(PRODUCTS_2026)} produk 2026 di tab 'Produk' Google Spreadsheet!")
+            print("👉 Buka aplikasi Bherung POS dan klik '🔄 Sinkronisasi Penuh Database Toko' untuk langsung memuat data!")
+    except Exception as e:
+        print(f"\n❌ Terjadi kesalahan saat mengirim ke Google Apps Script: {e}")
+        sys.exit(1)
+
+
+if __name__ == '__main__':
+    target_id = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_SPREADSHEET_ID
+    update_spreadsheet(target_id)
