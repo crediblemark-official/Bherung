@@ -1,0 +1,137 @@
+name: Build & Release Android APK
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag versi rilis (contoh: v1.0.0)'
+        required: false
+        default: 'v1.0.0'
+      release_title:
+        description: 'Judul Rilis (contoh: Bherung POS v1.0.0)'
+        required: false
+        default: 'Bherung POS - Release APK'
+      is_draft:
+        description: 'Simpan sebagai Draft Release?'
+        type: boolean
+        default: false
+      is_prerelease:
+        description: 'Tandai sebagai Pre-release (Beta)?'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: 🚀 Build APK & GitHub Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: ☕ Setup Java (JDK 17)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: 🐦 Setup Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+          cache-key: 'flutter-:os:-:channel:-:version:-:arch:-:hash:'
+
+      - name: 📦 Install Flutter Dependencies
+        run: flutter pub get
+
+      - name: 🧪 Run Automated Tests
+        run: flutter test
+
+      - name: 🔨 Build Release APK
+        run: |
+          flutter build apk --release
+          
+          # Buat direktori output rilis dan beri nama file yang rapi
+          mkdir -p release-output
+          
+          # Tentukan nama file rilis berdasarkan tag atau default
+          VERSION_TAG="${{ github.ref_name }}"
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ inputs.tag_name }}" ]]; then
+            VERSION_TAG="${{ inputs.tag_name }}"
+          fi
+          
+          if [[ "$VERSION_TAG" =~ ^v[0-9] ]]; then
+            RELEASE_APK_NAME="Bherung-POS-${VERSION_TAG}.apk"
+          else
+            RELEASE_APK_NAME="Bherung-POS-Release.apk"
+          fi
+          
+          cp build/app/outputs/flutter-apk/app-release.apk "release-output/${RELEASE_APK_NAME}"
+          echo "RELEASE_APK_PATH=release-output/${RELEASE_APK_NAME}" >> $GITHUB_ENV
+          echo "RELEASE_APK_NAME=${RELEASE_APK_NAME}" >> $GITHUB_ENV
+
+      - name: 📤 Upload APK to Actions Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.RELEASE_APK_NAME }}
+          path: ${{ env.RELEASE_APK_PATH }}
+          retention-days: 30
+
+      - name: 🏷️ Determine Release Tag & Title
+        id: release_info
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            TAG="${{ inputs.tag_name }}"
+            TITLE="${{ inputs.release_title }}"
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            TAG="${{ github.ref_name }}"
+            TITLE="Bherung POS ${{ github.ref_name }}"
+          else
+            TAG=""
+            TITLE=""
+          fi
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "title=${TITLE}" >> $GITHUB_OUTPUT
+
+      - name: 🎉 Create GitHub Release & Attach APK
+        if: steps.release_info.outputs.tag != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release_info.outputs.tag }}
+          name: ${{ steps.release_info.outputs.title }}
+          draft: ${{ inputs.is_draft || false }}
+          prerelease: ${{ inputs.is_prerelease || false }}
+          files: ${{ env.RELEASE_APK_PATH }}
+          generate_release_notes: true
+          body: |
+            ### 🛒 Bherung POS — Rilis Aplikasi Kasir Android
+
+            Selamat menggunakan **Bherung POS**! File APK rilis siap dipasang pada perangkat smartphone Android atau tablet kasir.
+
+            #### 📲 Informasi Berkas:
+            - **Nama Berkas**: `${{ env.RELEASE_APK_NAME }}`
+            - **Arsitektur**: Universal (ARM64, ARMv7, x86_64)
+            - **Fitur Utama**:
+              - ⚡ Kasir cepat & kalkulator grosir otomatis
+              - 📷 Scanner Barcode Kamera HP
+              - ☁️ Sinkronisasi 2 Arah Google Spreadsheet Toko
+              - 🔄 Serah terima shift kasir 24 jam & audit rokok/laci
+              - 📖 Buku Kasbon & pembayaran tunai/QRIS
+              - 📦 Manajemen stok & peringatan stok menipis
+
+            ---
+            *Unduh file `.apk` di bagian Assets di bawah dan pasang langsung di HP Android Anda.*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

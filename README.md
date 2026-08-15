@@ -1,11 +1,15 @@
 # 🛒 Bherung POS — Aplikasi Kasir & Manajemen Toko Kelontong 24 Jam
 
+[![Build & Release APK](https://github.com/crediblemark-official/Bherung/actions/workflows/release.yml/badge.svg)](https://github.com/crediblemark-official/Bherung/actions/workflows/release.yml)
 ![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?style=for-the-badge&logo=flutter&logoColor=white)
-![Dart](https://img.shields.io/badge/Dart-3.x-0175C2?style=for-the-badge&logo=dart&logoColor=white)
 ![Platform](https://img.shields.io/badge/Platform-Web%20|%20Android%20|%20Desktop-4CAF50?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-Production%20Ready-0D9488?style=for-the-badge)
 
 **Bherung** adalah sistem kasir Point of Sale (POS) modern, cepat, dan *offline-first* yang dirancang khusus untuk memenuhi kebutuhan toko kelontong, agen sembako, dan **Toko Madura 24 Jam**. Didesain dengan antarmuka yang intuitif, mendukung pemindaian barcode kamera, pencatatan kasbon, serah terima shift kasir non-stop, dan manajemen stok lengkap.
+
+### 📲 Unduh Aplikasi Android (APK)
+Anda dapat mengunduh berkas instalasi **APK Release** langsung dari halaman [GitHub Releases](https://github.com/crediblemark-official/Bherung/releases) atau melalui tab **Actions** di repositori.
+
 
 ---
 
