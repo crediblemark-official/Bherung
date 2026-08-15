@@ -136,7 +136,7 @@ class ProductCatalogView extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryDark.withOpacity(0.06),
+                  color: AppTheme.primaryDark.withValues(alpha: 0.06),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.storefront_rounded, size: 40, color: AppTheme.primaryDark),
