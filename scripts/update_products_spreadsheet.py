@@ -11,7 +11,7 @@ import urllib.parse
 import sys
 
 WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyEU2-yYkYFPhWxQxuBte_I7ENLQWkqinu_Cvt1Xk28A2R01O-HjtN510S2U7_mAsCe/exec'
-DEFAULT_SPREADSHEET_ID = '1DkrqCkxROO_9-X_G6GPBtDLNuRBKI-TMuUSTb9_Kzdg'
+DEFAULT_SPREADSHEET_ID = '1k6MIzg_1atT9sp_zPG4LzQOPVe4GC3ctb8GOV95Wyvc'
 
 # Data Katalog Lengkap 2026 (65 Produk FMCG Top-Selling, Barcode = "")
 PRODUCTS_2026 = [
@@ -967,35 +967,53 @@ PRODUCTS_2026 = [
 ]
 
 
+class GASRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        # Follow Google Apps Script 302 redirect with GET
+        return urllib.request.Request(newurl, headers={'User-Agent': 'Mozilla/5.0'})
+
+
 def update_spreadsheet(spreadsheet_id=DEFAULT_SPREADSHEET_ID):
     print(f"🚀 Memulai pengisian {len(PRODUCTS_2026)} produk resmi 2026 ke Google Spreadsheet...")
     print(f"📄 Target Spreadsheet ID: {spreadsheet_id}")
-    print("🔒 Catatan: Seluruh kolom Barcode_SKU dikosongkan (\"\" / empty) sesuai instruksi.")
+    print("🔒 Catatan: Seluruh kolom Barcode_SKU dikosongkan (\"\" / empty) sesuai instruksi.\n")
 
-    payload = {
-        "action": "syncProducts",
-        "spreadsheetId": spreadsheet_id,
-        "products": PRODUCTS_2026
-    }
+    chunk_size = 15
+    opener = urllib.request.build_opener(GASRedirectHandler)
 
-    data_bytes = json.dumps(payload).encode('utf-8')
-    req = urllib.request.Request(
-        WEB_APP_URL,
-        data=data_bytes,
-        headers={'Content-Type': 'application/json'}
-    )
+    for i in range(0, len(PRODUCTS_2026), chunk_size):
+        chunk = PRODUCTS_2026[i:i + chunk_size]
+        batch_num = (i // chunk_size) + 1
+        total_batches = (len(PRODUCTS_2026) + chunk_size - 1) // chunk_size
 
-    try:
-        with urllib.request.urlopen(req, timeout=30) as response:
-            res_body = response.read().decode('utf-8')
-            res_json = json.loads(res_body)
-            print("\n✅ RESPON BERHASIL DARI GOOGLE APPS SCRIPT:")
-            print(json.dumps(res_json, indent=2, ensure_ascii=False))
-            print(f"\n🎉 Berhasil memperbarui {len(PRODUCTS_2026)} produk 2026 di tab 'Produk' Google Spreadsheet!")
-            print("👉 Buka aplikasi Bherung POS dan klik '🔄 Sinkronisasi Penuh Database Toko' untuk langsung memuat data!")
-    except Exception as e:
-        print(f"\n❌ Terjadi kesalahan saat mengirim ke Google Apps Script: {e}")
-        sys.exit(1)
+        print(f"📦 Mengirim Batch {batch_num}/{total_batches} ({len(chunk)} produk)...", end="", flush=True)
+
+        payload = {
+            "action": "syncProducts",
+            "spreadsheetId": spreadsheet_id,
+            "products": chunk
+        }
+
+        data_bytes = json.dumps(payload).encode('utf-8')
+        req = urllib.request.Request(
+            WEB_APP_URL,
+            data=data_bytes,
+            headers={'Content-Type': 'application/json'}
+        )
+
+        try:
+            with opener.open(req, timeout=30) as response:
+                res_body = response.read().decode('utf-8')
+                res_json = json.loads(res_body)
+                if res_json.get('status') == 'success':
+                    print(" ✅ Sukses!")
+                else:
+                    print(f" ⚠️ {res_json.get('message')}")
+        except Exception as e:
+            print(f" ❌ Gagal: {e}")
+
+    print(f"\n🎉 Selesai! Seluruh {len(PRODUCTS_2026)} produk 2026 telah terisi di tab 'Produk' Google Spreadsheet Anda.")
+    print("👉 Buka aplikasi Bherung POS dan klik '🔄 Sinkronisasi Penuh Database Toko' untuk langsung memuat data ke etalase kasir!")
 
 
 if __name__ == '__main__':
