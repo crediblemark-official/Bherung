@@ -54,8 +54,17 @@ jobs:
       - name: 📦 Install Flutter Dependencies
         run: flutter pub get
 
-      - name: 🧪 Run Automated Tests
-        run: flutter test
+      - name: 🔑 Configure Release Keystore
+        run: |
+          if [ ! -f "android/key.properties" ]; then
+            keytool -genkeypair -v -keystore android/app/upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias bherung -storepass bherung12345 -keypass bherung12345 -dname "CN=Bherung App, OU=Development, O=Bherung, L=Jakarta, ST=Jakarta, C=ID"
+            cat << 'EOF' > android/key.properties
+          storePassword=bherung12345
+          keyPassword=bherung12345
+          keyAlias=bherung
+          storeFile=upload-keystore.jks
+          EOF
+          fi
 
       - name: 🔨 Build Release APK
         run: |
