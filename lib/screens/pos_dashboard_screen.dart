@@ -40,6 +40,7 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
   TransactionType _selectedTransactionType = TransactionType.eceran;
   String _customerName = '';
   double _discountPercent = 0;
+  double _deliveryFee = 0;
   bool _isLoadingData = true;
   bool _isLocked = true; // Layar terkunci secara default dengan sambutan Tretan
   AppUser? _scheduledNextUser;
@@ -409,6 +410,7 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
       _cartItems.clear();
       _customerName = '';
       _discountPercent = 0;
+      _deliveryFee = 0;
     });
   }
 
@@ -1156,6 +1158,7 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
       customerName: name,
       transactionType: _selectedTransactionType,
       items: List<CartItem>.from(_cartItems.map((e) => e.copyWith())),
+      deliveryFee: _selectedTransactionType == TransactionType.antar ? _deliveryFee : 0,
       createdAt: DateTime.now(),
     );
 
@@ -1164,6 +1167,7 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
       _cartItems.clear();
       _customerName = '';
       _discountPercent = 0;
+      _deliveryFee = 0;
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -1185,6 +1189,7 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
       _cartItems.addAll(order.items.map((e) => e.copyWith()));
       _customerName = order.customerName;
       _selectedTransactionType = order.transactionType;
+      _deliveryFee = order.deliveryFee;
       _heldOrders.remove(order);
     });
 
@@ -1270,7 +1275,8 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
   void _openCheckoutDialog() {
     final double subtotal = _cartItems.fold(0, (sum, item) => sum + item.totalPrice);
     final double discount = subtotal * (_discountPercent / 100);
-    final double total = subtotal - discount;
+    final double delivery = _selectedTransactionType == TransactionType.antar ? _deliveryFee : 0.0;
+    final double total = subtotal - discount + delivery;
     final String trxId = 'TRX-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
 
     Navigator.push(
@@ -1280,6 +1286,7 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
           totalAmount: total,
           subtotal: subtotal,
           discountAmount: discount,
+          deliveryFee: delivery,
           cartItems: _cartItems,
           transactionType: _selectedTransactionType,
           customerName: _customerName,
@@ -1330,6 +1337,7 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
                 customerName: finalCustName,
                 subtotal: subtotal,
                 discountAmount: discount,
+                deliveryFee: delivery,
                 totalAmount: total,
                 paymentMethod: 'Tunai / QRIS',
                 cashierName: _currentUser.name,
@@ -1634,6 +1642,8 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
                         onCustomerNameChanged: (val) => setState(() => _customerName = val),
                         discountPercent: _discountPercent,
                         onDiscountChanged: (val) => setState(() => _discountPercent = val),
+                        deliveryFee: _deliveryFee,
+                        onDeliveryFeeChanged: (val) => setState(() => _deliveryFee = val),
                       ),
                     ),
                 ],
@@ -1723,6 +1733,11 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
               discountPercent: _discountPercent,
               onDiscountChanged: (val) {
                 setState(() => _discountPercent = val);
+                setSheetState(() {});
+              },
+              deliveryFee: _deliveryFee,
+              onDeliveryFeeChanged: (val) {
+                setState(() => _deliveryFee = val);
                 setSheetState(() {});
               },
             ),

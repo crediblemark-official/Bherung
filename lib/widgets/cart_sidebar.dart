@@ -18,6 +18,8 @@ class CartSidebar extends StatefulWidget {
   final Function(String) onCustomerNameChanged;
   final double discountPercent;
   final Function(double) onDiscountChanged;
+  final double deliveryFee;
+  final Function(double)? onDeliveryFeeChanged;
 
   const CartSidebar({
     super.key,
@@ -36,6 +38,8 @@ class CartSidebar extends StatefulWidget {
     required this.onCustomerNameChanged,
     required this.discountPercent,
     required this.onDiscountChanged,
+    this.deliveryFee = 0.0,
+    this.onDeliveryFeeChanged,
   });
 
   @override
@@ -44,11 +48,15 @@ class CartSidebar extends StatefulWidget {
 
 class _CartSidebarState extends State<CartSidebar> {
   late TextEditingController _customerController;
+  late TextEditingController _deliveryFeeController;
 
   @override
   void initState() {
     super.initState();
     _customerController = TextEditingController(text: widget.customerName);
+    _deliveryFeeController = TextEditingController(
+      text: widget.deliveryFee > 0 ? widget.deliveryFee.toInt().toString() : '',
+    );
   }
 
   @override
@@ -58,17 +66,25 @@ class _CartSidebarState extends State<CartSidebar> {
         _customerController.text != widget.customerName) {
       _customerController.text = widget.customerName;
     }
+    if (oldWidget.deliveryFee != widget.deliveryFee) {
+      final currentTextVal = double.tryParse(_deliveryFeeController.text.trim()) ?? 0;
+      if (currentTextVal != widget.deliveryFee) {
+        _deliveryFeeController.text = widget.deliveryFee > 0 ? widget.deliveryFee.toInt().toString() : '';
+      }
+    }
   }
 
   @override
   void dispose() {
     _customerController.dispose();
+    _deliveryFeeController.dispose();
     super.dispose();
   }
 
   double get subtotal => widget.cartItems.fold(0, (sum, item) => sum + item.totalPrice);
   double get discountAmount => subtotal * (widget.discountPercent / 100);
-  double get grandTotal => subtotal - discountAmount;
+  double get deliveryFeeAmount => widget.transactionType == TransactionType.antar ? widget.deliveryFee : 0;
+  double get grandTotal => subtotal - discountAmount + deliveryFeeAmount;
   int get totalItemCount => widget.cartItems.fold(0, (sum, item) => sum + item.quantity);
 
   void _showNoteDialog(CartItem item) {
@@ -383,6 +399,96 @@ class _CartSidebarState extends State<CartSidebar> {
                     ],
                   ),
                 ),
+
+                // Form Biaya Ongkir / Antar (Otomatis Muncul Khusus Tab Antar / Titip)
+                if (widget.transactionType == TransactionType.antar) ...[
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0FDF4), // soft green
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFBBF7D0)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.delivery_dining_rounded, size: 16, color: Color(0xFF16A34A)),
+                            const SizedBox(width: 5),
+                            const Text(
+                              'Biaya Ongkir / Antar:',
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF166534)),
+                            ),
+                            const Spacer(),
+                            SizedBox(
+                              width: 105,
+                              height: 28,
+                              child: TextField(
+                                controller: _deliveryFeeController,
+                                keyboardType: TextInputType.number,
+                                onChanged: (val) {
+                                  final clean = double.tryParse(val.replaceAll('.', '').replaceAll(',', '').trim()) ?? 0;
+                                  if (widget.onDeliveryFeeChanged != null) {
+                                    widget.onDeliveryFeeChanged!(clean);
+                                  }
+                                },
+                                style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: Color(0xFF166534)),
+                                textAlign: TextAlign.end,
+                                decoration: InputDecoration(
+                                  prefixText: 'Rp ',
+                                  prefixStyle: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF166534)),
+                                  hintText: '0',
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: const BorderSide(color: Color(0xFF86EFAC))),
+                                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: const BorderSide(color: Color(0xFF86EFAC))),
+                                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: const BorderSide(color: Color(0xFF16A34A), width: 1.5)),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 5),
+                        // Quick Chips: Gratis, 3rb, 5rb, 10rb, 15rb
+                        Wrap(
+                          spacing: 4,
+                          children: [0, 3000, 5000, 10000, 15000].map((fee) {
+                            final isSel = widget.deliveryFee == fee;
+                            return InkWell(
+                              onTap: () {
+                                _deliveryFeeController.text = fee > 0 ? fee.toString() : '';
+                                if (widget.onDeliveryFeeChanged != null) {
+                                  widget.onDeliveryFeeChanged!(fee.toDouble());
+                                }
+                              },
+                              borderRadius: BorderRadius.circular(4),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: isSel ? const Color(0xFF16A34A) : Colors.white,
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(color: isSel ? const Color(0xFF16A34A) : const Color(0xFF86EFAC)),
+                                ),
+                                child: Text(
+                                  fee == 0 ? 'Gratis' : '${fee ~/ 1000}rb',
+                                  style: TextStyle(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: isSel ? Colors.white : const Color(0xFF166534),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -786,6 +892,29 @@ class _CartSidebarState extends State<CartSidebar> {
                     padding: EdgeInsets.symmetric(vertical: 6),
                     child: Divider(height: 1, color: AppTheme.borderColor),
                   ),
+                ],
+                if (widget.transactionType == TransactionType.antar) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.delivery_dining_rounded, size: 14, color: Color(0xFF16A34A)),
+                          SizedBox(width: 4),
+                          Text('Ongkir / Biaya Antar', style: TextStyle(fontSize: 11.5, color: Color(0xFF166534), fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                      Text(
+                        deliveryFeeAmount > 0 ? '+ ${AppTheme.formatRupiah(deliveryFeeAmount)}' : 'GRATIS',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w800,
+                          color: deliveryFeeAmount > 0 ? const Color(0xFF166534) : AppTheme.primaryTeal,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 5),
                 ],
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,

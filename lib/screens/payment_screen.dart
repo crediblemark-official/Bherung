@@ -7,6 +7,7 @@ class PaymentScreen extends StatefulWidget {
   final double totalAmount;
   final double subtotal;
   final double discountAmount;
+  final double deliveryFee;
   final List<CartItem> cartItems;
   final TransactionType transactionType;
   final String customerName;
@@ -18,6 +19,7 @@ class PaymentScreen extends StatefulWidget {
     required this.totalAmount,
     required this.subtotal,
     required this.discountAmount,
+    this.deliveryFee = 0.0,
     required this.cartItems,
     required this.transactionType,
     required this.customerName,
@@ -704,6 +706,26 @@ class _PaymentScreenState extends State<PaymentScreen> {
               );
             },
           ),
+          if (widget.deliveryFee > 0) ...[
+            const Divider(height: 10),
+            Row(
+              children: [
+                const Expanded(
+                  child: Row(
+                    children: [
+                      Icon(Icons.delivery_dining_rounded, size: 14, color: Color(0xFF16A34A)),
+                      SizedBox(width: 4),
+                      Text('Biaya Ongkir / Antar', style: TextStyle(fontSize: 11.5, color: Color(0xFF166534), fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
+                Text(
+                  '+ ${AppTheme.formatRupiah(widget.deliveryFee)}',
+                  style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF166534)),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

@@ -349,7 +349,10 @@ function doPost(e) {
       const sheetTrx = getOrCreateSheet(ss, 'Transaksi');
       const dateNow = new Date();
 
-      const itemsSummary = (trx.items || []).map(i => `${i.name} (${i.qty} ${i.unit || 'pcs'} @ ${i.unitPrice})`).join('; ');
+      let itemsSummary = (trx.items || []).map(i => `${i.name} (${i.qty} ${i.unit || 'pcs'} @ ${i.unitPrice})`).join('; ');
+      if (Number(trx.deliveryFee) > 0) {
+        itemsSummary += ` [Ongkir: Rp ${trx.deliveryFee}]`;
+      }
 
       sheetTrx.appendRow([
         trx.id || ('TRX-' + dateNow.getTime()),
