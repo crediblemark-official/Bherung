@@ -188,6 +188,7 @@ class UserGuideScreen extends StatelessWidget {
                         'Setelah penerapan selesai, klik tombol "Salin" pada bagian Aplikasi web URL (link berakhiran /exec).\n\nTempelkan link URL tersebut ke kolom input "URL Web App Google Apps Script" di menu Pengaturan Bherung POS, lalu klik "Hubungkan & Simpan Database". Selesai!',
                     imagePaths: [
                       'assets/docs/gas_step5_salin_url.png',
+                      'assets/docs/gas_step6_input_pengaturan.png',
                     ],
                     badgeText: 'URL Web App Siap',
                     badgeColor: AppTheme.successGreen,
