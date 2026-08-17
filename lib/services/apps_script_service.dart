@@ -168,6 +168,21 @@ class AppsScriptService {
     }
   }
 
+  // Helper untuk mengirim perintah ke Google Apps Script via POST (CORS-friendly untuk Web & Android)
+  Future<http.Response> _sendAction(String action, [Map<String, dynamic>? extra]) async {
+    final payload = {
+      'action': action,
+      if (_spreadsheetId.isNotEmpty) 'spreadsheetId': _spreadsheetId,
+      ...?extra,
+    };
+    final uri = Uri.parse(_webAppUrl);
+    return await _sendWithRedirect(
+      uri,
+      method: 'POST',
+      body: jsonEncode(payload),
+    );
+  }
+
   // 1. Test Koneksi ke Spreadsheet & Simpan Status Permanen
   Future<Map<String, dynamic>> testConnection([String? input]) async {
     if (input != null && input.trim().isNotEmpty) {
@@ -182,9 +197,7 @@ class AppsScriptService {
     }
 
     try {
-      final queryParam = _spreadsheetId.isNotEmpty ? '&spreadsheetId=$_spreadsheetId' : '';
-      final uri = Uri.parse('$_webAppUrl?action=ping$queryParam');
-      final response = await _sendWithRedirect(uri, method: 'GET');
+      final response = await _sendAction('ping');
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = jsonDecode(response.body);
@@ -489,9 +502,7 @@ class AppsScriptService {
     if (!isConnected) return null;
 
     try {
-      final queryParam = _spreadsheetId.isNotEmpty ? '&spreadsheetId=$_spreadsheetId' : '';
-      final uri = Uri.parse('$_webAppUrl?action=getProducts$queryParam');
-      final response = await _sendWithRedirect(uri, method: 'GET');
+      final response = await _sendAction('getProducts');
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = jsonDecode(response.body);
@@ -568,9 +579,7 @@ class AppsScriptService {
     if (!isConnected) return null;
 
     try {
-      final queryParam = _spreadsheetId.isNotEmpty ? '&spreadsheetId=$_spreadsheetId' : '';
-      final uri = Uri.parse('$_webAppUrl?action=getUsers$queryParam');
-      final response = await _sendWithRedirect(uri, method: 'GET');
+      final response = await _sendAction('getUsers');
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = jsonDecode(response.body);
@@ -615,9 +624,7 @@ class AppsScriptService {
     if (!isConnected) return null;
 
     try {
-      final queryParam = _spreadsheetId.isNotEmpty ? '&spreadsheetId=$_spreadsheetId' : '';
-      final uri = Uri.parse('$_webAppUrl?action=getKasbon$queryParam');
-      final response = await _sendWithRedirect(uri, method: 'GET');
+      final response = await _sendAction('getKasbon');
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = jsonDecode(response.body);
@@ -687,9 +694,7 @@ class AppsScriptService {
   Future<List<ShiftRecord>?> fetchShiftsFromSpreadsheet() async {
     if (!isConnected) return null;
     try {
-      final queryParam = _spreadsheetId.isNotEmpty ? '&spreadsheetId=$_spreadsheetId' : '';
-      final uri = Uri.parse('$_webAppUrl?action=getShifts$queryParam');
-      final response = await _sendWithRedirect(uri, method: 'GET');
+      final response = await _sendAction('getShifts');
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = jsonDecode(response.body);
@@ -737,9 +742,7 @@ class AppsScriptService {
   Future<List<StockMutation>?> fetchMutationsFromSpreadsheet() async {
     if (!isConnected) return null;
     try {
-      final queryParam = _spreadsheetId.isNotEmpty ? '&spreadsheetId=$_spreadsheetId' : '';
-      final uri = Uri.parse('$_webAppUrl?action=getMutations$queryParam');
-      final response = await _sendWithRedirect(uri, method: 'GET');
+      final response = await _sendAction('getMutations');
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = jsonDecode(response.body);
@@ -787,9 +790,7 @@ class AppsScriptService {
   Future<StoreProfile?> fetchStoreProfileFromSpreadsheet() async {
     if (!isConnected) return null;
     try {
-      final queryParam = _spreadsheetId.isNotEmpty ? '&spreadsheetId=$_spreadsheetId' : '';
-      final uri = Uri.parse('$_webAppUrl?action=getStoreProfile$queryParam');
-      final response = await _sendWithRedirect(uri, method: 'GET');
+      final response = await _sendAction('getStoreProfile');
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = jsonDecode(response.body);
@@ -807,9 +808,7 @@ class AppsScriptService {
   Future<Map<String, dynamic>?> fetchTodaySalesFromSpreadsheet() async {
     if (!isConnected) return null;
     try {
-      final queryParam = _spreadsheetId.isNotEmpty ? '&spreadsheetId=$_spreadsheetId' : '';
-      final uri = Uri.parse('$_webAppUrl?action=getTransactions$queryParam');
-      final response = await _sendWithRedirect(uri, method: 'GET');
+      final response = await _sendAction('getTransactions');
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = jsonDecode(response.body);

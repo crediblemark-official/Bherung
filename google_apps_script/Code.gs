@@ -331,8 +331,17 @@ function doPost(e) {
       }
     }
 
-    const ss = getTargetSpreadsheet(e, body);
     const action = body.action || (e && e.parameter && e.parameter.action);
+
+    // Delegasikan action pembacaan (GET actions) ke doGet untuk kompatibilitas Web & Android
+    const readActions = ['ping', 'getProducts', 'getKasbon', 'getUsers', 'getShifts', 'getMutations', 'getStoreProfile', 'getTransactions'];
+    if (readActions.includes(action)) {
+      if (!e) e = {};
+      e.parameter = Object.assign({}, e.parameter || {}, body);
+      return doGet(e);
+    }
+
+    const ss = getTargetSpreadsheet(e, body);
 
     // 1. Simpan Transaksi Penjualan
     if (action === 'addTransaction') {
