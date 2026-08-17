@@ -710,57 +710,49 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
               ),
               const SizedBox(height: 12),
 
-              // Action Buttons
-              Row(
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: SizedBox(
-                      height: 42,
-                      child: ElevatedButton.icon(
-                        onPressed: _isTesting ? null : _handleTestConnection,
-                        icon: _isTesting
-                            ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryDark))
-                            : const Icon(Icons.cable_rounded, size: 16),
-                        label: Text(
-                          _isTesting ? 'Memeriksa...' : 'Hubungkan & Simpan Database',
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryGold,
-                          foregroundColor: AppTheme.primaryDark,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          elevation: 1,
-                        ),
-                      ),
-                    ),
+              // Action Buttons: Stacked Full-Width (Rapi & Tidak Terpotong)
+              SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: ElevatedButton.icon(
+                  onPressed: _isTesting ? null : _handleTestConnection,
+                  icon: _isTesting
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryDark))
+                      : const Icon(Icons.cable_rounded, size: 18),
+                  label: Text(
+                    _isTesting ? 'Memeriksa Koneksi Database...' : 'Hubungkan & Simpan Database',
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 2,
-                    child: SizedBox(
-                      height: 42,
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const UserGuideScreen()),
-                          );
-                        },
-                        icon: const Icon(Icons.menu_book_rounded, size: 16, color: Color(0xFF2563EB)),
-                        label: const Text(
-                          'Buku Panduan',
-                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF2563EB)),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Color(0xFF93C5FD)),
-                          backgroundColor: const Color(0xFFEFF6FF),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        ),
-                      ),
-                    ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryGold,
+                    foregroundColor: AppTheme.primaryDark,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+                    elevation: 1,
                   ),
-                ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                height: 38,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const UserGuideScreen()),
+                    );
+                  },
+                  icon: const Icon(Icons.menu_book_rounded, size: 16, color: Color(0xFF2563EB)),
+                  label: const Text(
+                    'Buka Buku Panduan Setup & Deploy Database',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF2563EB)),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFFBFDBFE)),
+                    backgroundColor: const Color(0xFFEFF6FF),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+                  ),
+                ),
               ),
             ],
           ),
