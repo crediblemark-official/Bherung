@@ -15,6 +15,48 @@ class InventoryStorageService {
   static const String _keyUsers = 'bherung_users_json_v1';
   static const String _keyKasbon = 'bherung_kasbon_json_v1';
   static const String _keyStoreProfile = 'bherung_store_profile_json_v1';
+  static const String _keyUnits = 'bherung_custom_units_v1';
+
+  static const List<String> defaultUnits = [
+    'pcs', 'bks', 'botol', 'renceng', 'kg', 'sak', 'dus', 'tabung', 'galon', 'sachet', 'pak', 'butir', 'liter', 'ikat', 'toples', 'kaleng', 'lusin', 'bal', 'roll'
+  ];
+
+  // Load Units (Default + Custom Units)
+  Future<List<String>> loadUnits({List<Product>? products}) async {
+    final Set<String> unitSet = Set.from(defaultUnits);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final List<String>? saved = prefs.getStringList(_keyUnits);
+      if (saved != null) {
+        unitSet.addAll(saved);
+      }
+    } catch (_) {}
+
+    if (products != null) {
+      for (final p in products) {
+        if (p.unit.trim().isNotEmpty) {
+          unitSet.add(p.unit.trim().toLowerCase());
+        }
+      }
+    }
+    return unitSet.toList();
+  }
+
+  // Save Custom Unit
+  Future<void> saveCustomUnit(String unit) async {
+    final clean = unit.trim().toLowerCase();
+    if (clean.isEmpty) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final List<String> current = prefs.getStringList(_keyUnits) ?? [];
+      if (!current.contains(clean)) {
+        current.add(clean);
+        await prefs.setStringList(_keyUnits, current);
+      }
+    } catch (e) {
+      debugPrint('Error saving custom unit: $e');
+    }
+  }
 
   // 1. Load Products (Persistent Local Storage)
   Future<List<Product>> loadProducts() async {

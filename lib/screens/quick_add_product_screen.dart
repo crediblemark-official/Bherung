@@ -3,6 +3,7 @@ import '../models/product.dart';
 import '../services/barcode_master_lookup_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/dynamic_category_picker.dart';
+import '../widgets/dynamic_unit_picker.dart';
 import 'scanner_screen.dart';
 
 class QuickAddProductScreen extends StatefulWidget {
@@ -326,7 +327,7 @@ class _QuickAddProductScreenState extends State<QuickAddProductScreen> {
                           ),
                           const SizedBox(width: 10),
 
-                          // Satuan
+                          // Satuan Dinamis & Searchable
                           Expanded(
                             flex: 2,
                             child: Column(
@@ -334,27 +335,12 @@ class _QuickAddProductScreenState extends State<QuickAddProductScreen> {
                               children: [
                                 const Text('Satuan *', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
                                 const SizedBox(height: 6),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    border: Border.all(color: AppTheme.borderColor),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: DropdownButtonHideUnderline(
-                                    child: DropdownButton<String>(
-                                      value: _selectedUnit,
-                                      isExpanded: true,
-                                      items: _units.map((u) {
-                                        return DropdownMenuItem<String>(
-                                          value: u,
-                                          child: Text(u, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                                        );
-                                      }).toList(),
-                                      onChanged: (val) {
-                                        if (val != null) setState(() => _selectedUnit = val);
-                                      },
-                                    ),
-                                  ),
+                                DynamicUnitPicker(
+                                  selectedUnit: _selectedUnit,
+                                  initialUnits: _units,
+                                  onUnitSelected: (unit) {
+                                    setState(() => _selectedUnit = unit);
+                                  },
                                 ),
                               ],
                             ),
