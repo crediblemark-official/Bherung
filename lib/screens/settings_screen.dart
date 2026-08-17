@@ -710,46 +710,21 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
               const SizedBox(height: 12),
 
               // Action Buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 40,
-                      child: ElevatedButton.icon(
-                        onPressed: _isTesting ? null : _handleTestConnection,
-                        icon: _isTesting
-                            ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                            : const Icon(Icons.cable_rounded, size: 16),
-                        label: Text(
-                          _isTesting ? 'Memeriksa...' : 'Hubungkan & Simpan Database',
-                          style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryTeal,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-
-              // Tombol Panduan Deploy Apps Script
               SizedBox(
                 width: double.infinity,
-                height: 38,
-                child: OutlinedButton.icon(
-                  onPressed: () => _showAppsScriptDeploymentGuide(context),
-                  icon: const Icon(Icons.help_outline_rounded, size: 16, color: Color(0xFF2563EB)),
-                  label: const Text(
-                    '📖 Panduan Deploy Google Apps Script (Langkah demi Langkah)',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF2563EB)),
+                height: 40,
+                child: ElevatedButton.icon(
+                  onPressed: _isTesting ? null : _handleTestConnection,
+                  icon: _isTesting
+                      ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.cable_rounded, size: 16),
+                  label: Text(
+                    _isTesting ? 'Memeriksa...' : 'Hubungkan & Simpan Database',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                   ),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0xFF93C5FD)),
-                    backgroundColor: const Color(0xFFEFF6FF),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryTeal,
+                    foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
@@ -1124,202 +1099,6 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
           ),
         ),
       ],
-    );
-  }
-
-  void _showAppsScriptDeploymentGuide(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.85,
-        maxChildSize: 0.95,
-        minChildSize: 0.5,
-        builder: (c, scrollCtrl) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            children: [
-              // Modal Header
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                decoration: const BoxDecoration(
-                  color: AppTheme.primaryDark,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryGold.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(Icons.code_rounded, color: AppTheme.primaryGold, size: 20),
-                    ),
-                    const SizedBox(width: 10),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Panduan Deploy Google Apps Script',
-                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-                          ),
-                          Text(
-                            'Langkah-demi-langkah memasang backend toko pribadi',
-                            style: TextStyle(color: AppTheme.goldAccent, fontSize: 11),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded, color: Colors.white70),
-                      onPressed: () => Navigator.pop(ctx),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Guide Content
-              Expanded(
-                child: ListView(
-                  controller: scrollCtrl,
-                  padding: const EdgeInsets.all(18),
-                  children: [
-                    _buildGuideStepCard(
-                      stepNum: '1',
-                      title: 'Buka Menu Apps Script di Spreadsheet',
-                      description: 'Buka file Google Spreadsheet toko Anda di komputer/laptop. Klik menu "Extensions" (Ekstensi) ➡️ pilih "Apps Script".',
-                      icon: Icons.open_in_browser_rounded,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildGuideStepCard(
-                      stepNum: '2',
-                      title: 'Salin Kode "Code.gs"',
-                      description: 'Hapus semua isi teks bawaan di editor Apps Script, lalu tempelkan seluruh isi kode dari file "google_apps_script/Code.gs".',
-                      icon: Icons.copy_rounded,
-                      actionWidget: OutlinedButton.icon(
-                        icon: const Icon(Icons.copy_rounded, size: 14),
-                        label: const Text('Salin Link Kode Code.gs', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                        onPressed: () {
-                          Clipboard.setData(const ClipboardData(
-                            text: 'https://raw.githubusercontent.com/crediblemark-official/Bherung/main/google_apps_script/Code.gs',
-                          ));
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Link raw Code.gs berhasil disalin!'),
-                              backgroundColor: AppTheme.successGreen,
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    _buildGuideStepCard(
-                      stepNum: '3',
-                      title: 'Buat Penerapan Baru (Deploy)',
-                      description: 'Klik tombol biru "Deploy" (Terapkan) di pojok kanan atas editor ➡️ pilih "New deployment" (Penerapan baru).',
-                      icon: Icons.cloud_upload_rounded,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildGuideStepCard(
-                      stepNum: '4',
-                      title: 'Pilih Tipe Web App & Atur Akses',
-                      description: 'Klik ikon gerigi ⚙️ di samping "Select type" ➡️ pilih "Web app". Atur pengaturan berikut:\n\n'
-                          '• Execute as: Me (email@gmail.com)\n'
-                          '• Who has access: Anyone (Siapa saja)\n\n'
-                          '⚠️ PENTING: Wajib pilih "Anyone" agar HP kasir & toko dapat mengirim transaksi secara otomatis tanpa login berulang.',
-                      icon: Icons.admin_panel_settings_rounded,
-                      isHighlighted: true,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildGuideStepCard(
-                      stepNum: '5',
-                      title: 'Otorisasi & Salin Web App URL',
-                      description: 'Klik tombol "Deploy" ➡️ Berikan izin akses ("Authorize access" ➡️ Advanced ➡️ Go to script) ➡️ Salin "Web app URL" (akhiran /exec).',
-                      icon: Icons.link_rounded,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildGuideStepCard(
-                      stepNum: '6',
-                      title: 'Tempelkan URL ke Aplikasi',
-                      description: 'Tempelkan Web App URL yang baru saja disalin ke kolom input "URL Web App Google Apps Script" di halaman Pengaturan, lalu klik "Hubungkan & Simpan Database".',
-                      icon: Icons.check_circle_rounded,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGuideStepCard({
-    required String stepNum,
-    required String title,
-    required String description,
-    required IconData icon,
-    Widget? actionWidget,
-    bool isHighlighted = false,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isHighlighted ? const Color(0xFFFEF3C7) : const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: isHighlighted ? const Color(0xFFF59E0B) : const Color(0xFFE2E8F0),
-          width: isHighlighted ? 1.5 : 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 10,
-                backgroundColor: isHighlighted ? const Color(0xFFD97706) : AppTheme.primaryTeal,
-                child: Text(
-                  stepNum,
-                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.bold,
-                    color: isHighlighted ? const Color(0xFF92400E) : AppTheme.textDark,
-                  ),
-                ),
-              ),
-              Icon(icon, size: 18, color: isHighlighted ? const Color(0xFFD97706) : AppTheme.primaryTeal),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            description,
-            style: TextStyle(
-              fontSize: 11,
-              color: isHighlighted ? const Color(0xFF78350F) : AppTheme.textMuted,
-              height: 1.35,
-            ),
-          ),
-          if (actionWidget != null) ...[
-            const SizedBox(height: 8),
-            actionWidget,
-          ],
-        ],
-      ),
     );
   }
 }
