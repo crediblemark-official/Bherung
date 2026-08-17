@@ -41,7 +41,6 @@ class _RoleSwitcherScreenState extends State<RoleSwitcherScreen> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _pinController = TextEditingController(text: '1234');
   final TextEditingController _verifyPinController = TextEditingController();
-  final TextEditingController _quickPinController = TextEditingController();
   UserRoleType _role = UserRoleType.staff;
   bool _isSyncing = false;
 
@@ -51,7 +50,6 @@ class _RoleSwitcherScreenState extends State<RoleSwitcherScreen> {
     _phoneController.dispose();
     _pinController.dispose();
     _verifyPinController.dispose();
-    _quickPinController.dispose();
     super.dispose();
   }
 
@@ -345,54 +343,6 @@ class _RoleSwitcherScreenState extends State<RoleSwitcherScreen> {
     );
   }
 
-  void _handleQuickPinAuth(String pin) {
-    if (pin.trim().length < 4) return;
-    final cleanPin = pin.trim();
-    AppUser? matchedUser;
-
-    for (final u in widget.users) {
-      if (u.isActive && u.pin.trim() == cleanPin) {
-        matchedUser = u;
-        break;
-      }
-    }
-
-    if (matchedUser != null) {
-      _quickPinController.clear();
-      widget.onUserSelected(matchedUser);
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(
-                matchedUser.isOwner ? Icons.workspace_premium_rounded : Icons.badge_rounded,
-                color: Colors.white,
-                size: 18,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'PIN Cocok! Masuk sebagai: ${matchedUser.name} (${matchedUser.isOwner ? "👑 Pemilik Toko" : "💼 Penjaga Toko"})',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: matchedUser.isOwner ? AppTheme.primaryDark : AppTheme.primaryTeal,
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('PIN tidak cocok dengan akun mana pun. Periksa kembali PIN Anda.'),
-          backgroundColor: AppTheme.dangerRed,
-          duration: Duration(seconds: 2),
-        ),
-      );
-    }
-  }
-
   // Sinkronisasi 2 Arah Data Pengguna ke Google Sheets
   Future<void> _syncUsersToCloud() async {
     setState(() => _isSyncing = true);
@@ -640,81 +590,6 @@ class _RoleSwitcherScreenState extends State<RoleSwitcherScreen> {
                                 ],
                               ),
                             ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Quick PIN Input Card (Auto Identify Role & User)
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppTheme.primaryTeal.withValues(alpha: 0.3), width: 1.5),
-                        boxShadow: AppTheme.softShadow,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Row(
-                            children: [
-                              Icon(Icons.pin_rounded, color: AppTheme.primaryTeal, size: 20),
-                              SizedBox(width: 8),
-                              Text(
-                                'Masuk Cepat via PIN (Deteksi Role Otomatis)',
-                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: AppTheme.primaryDark),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          const Text(
-                            'Ketik 4-digit PIN untuk login langsung tanpa memilih nama. Sistem otomatis mengenali apakah Anda Pemilik Toko (PIN: 1234) atau Penjaga Toko (PIN: 5678).',
-                            style: TextStyle(fontSize: 11, color: AppTheme.textMuted, height: 1.3),
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: _quickPinController,
-                                  keyboardType: TextInputType.number,
-                                  obscureText: true,
-                                  maxLength: 4,
-                                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 8),
-                                  decoration: InputDecoration(
-                                    counterText: '',
-                                    hintText: '• • • •',
-                                    hintStyle: const TextStyle(letterSpacing: 8, color: Colors.black26),
-                                    prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppTheme.primaryTeal, size: 20),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      borderSide: const BorderSide(color: AppTheme.primaryTeal, width: 2),
-                                    ),
-                                  ),
-                                  onChanged: (val) {
-                                    if (val.length == 4) {
-                                      _handleQuickPinAuth(val);
-                                    }
-                                  },
-                                  onSubmitted: (val) => _handleQuickPinAuth(val),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              ElevatedButton(
-                                onPressed: () => _handleQuickPinAuth(_quickPinController.text),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppTheme.primaryTeal,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                ),
-                                child: const Text('Masuk', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
-                              ),
-                            ],
-                          ),
                         ],
                       ),
                     ),
