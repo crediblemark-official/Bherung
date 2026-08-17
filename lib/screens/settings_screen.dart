@@ -834,59 +834,19 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
               const SizedBox(height: 10),
 
               // Step 2
-              Row(
+              const Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const CircleAvatar(
+                  CircleAvatar(
                     radius: 8.5,
                     backgroundColor: Color(0xFF0D9488),
                     child: Text('2', style: TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold)),
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Bagikan (Share) spreadsheet ke email robot berikut sebagai "Editor" (atau atur Akses Umum: Siapa saja yang memiliki link):',
-                          style: TextStyle(fontSize: 11, color: AppTheme.textDark),
-                        ),
-                        const SizedBox(height: 6),
-                        InkWell(
-                          onTap: () {
-                            Clipboard.setData(const ClipboardData(text: 'bherung-pos@app-script-505503.iam.gserviceaccount.com'));
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Email Service Account disalin ke Clipboard!'),
-                                backgroundColor: AppTheme.successGreen,
-                              ),
-                            );
-                          },
-                          borderRadius: BorderRadius.circular(6),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF1F5F9),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: const Color(0xFFCBD5E1)),
-                            ),
-                            child: const Row(
-                              children: [
-                                Icon(Icons.email_outlined, size: 14, color: AppTheme.primaryTeal),
-                                SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    'bherung-pos@app-script-505503.iam.gserviceaccount.com',
-                                    style: TextStyle(fontFamily: 'monospace', fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.primaryDark),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                Icon(Icons.copy_rounded, size: 13, color: AppTheme.primaryTeal),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      'Pastikan akses berbagi spreadsheet diatur "Editor", lalu salin link/ID spreadsheet Anda ke bawah:',
+                      style: TextStyle(fontSize: 11, color: AppTheme.textDark),
                     ),
                   ),
                 ],
