@@ -57,6 +57,7 @@ class ShiftRecord {
   final String? handoverNotes;
   final String nextCashierName;
   final bool isVerifiedByOwner;
+  final int transactionCount; // Jumlah transaksi periode ini
 
   const ShiftRecord({
     required this.id,
@@ -75,6 +76,7 @@ class ShiftRecord {
     this.handoverNotes,
     required this.nextCashierName,
     this.isVerifiedByOwner = false,
+    this.transactionCount = 0,
   });
 
   Map<String, dynamic> toJson() {
@@ -84,17 +86,11 @@ class ShiftRecord {
       'shiftName': shiftName,
       'startTime': startTime.toIso8601String(),
       'endTime': endTime.toIso8601String(),
-      'startingCashDrawer': startingCashDrawer,
-      'systemCashSales': systemCashSales,
-      'systemQrisSales': systemQrisSales,
-      'systemKasbonSales': systemKasbonSales,
       'totalSystemSales': totalSystemSales,
-      'physicalCashCounted': physicalCashCounted,
-      'cashDifference': cashDifference,
+      'currentShiftTransactions': transactionCount,
       'stockAudits': stockAudits.map((a) => a.toJson()).toList(),
       'handoverNotes': handoverNotes,
       'nextCashierName': nextCashierName,
-      'isVerifiedByOwner': isVerifiedByOwner,
     };
   }
 
@@ -108,22 +104,23 @@ class ShiftRecord {
     }
 
     return ShiftRecord(
-      id: json['id']?.toString() ?? 'SHIFT-${DateTime.now().millisecondsSinceEpoch}',
-      cashierName: json['cashierName']?.toString() ?? 'Kasir',
-      shiftName: json['shiftName']?.toString() ?? 'Shift 24 Jam',
+      id: json['id']?.toString() ?? 'LAPORAN-${DateTime.now().millisecondsSinceEpoch}',
+      cashierName: json['cashierName']?.toString() ?? 'Penjaga',
+      shiftName: json['shiftName']?.toString() ?? 'Laporan Jaga',
       startTime: json['startTime'] != null ? DateTime.tryParse(json['startTime'].toString()) ?? DateTime.now() : DateTime.now(),
       endTime: json['endTime'] != null ? DateTime.tryParse(json['endTime'].toString()) ?? DateTime.now() : DateTime.now(),
-      startingCashDrawer: (json['startingCashDrawer'] as num?)?.toDouble() ?? 0.0,
-      systemCashSales: (json['systemCashSales'] as num?)?.toDouble() ?? 0.0,
-      systemQrisSales: (json['systemQrisSales'] as num?)?.toDouble() ?? 0.0,
-      systemKasbonSales: (json['systemKasbonSales'] as num?)?.toDouble() ?? 0.0,
+      startingCashDrawer: 0,
+      systemCashSales: (json['totalSystemSales'] as num?)?.toDouble() ?? 0.0,
+      systemQrisSales: 0,
+      systemKasbonSales: 0,
       totalSystemSales: (json['totalSystemSales'] as num?)?.toDouble() ?? 0.0,
-      physicalCashCounted: (json['physicalCashCounted'] as num?)?.toDouble() ?? 0.0,
-      cashDifference: (json['cashDifference'] as num?)?.toDouble() ?? 0.0,
+      physicalCashCounted: 0,
+      cashDifference: 0,
       stockAudits: loadedAudits,
       handoverNotes: json['handoverNotes']?.toString(),
-      nextCashierName: json['nextCashierName']?.toString() ?? 'Kasir',
-      isVerifiedByOwner: json['isVerifiedByOwner'] == true,
+      nextCashierName: json['nextCashierName']?.toString() ?? 'Penjaga',
+      isVerifiedByOwner: false,
+      transactionCount: (json['currentShiftTransactions'] as num?)?.toInt() ?? 0,
     );
   }
 }

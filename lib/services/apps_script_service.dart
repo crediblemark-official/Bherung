@@ -51,7 +51,7 @@ class AppsScriptService {
   String get webAppUrl => _webAppUrl;
   String get spreadsheetId => _spreadsheetId;
   String get rawInput => _rawInput;
-  bool get isConnected => _isConnected && _webAppUrl.isNotEmpty;
+  bool get isConnected => _isConnected && (_webAppUrl.isNotEmpty || _spreadsheetId.isNotEmpty);
   String get spreadsheetName => _spreadsheetName;
   int get offlineQueueCount => _offlineQueue.length;
 
@@ -64,7 +64,7 @@ class AppsScriptService {
       _spreadsheetId = prefs.getString('bherung_spreadsheet_id') ?? '';
       _webAppUrl = prefs.getString('bherung_web_app_url') ?? '';
       _spreadsheetName = prefs.getString('bherung_spreadsheet_name') ?? 'Mode Offline (Belum Terhubung)';
-      _isConnected = (prefs.getBool('bherung_is_connected') ?? false) && _webAppUrl.isNotEmpty;
+      _isConnected = (prefs.getBool('bherung_is_connected') ?? false) && (_webAppUrl.isNotEmpty || _spreadsheetId.isNotEmpty);
       _isInitialized = true;
     } catch (e) {
       debugPrint('Error loading saved settings: $e');
@@ -183,7 +183,7 @@ class AppsScriptService {
     if (_webAppUrl.isEmpty && _spreadsheetId.isEmpty) {
       return {
         'success': false,
-        'message': 'Harap masukkan URL Web App Google Apps Script atau Spreadsheet ID toko Anda.',
+        'message': 'Harap masukkan Link/ID Google Spreadsheet toko Anda.',
       };
     }
 
@@ -212,12 +212,12 @@ class AppsScriptService {
         }
       }
 
-      // Fallback: Coba koneksi langsung via Google Service Account jika Master Apps Script gagal
+      // Coba koneksi langsung via ID Spreadsheet (Metode 1: Otomatis 1-Klik)
       if (_spreadsheetId.isNotEmpty) {
         final saRes = await ServiceAccountSheetsService().testConnection(_spreadsheetId);
         if (saRes['success'] == true) {
           _isConnected = true;
-          _spreadsheetName = saRes['name'] ?? 'Spreadsheet Toko';
+          _spreadsheetName = saRes['name'] ?? 'Google Spreadsheet Toko';
 
           try {
             final prefs = await SharedPreferences.getInstance();
@@ -227,19 +227,19 @@ class AppsScriptService {
 
           return {
             'success': true,
-            'message': 'Terhubung via Google Service Account Resmi!',
+            'message': 'Berhasil terhubung ke Google Spreadsheet Toko!',
             'spreadsheetName': _spreadsheetName,
           };
         }
       }
 
-      return {'success': false, 'message': 'Gagal merespons dari Web App Apps Script. Pastikan URL benar & memiliki izin akses Siapa saja.'};
+      return {'success': false, 'message': 'Gagal merespons dari Spreadsheet. Pastikan ID benar & akses berbagi diatur "Siapa saja yang memiliki link: Editor".'};
     } catch (e) {
       if (_spreadsheetId.isNotEmpty) {
         final saRes = await ServiceAccountSheetsService().testConnection(_spreadsheetId);
         if (saRes['success'] == true) {
           _isConnected = true;
-          _spreadsheetName = saRes['name'] ?? 'Spreadsheet Toko';
+          _spreadsheetName = saRes['name'] ?? 'Google Spreadsheet Toko';
 
           try {
             final prefs = await SharedPreferences.getInstance();
@@ -249,28 +249,10 @@ class AppsScriptService {
 
           return {
             'success': true,
-            'message': 'Terhubung via Google Service Account Resmi!',
+            'message': 'Berhasil terhubung ke Google Spreadsheet Toko!',
             'spreadsheetName': _spreadsheetName,
           };
         }
-      }
-
-      // Khusus Flutter Web di browser Chrome (CORS restriction pada localhost):
-      // Jika URL Web App atau ID Spreadsheet valid, simpan konfigurasi dan tandai siap dipakai
-      if (kIsWeb && (_webAppUrl.contains('script.google.com') || _spreadsheetId.isNotEmpty)) {
-        _isConnected = true;
-        _spreadsheetName = 'Google Spreadsheet Toko';
-        try {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('bherung_is_connected', true);
-          await prefs.setString('bherung_spreadsheet_name', _spreadsheetName);
-        } catch (_) {}
-
-        return {
-          'success': true,
-          'message': 'Konfigurasi database tersimpan! (Di HP Android kasir akan langsung terhubung tanpa CORS).',
-          'spreadsheetName': _spreadsheetName,
-        };
       }
 
       return {'success': false, 'message': 'Error koneksi: $e'};
@@ -497,43 +479,60 @@ class AppsScriptService {
     if (!isConnected) return null;
 
     try {
-      final response = await _sendAction('getProducts');
+      if (_webAppUrl.isNotEmpty) {
+        final response = await _sendAction('getProducts');
 
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        final data = jsonDecode(response.body);
-        final List? rawList = (data['products'] is List) ? data['products'] : (data['data'] is List ? data['data'] : null);
-        if (data['status'] == 'success' && rawList != null) {
-          final List<Product> fetchedProducts = [];
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          final data = jsonDecode(response.body);
+          final List? rawList = (data['products'] is List) ? data['products'] : (data['data'] is List ? data['data'] : null);
+          if (data['status'] == 'success' && rawList != null) {
+            final List<Product> fetchedProducts = [];
 
-          for (final item in rawList) {
-            if (item is Map) {
-              final catId = item['categoryId']?.toString() ?? 'sembako';
-              fetchedProducts.add(
-                Product(
-                  id: item['id']?.toString() ?? 'prd-${DateTime.now().millisecondsSinceEpoch}',
-                  name: item['name']?.toString() ?? 'Produk Tanpa Nama',
-                  price: (item['price'] is num) ? (item['price'] as num).toDouble() : double.tryParse(item['price']?.toString() ?? '0') ?? 0,
-                  costPrice: (item['costPrice'] is num) ? (item['costPrice'] as num).toDouble() : double.tryParse(item['costPrice']?.toString() ?? ''),
-                  wholesalePrice: (item['wholesalePrice'] is num) ? (item['wholesalePrice'] as num).toDouble() : double.tryParse(item['wholesalePrice']?.toString() ?? ''),
-                  wholesaleMinQty: (item['wholesaleMinQty'] is num) ? (item['wholesaleMinQty'] as num).toInt() : int.tryParse(item['wholesaleMinQty']?.toString() ?? ''),
-                  unit: item['unit']?.toString() ?? 'pcs',
-                  categoryId: catId,
-                  icon: AppTheme.getCategoryIcon(catId),
-                  color: AppTheme.getCategoryColor(catId),
-                  code: item['code']?.toString() ?? '',
-                  stock: (item['stock'] is num) ? (item['stock'] as num).toInt() : int.tryParse(item['stock']?.toString() ?? '0') ?? 0,
-                  minStockAlert: (item['minStockAlert'] is num) ? (item['minStockAlert'] as num).toInt() : int.tryParse(item['minStockAlert']?.toString() ?? '5') ?? 5,
-                  description: item['description']?.toString(),
-                  isSensitiveItem: item['isSensitiveItem'] == true || item['isSensitiveItem']?.toString() == 'true',
-                ),
-              );
+            for (final item in rawList) {
+              if (item is Map) {
+                final catId = item['categoryId']?.toString() ?? 'sembako';
+                fetchedProducts.add(
+                  Product(
+                    id: item['id']?.toString() ?? 'prd-${DateTime.now().millisecondsSinceEpoch}',
+                    name: item['name']?.toString() ?? 'Produk Tanpa Nama',
+                    price: (item['price'] is num) ? (item['price'] as num).toDouble() : double.tryParse(item['price']?.toString() ?? '0') ?? 0,
+                    costPrice: (item['costPrice'] is num) ? (item['costPrice'] as num).toDouble() : double.tryParse(item['costPrice']?.toString() ?? ''),
+                    wholesalePrice: (item['wholesalePrice'] is num) ? (item['wholesalePrice'] as num).toDouble() : double.tryParse(item['wholesalePrice']?.toString() ?? ''),
+                    wholesaleMinQty: (item['wholesaleMinQty'] is num) ? (item['wholesaleMinQty'] as num).toInt() : int.tryParse(item['wholesaleMinQty']?.toString() ?? ''),
+                    unit: item['unit']?.toString() ?? 'pcs',
+                    categoryId: catId,
+                    icon: AppTheme.getCategoryIcon(catId),
+                    color: AppTheme.getCategoryColor(catId),
+                    code: item['code']?.toString() ?? '',
+                    stock: (item['stock'] is num) ? (item['stock'] as num).toInt() : int.tryParse(item['stock']?.toString() ?? '0') ?? 0,
+                    minStockAlert: (item['minStockAlert'] is num) ? (item['minStockAlert'] as num).toInt() : int.tryParse(item['minStockAlert']?.toString() ?? '5') ?? 5,
+                    description: item['description']?.toString(),
+                    isSensitiveItem: item['isSensitiveItem'] == true || item['isSensitiveItem']?.toString() == 'true',
+                  ),
+                );
+              }
             }
+            return fetchedProducts;
           }
-          return fetchedProducts;
         }
       }
+
+      // Fallback: Ambil langsung dari Google Spreadsheet
+      if (_spreadsheetId.isNotEmpty) {
+        final directProducts = await ServiceAccountSheetsService().fetchProducts(_spreadsheetId);
+        if (directProducts != null && directProducts.isNotEmpty) {
+          return directProducts;
+        }
+      }
+
       return null;
     } catch (e) {
+      if (_spreadsheetId.isNotEmpty) {
+        final directProducts = await ServiceAccountSheetsService().fetchProducts(_spreadsheetId);
+        if (directProducts != null && directProducts.isNotEmpty) {
+          return directProducts;
+        }
+      }
       debugPrint('Sync Info: Produk belum dapat diambil dari cloud ($e). Menggunakan database lokal.');
       return null;
     }
@@ -546,6 +545,9 @@ class AppsScriptService {
     }
 
     try {
+      if (_webAppUrl.isEmpty) {
+        return {'success': true, 'message': 'Data pengguna tersimpan di database lokal.'};
+      }
       final uri = Uri.parse(_webAppUrl);
       final payload = {
         'action': 'syncUsers',
@@ -574,26 +576,28 @@ class AppsScriptService {
     if (!isConnected) return null;
 
     try {
-      final response = await _sendAction('getUsers');
+      if (_webAppUrl.isNotEmpty) {
+        final response = await _sendAction('getUsers');
 
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        final data = jsonDecode(response.body);
-        final List? rawList = (data['users'] is List) ? data['users'] : (data['data'] is List ? data['data'] : null);
-        if (data['status'] == 'success' && rawList != null) {
-          final List<AppUser> fetchedUsers = [];
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          final data = jsonDecode(response.body);
+          final List? rawList = (data['users'] is List) ? data['users'] : (data['data'] is List ? data['data'] : null);
+          if (data['status'] == 'success' && rawList != null) {
+            final List<AppUser> fetchedUsers = [];
 
-          for (final item in rawList) {
-            if (item is Map) {
-              fetchedUsers.add(AppUser.fromJson(Map<String, dynamic>.from(item)));
+            for (final item in rawList) {
+              if (item is Map) {
+                fetchedUsers.add(AppUser.fromJson(Map<String, dynamic>.from(item)));
+              }
             }
-          }
-          if (fetchedUsers.isNotEmpty) {
-            return fetchedUsers;
+            if (fetchedUsers.isNotEmpty) {
+              return fetchedUsers;
+            }
           }
         }
       }
 
-      // Fallback via Service Account langsung
+      // Fallback via Spreadsheet langsung
       if (_spreadsheetId.isNotEmpty) {
         final saUsers = await ServiceAccountSheetsService().fetchUsers(_spreadsheetId);
         if (saUsers != null && saUsers.isNotEmpty) {
@@ -619,44 +623,61 @@ class AppsScriptService {
     if (!isConnected) return null;
 
     try {
-      final response = await _sendAction('getKasbon');
+      if (_webAppUrl.isNotEmpty) {
+        final response = await _sendAction('getKasbon');
 
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        final data = jsonDecode(response.body);
-        if (data['status'] == 'success' && data['data'] is List) {
-          final List rawList = data['data'];
-          final List<KasbonRecord> fetchedKasbon = [];
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          final data = jsonDecode(response.body);
+          if (data['status'] == 'success' && data['data'] is List) {
+            final List rawList = data['data'];
+            final List<KasbonRecord> fetchedKasbon = [];
 
-          for (final item in rawList) {
-            if (item is Map) {
-              DateTime createdAt = DateTime.now();
-              if (item['createdAt'] != null) {
-                createdAt = DateTime.tryParse(item['createdAt'].toString()) ?? DateTime.now();
+            for (final item in rawList) {
+              if (item is Map) {
+                DateTime createdAt = DateTime.now();
+                if (item['createdAt'] != null) {
+                  createdAt = DateTime.tryParse(item['createdAt'].toString()) ?? DateTime.now();
+                }
+                DateTime? dueDate;
+                if (item['dueDate'] != null && item['dueDate'].toString() != '-') {
+                  dueDate = DateTime.tryParse(item['dueDate'].toString());
+                }
+
+                fetchedKasbon.add(
+                  KasbonRecord(
+                    id: item['id']?.toString() ?? 'KSB-${DateTime.now().millisecondsSinceEpoch}',
+                    customerName: item['customerName']?.toString() ?? 'Pelanggan',
+                    customerPhone: item['customerPhone']?.toString() ?? '',
+                    amount: (item['amount'] is num) ? (item['amount'] as num).toDouble() : double.tryParse(item['amount']?.toString() ?? '0') ?? 0,
+                    createdAt: createdAt,
+                    dueDate: dueDate,
+                    isPaid: item['isPaid'] == true,
+                    items: [],
+                  ),
+                );
               }
-              DateTime? dueDate;
-              if (item['dueDate'] != null && item['dueDate'].toString() != '-') {
-                dueDate = DateTime.tryParse(item['dueDate'].toString());
-              }
-
-              fetchedKasbon.add(
-                KasbonRecord(
-                  id: item['id']?.toString() ?? 'KSB-${DateTime.now().millisecondsSinceEpoch}',
-                  customerName: item['customerName']?.toString() ?? 'Pelanggan',
-                  customerPhone: item['customerPhone']?.toString() ?? '',
-                  amount: (item['amount'] is num) ? (item['amount'] as num).toDouble() : double.tryParse(item['amount']?.toString() ?? '0') ?? 0,
-                  createdAt: createdAt,
-                  dueDate: dueDate,
-                  isPaid: item['isPaid'] == true,
-                  items: [],
-                ),
-              );
             }
+            return fetchedKasbon;
           }
-          return fetchedKasbon;
         }
       }
+
+      // Fallback via Spreadsheet langsung
+      if (_spreadsheetId.isNotEmpty) {
+        final directKasbon = await ServiceAccountSheetsService().fetchKasbon(_spreadsheetId);
+        if (directKasbon != null && directKasbon.isNotEmpty) {
+          return directKasbon;
+        }
+      }
+
       return null;
     } catch (e) {
+      if (_spreadsheetId.isNotEmpty) {
+        final directKasbon = await ServiceAccountSheetsService().fetchKasbon(_spreadsheetId);
+        if (directKasbon != null && directKasbon.isNotEmpty) {
+          return directKasbon;
+        }
+      }
       debugPrint('Sync Info: Data kasbon belum dapat diambil dari cloud ($e). Menggunakan kasbon lokal.');
       return null;
     }
@@ -666,6 +687,7 @@ class AppsScriptService {
   Future<bool> sendShiftRecord(ShiftRecord shift) async {
     if (!isConnected) return false;
     try {
+      if (_webAppUrl.isEmpty) return true;
       final uri = Uri.parse(_webAppUrl);
       final response = await _sendWithRedirect(
         uri,
@@ -689,23 +711,39 @@ class AppsScriptService {
   Future<List<ShiftRecord>?> fetchShiftsFromSpreadsheet() async {
     if (!isConnected) return null;
     try {
-      final response = await _sendAction('getShifts');
+      if (_webAppUrl.isNotEmpty) {
+        final response = await _sendAction('getShifts');
 
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        final data = jsonDecode(response.body);
-        final List? rawList = (data['shifts'] is List) ? data['shifts'] : (data['data'] is List ? data['data'] : null);
-        if (data['status'] == 'success' && rawList != null) {
-          final List<ShiftRecord> list = [];
-          for (final item in rawList) {
-            if (item is Map) {
-              list.add(ShiftRecord.fromJson(Map<String, dynamic>.from(item)));
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          final data = jsonDecode(response.body);
+          final List? rawList = (data['shifts'] is List) ? data['shifts'] : (data['data'] is List ? data['data'] : null);
+          if (data['status'] == 'success' && rawList != null) {
+            final List<ShiftRecord> list = [];
+            for (final item in rawList) {
+              if (item is Map) {
+                list.add(ShiftRecord.fromJson(Map<String, dynamic>.from(item)));
+              }
             }
+            return list;
           }
-          return list;
         }
       }
+
+      if (_spreadsheetId.isNotEmpty) {
+        final directShifts = await ServiceAccountSheetsService().fetchShifts(_spreadsheetId);
+        if (directShifts != null && directShifts.isNotEmpty) {
+          return directShifts;
+        }
+      }
+
       return null;
     } catch (e) {
+      if (_spreadsheetId.isNotEmpty) {
+        final directShifts = await ServiceAccountSheetsService().fetchShifts(_spreadsheetId);
+        if (directShifts != null && directShifts.isNotEmpty) {
+          return directShifts;
+        }
+      }
       return null;
     }
   }
@@ -714,6 +752,7 @@ class AppsScriptService {
   Future<bool> sendStockMutation(StockMutation mutation) async {
     if (!isConnected) return false;
     try {
+      if (_webAppUrl.isEmpty) return true;
       final uri = Uri.parse(_webAppUrl);
       final response = await _sendWithRedirect(
         uri,
@@ -737,23 +776,39 @@ class AppsScriptService {
   Future<List<StockMutation>?> fetchMutationsFromSpreadsheet() async {
     if (!isConnected) return null;
     try {
-      final response = await _sendAction('getMutations');
+      if (_webAppUrl.isNotEmpty) {
+        final response = await _sendAction('getMutations');
 
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        final data = jsonDecode(response.body);
-        final List? rawList = (data['mutations'] is List) ? data['mutations'] : (data['data'] is List ? data['data'] : null);
-        if (data['status'] == 'success' && rawList != null) {
-          final List<StockMutation> list = [];
-          for (final item in rawList) {
-            if (item is Map) {
-              list.add(StockMutation.fromJson(Map<String, dynamic>.from(item)));
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          final data = jsonDecode(response.body);
+          final List? rawList = (data['mutations'] is List) ? data['mutations'] : (data['data'] is List ? data['data'] : null);
+          if (data['status'] == 'success' && rawList != null) {
+            final List<StockMutation> list = [];
+            for (final item in rawList) {
+              if (item is Map) {
+                list.add(StockMutation.fromJson(Map<String, dynamic>.from(item)));
+              }
             }
+            return list;
           }
-          return list;
         }
       }
+
+      if (_spreadsheetId.isNotEmpty) {
+        final directMutations = await ServiceAccountSheetsService().fetchMutations(_spreadsheetId);
+        if (directMutations != null && directMutations.isNotEmpty) {
+          return directMutations;
+        }
+      }
+
       return null;
     } catch (e) {
+      if (_spreadsheetId.isNotEmpty) {
+        final directMutations = await ServiceAccountSheetsService().fetchMutations(_spreadsheetId);
+        if (directMutations != null && directMutations.isNotEmpty) {
+          return directMutations;
+        }
+      }
       return null;
     }
   }
@@ -762,6 +817,7 @@ class AppsScriptService {
   Future<bool> sendStoreProfile(StoreProfile profile) async {
     if (!isConnected) return false;
     try {
+      if (_webAppUrl.isEmpty) return true;
       final uri = Uri.parse(_webAppUrl);
       final response = await _sendWithRedirect(
         uri,
@@ -785,16 +841,32 @@ class AppsScriptService {
   Future<StoreProfile?> fetchStoreProfileFromSpreadsheet() async {
     if (!isConnected) return null;
     try {
-      final response = await _sendAction('getStoreProfile');
+      if (_webAppUrl.isNotEmpty) {
+        final response = await _sendAction('getStoreProfile');
 
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        final data = jsonDecode(response.body);
-        if (data['status'] == 'success' && data['profile'] is Map) {
-          return StoreProfile.fromJson(Map<String, dynamic>.from(data['profile']));
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          final data = jsonDecode(response.body);
+          if (data['status'] == 'success' && data['profile'] is Map) {
+            return StoreProfile.fromJson(Map<String, dynamic>.from(data['profile']));
+          }
         }
       }
+
+      if (_spreadsheetId.isNotEmpty) {
+        final directProfile = await ServiceAccountSheetsService().fetchStoreProfile(_spreadsheetId);
+        if (directProfile != null) {
+          return directProfile;
+        }
+      }
+
       return null;
     } catch (e) {
+      if (_spreadsheetId.isNotEmpty) {
+        final directProfile = await ServiceAccountSheetsService().fetchStoreProfile(_spreadsheetId);
+        if (directProfile != null) {
+          return directProfile;
+        }
+      }
       return null;
     }
   }

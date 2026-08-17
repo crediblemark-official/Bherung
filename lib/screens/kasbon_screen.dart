@@ -7,11 +7,13 @@ import '../theme/app_theme.dart';
 class KasbonScreen extends StatefulWidget {
   final List<KasbonRecord> kasbonRecords;
   final ValueChanged<KasbonRecord> onKasbonPaid;
+  final String storeName;
 
   const KasbonScreen({
     super.key,
     required this.kasbonRecords,
     required this.onKasbonPaid,
+    this.storeName = 'Bherung',
   });
 
   @override
@@ -64,6 +66,202 @@ class _KasbonScreenState extends State<KasbonScreen> {
       }
     });
   }
+
+  void _showKasbonReceipt(BuildContext ctx, KasbonRecord kasbon, {bool isPelunasan = false}) {
+    final now = DateTime.now();
+    final dateStr = '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    final createdStr = '${kasbon.createdAt.day.toString().padLeft(2, '0')}/${kasbon.createdAt.month.toString().padLeft(2, '0')}/${kasbon.createdAt.year}';
+
+    showModalBottomSheet(
+      context: ctx,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        maxChildSize: 0.95,
+        minChildSize: 0.5,
+        builder: (_, scrollCtrl) => Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFFFAFAF8),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 10, bottom: 6),
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        isPelunasan ? 'Bukti Pelunasan Kasbon' : 'Struk Kasbon',
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: AppTheme.textDark),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, color: AppTheme.textMuted),
+                      onPressed: () => Navigator.pop(ctx),
+                      padding: EdgeInsets.zero,
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: ListView(
+                  controller: scrollCtrl,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  children: [
+                    Center(
+                      child: Column(
+                        children: [
+                          Text(
+                            widget.storeName.toUpperCase(),
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppTheme.textDark, letterSpacing: 1.5),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            isPelunasan ? 'BUKTI PELUNASAN KASBON' : 'BUKTI KASBON / UTANG',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: isPelunasan ? AppTheme.successGreen : AppTheme.dangerRed,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    _receiptDivider(),
+                    const SizedBox(height: 10),
+                    _receiptRow('No. Kasbon', kasbon.id),
+                    const SizedBox(height: 4),
+                    _receiptRow('Tanggal Kasbon', createdStr),
+                    const SizedBox(height: 4),
+                    if (isPelunasan) ...[
+                      _receiptRow('Tanggal Lunas', dateStr),
+                      const SizedBox(height: 4),
+                    ],
+                    _receiptRow('Nama Pelanggan', kasbon.customerName, bold: true),
+                    if (kasbon.customerPhone.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      _receiptRow('No. HP / WA', kasbon.customerPhone),
+                    ],
+                    if (kasbon.dueDate != null) ...[
+
+                      const SizedBox(height: 4),
+                      _receiptRow(
+                        'Jatuh Tempo',
+                        '${kasbon.dueDate!.day.toString().padLeft(2, '0')}/${kasbon.dueDate!.month.toString().padLeft(2, '0')}/${kasbon.dueDate!.year}',
+                        highlight: !isPelunasan,
+                      ),
+                    ],
+                    const SizedBox(height: 10),
+                    _receiptDivider(),
+                    const SizedBox(height: 10),
+                    const Text('Rincian Barang:', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: AppTheme.textDark)),
+                    const SizedBox(height: 8),
+                    ...kasbon.items.map((item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 5),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${item.product.name}\n${item.quantity} ${item.product.unit} \u00d7 ${AppTheme.formatRupiah(item.unitPrice)}',
+                              style: const TextStyle(fontSize: 11.5, color: AppTheme.textDark, height: 1.4),
+                            ),
+                          ),
+                          Text(
+                            AppTheme.formatRupiah(item.totalPrice),
+                            style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                          ),
+                        ],
+                      ),
+                    )),
+                    const SizedBox(height: 10),
+                    _receiptDivider(),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          isPelunasan ? 'TOTAL DILUNASI' : 'TOTAL UTANG',
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: AppTheme.textDark),
+                        ),
+                        Text(
+                          AppTheme.formatRupiah(kasbon.amount),
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                            color: isPelunasan ? AppTheme.successGreen : AppTheme.dangerRed,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    _receiptDivider(),
+                    const SizedBox(height: 16),
+                    Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: isPelunasan ? const Color(0xFFECFDF5) : const Color(0xFFFEF2F2),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: isPelunasan ? AppTheme.successGreen : AppTheme.dangerRed),
+                        ),
+                        child: Text(
+                          isPelunasan ? '\u2713 LUNAS' : '\u26a0 BELUM LUNAS',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                            color: isPelunasan ? AppTheme.successGreen : AppTheme.dangerRed,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Center(child: Text('Dicetak: $dateStr', style: const TextStyle(fontSize: 10, color: AppTheme.textMuted))),
+                    const SizedBox(height: 4),
+                    const Center(child: Text('Bherung POS — Sistem Kasir Toko Sembako', style: TextStyle(fontSize: 9.5, color: AppTheme.textMuted))),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _receiptDivider() => Row(
+    children: List.generate(40, (i) => Expanded(
+      child: Container(margin: const EdgeInsets.symmetric(horizontal: 1), height: 1, color: i.isEven ? AppTheme.borderColor : Colors.transparent),
+    )),
+  );
+
+  Widget _receiptRow(String label, String value, {bool bold = false, bool highlight = false}) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      SizedBox(width: 110, child: Text(label, style: const TextStyle(fontSize: 11, color: AppTheme.textMuted))),
+      const Text(':', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+      const SizedBox(width: 6),
+      Expanded(
+        child: Text(
+          value,
+          style: TextStyle(fontSize: 11.5, fontWeight: bold ? FontWeight.w800 : FontWeight.w600, color: highlight ? AppTheme.dangerRed : AppTheme.textDark),
+        ),
+      ),
+    ],
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -341,6 +539,7 @@ class _KasbonScreenState extends State<KasbonScreen> {
                                                     backgroundColor: AppTheme.successGreen,
                                                   ),
                                                 );
+                                                _showKasbonReceipt(context, kasbon, isPelunasan: true);
                                               },
                                               style: ElevatedButton.styleFrom(
                                                 backgroundColor: AppTheme.successGreen,
@@ -440,30 +639,59 @@ class _KasbonScreenState extends State<KasbonScreen> {
                                                 'Dicatat: ${kasbon.createdAt.day}/${kasbon.createdAt.month}/${kasbon.createdAt.year} ${kasbon.createdAt.hour.toString().padLeft(2, "0")}:${kasbon.createdAt.minute.toString().padLeft(2, "0")}',
                                                 style: const TextStyle(fontSize: 10, color: AppTheme.textMuted),
                                               ),
-                                              if (!kasbon.isPaid)
-                                                InkWell(
-                                                  onTap: () {
-                                                    setState(() => kasbon.isPaid = true);
-                                                    widget.onKasbonPaid(kasbon);
-                                                    AppsScriptService().payKasbon(kasbon.id);
-                                                    ScaffoldMessenger.of(context).showSnackBar(
-                                                      SnackBar(
-                                                        content: Text('Kasbon ${kasbon.customerName} ditandai LUNAS!'),
-                                                        backgroundColor: AppTheme.successGreen,
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  // Tombol Struk
+                                                  InkWell(
+                                                    onTap: () => _showKasbonReceipt(context, kasbon, isPelunasan: kasbon.isPaid),
+                                                    borderRadius: BorderRadius.circular(6),
+                                                    child: Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                                                      decoration: BoxDecoration(
+                                                        color: AppTheme.bgSubtle,
+                                                        borderRadius: BorderRadius.circular(6),
+                                                        border: Border.all(color: AppTheme.borderColor),
                                                       ),
-                                                    );
-                                                  },
-                                                  child: const Row(
-                                                    children: [
-                                                      Icon(Icons.check_circle_outline_rounded, size: 13, color: AppTheme.successGreen),
-                                                      SizedBox(width: 4),
-                                                      Text(
-                                                        'Tandai Sudah Lunas',
-                                                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.successGreen),
+                                                      child: const Row(
+                                                        mainAxisSize: MainAxisSize.min,
+                                                        children: [
+                                                          Icon(Icons.receipt_long_rounded, size: 13, color: AppTheme.primaryTeal),
+                                                          SizedBox(width: 4),
+                                                          Text('Struk', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.primaryTeal)),
+                                                        ],
                                                       ),
-                                                    ],
+                                                    ),
                                                   ),
-                                                ),
+                                                  if (!kasbon.isPaid) ...[
+                                                    const SizedBox(width: 8),
+                                                    InkWell(
+                                                      onTap: () {
+                                                        setState(() => kasbon.isPaid = true);
+                                                        widget.onKasbonPaid(kasbon);
+                                                        AppsScriptService().payKasbon(kasbon.id);
+                                                        ScaffoldMessenger.of(context).showSnackBar(
+                                                          SnackBar(
+                                                            content: Text('Kasbon ${kasbon.customerName} ditandai LUNAS!'),
+                                                            backgroundColor: AppTheme.successGreen,
+                                                          ),
+                                                        );
+                                                        _showKasbonReceipt(context, kasbon, isPelunasan: true);
+                                                      },
+                                                      child: const Row(
+                                                        children: [
+                                                          Icon(Icons.check_circle_outline_rounded, size: 13, color: AppTheme.successGreen),
+                                                          SizedBox(width: 4),
+                                                          Text(
+                                                            'Tandai Sudah Lunas',
+                                                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.successGreen),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ],
+                                              ),
                                             ],
                                           ),
                                         ],

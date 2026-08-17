@@ -948,43 +948,10 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
             ],
           ),
         ),
-        const SizedBox(height: 12),
-
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: AppTheme.borderColor),
-            boxShadow: AppTheme.softShadow,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Operasional Jaga & Kasir', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textDark)),
-              const SizedBox(height: 10),
-              TextField(
-                controller: _startingCashController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Uang Kembalian di Laci Default (Rp)',
-                  hintText: '200000',
-                  prefixIcon: Icon(Icons.payments_rounded, size: 18, color: AppTheme.primaryTeal),
-                  isDense: true,
-                ),
-                onChanged: (_) => _saveProfileChanges(),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'Nilai ini akan otomatis menjadi saldo awal saat kasir membuka serah terima shift baru.',
-                style: TextStyle(fontSize: 10.5, color: AppTheme.textMuted),
-              ),
-            ],
-          ),
-        ),
       ],
     );
   }
+
 
   // TAB 3: QRIS & Rekening Bank Toko
   Widget _buildPaymentMethodsTab() {

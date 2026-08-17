@@ -201,7 +201,7 @@ function doGet(e) {
       return jsonResponse({ status: 'success', users: users, data: users });
     }
 
-    // 4. GET Rekap Shift
+    // 4. GET Rekap Laporan Jaga
     if (action === 'getShifts') {
       const sheet = getOrCreateSheet(ss, 'Shift_Rekap');
       const data = sheet.getDataRange().getValues();
@@ -210,15 +210,15 @@ function doGet(e) {
       const shifts = rows.map(r => ({
         id: String(r[0]),
         cashierName: String(r[1]),
-        shiftName: String(r[2] || 'Shift Operan'),
+        shiftName: String(r[2] || 'Laporan Jaga'),
         startTime: r[3] instanceof Date ? r[3].toISOString() : String(r[3]),
         endTime: r[4] instanceof Date ? r[4].toISOString() : String(r[4]),
-        startingCashDrawer: Number(r[5]) || 0,
-        totalSystemSales: Number(r[6]) || 0,
-        physicalCashCounted: Number(r[7]) || 0,
-        cashDifference: Number(r[8]) || 0,
-        handoverNotes: String(r[9] || ''),
-        nextCashierName: String(r[10] || '')
+        startingCashDrawer: 0,
+        totalSystemSales: Number(r[5]) || 0,
+        physicalCashCounted: 0,
+        cashDifference: 0,
+        handoverNotes: String(r[7] || ''),
+        nextCashierName: String(r[8] || '')
       }));
 
       return jsonResponse({ status: 'success', shifts: shifts, data: shifts });
@@ -481,28 +481,32 @@ function doPost(e) {
       });
     }
 
-    // 6. Simpan Rekap Shift ke Spreadsheet
+    // 6. Simpan Rekap Laporan Jaga ke Spreadsheet
     if (action === 'addShift') {
       const shift = body.data;
       const sheetShifts = getOrCreateSheet(ss, 'Shift_Rekap');
+      const dateNow = new Date();
+
+      // Ringkasan audit stok (jika ada)
+      const stockAuditSummary = (shift.stockAudits || []).map(a =>
+        `${a.productName}: sistem=${a.systemStock}, fisik=${a.physicalStock}${a.difference !== 0 ? ' [SELISIH:'+a.difference+']' : ''}`
+      ).join('; ');
 
       sheetShifts.appendRow([
-        shift.id || ('SHIFT-' + new Date().getTime()),
-        shift.cashierName || 'Kasir',
-        shift.shiftName || 'Shift Operan',
-        shift.startTime || new Date().toISOString(),
-        shift.endTime || new Date().toISOString(),
-        Number(shift.startingCashDrawer) || 0,
+        shift.id || ('LAPORAN-' + dateNow.getTime()),
+        shift.cashierName || 'Penjaga',
+        Utilities.formatDate(dateNow, Session.getScriptTimeZone(), 'yyyy-MM-dd'),
+        Utilities.formatDate(dateNow, Session.getScriptTimeZone(), 'HH:mm:ss'),
         Number(shift.totalSystemSales) || 0,
-        Number(shift.physicalCashCounted) || 0,
-        Number(shift.cashDifference) || 0,
+        Number(shift.currentShiftTransactions) || 0,
+        stockAuditSummary,
         shift.handoverNotes || '',
-        shift.nextCashierName || ''
+        shift.nextCashierName || shift.cashierName || 'Penjaga Tetap'
       ]);
 
       return jsonResponse({
         status: 'success',
-        message: 'Rekap shift berhasil dicatat ke Spreadsheet!'
+        message: 'Laporan jaga berhasil dikirim ke Spreadsheet!'
       });
     }
 
