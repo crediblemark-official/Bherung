@@ -63,35 +63,20 @@ class UserGuideScreen extends StatelessWidget {
                   _buildVisualStepCard(
                     context,
                     stepNumber: '2',
-                    title: 'Buka Hak Akses Link Menjadi "Editor"',
-                    desc:
-                        'Di Google Spreadsheet hasil salinan Anda, klik tombol "Bagikan (Share)". Pada bagian Akses umum, ubah menjadi "Siapa saja yang memiliki link (Anyone with the link)" dan pastikan perannya dipilih "Editor" (bukan Viewer/Pelihat) agar aplikasi kasir dapat mencatat penjualan, memperbarui stok, dan buku kasbon secara otomatis.',
-                    imagePaths: [
-                      'assets/docs/step1_akses_siapa_saja.png',
-                      'assets/docs/step2_pilih_editor.png',
-                    ],
-                    badgeText: 'PENTING: Wajib Editor',
-                    badgeColor: AppTheme.successGreen,
-                  ),
-                  const SizedBox(height: 12),
-
-                  _buildVisualStepCard(
-                    context,
-                    stepNumber: '3',
                     title: 'Jalankan Menu "Bherung POS" di Spreadsheet',
                     desc:
-                        'Buka Google Spreadsheet di laptop/komputer. Klik menu khusus "🏪 Bherung POS" di bilah atas, lalu pilih opsi:\n"🔑 1. Otorisasi & Aktifkan Database Kasir" untuk mengaktifkan seluruh 7 tabel database toko serta memberikan akses robot Service Account secara otomatis.',
+                        'Buka Google Spreadsheet di laptop/komputer. Klik menu khusus "🏪 Bherung POS" di bilah atas, lalu pilih opsi:\n"🔑 1. Otorisasi & Aktifkan Database Kasir" untuk mengaktifkan seluruh 7 tabel database toko serta memberikan akses robot Service Account secara otomatis tanpa perlu atur berbagi manual.',
                     imagePaths: [
                       'assets/docs/step3_menu_otorisasi.png',
                     ],
-                    badgeText: 'Menu Otomatis',
+                    badgeText: 'Otomatis 1-Klik',
                     badgeColor: AppTheme.primaryGold,
                   ),
                   const SizedBox(height: 12),
 
                   _buildVisualStepCard(
                     context,
-                    stepNumber: '4',
+                    stepNumber: '3',
                     title: 'Izinkan Otorisasi Keamanan Akun Google',
                     desc:
                         'Google akan menampilkan dialog otorisasi izin keamanan. Klik "Oke", pilih akun Google Anda, centang izin Google Drive & Spreadsheet, lalu klik tombol "Lanjutkan / Izinkan". Otorisasi ini hanya perlu dilakukan satu kali saja di awal.',
@@ -106,7 +91,7 @@ class UserGuideScreen extends StatelessWidget {
 
                   _buildVisualStepCard(
                     context,
-                    stepNumber: '5',
+                    stepNumber: '4',
                     title: 'Salin ID Spreadsheet atau URL Apps Script ke Aplikasi',
                     desc:
                         'Setelah otorisasi selesai, ID Spreadsheet akan muncul di layar. Anda juga bisa menyalin link URL lengkap dari address bar browser.\n\nBuka menu Pengaturan > Tab Database & Cloud di aplikasi Bherung POS, tempelkan ID Spreadsheet atau URL Web App Apps Script, lalu klik tombol "Hubungkan & Simpan Database". Aplikasi kini langsung terhubung tanpa batas limit pengguna (Unlimited)!',
