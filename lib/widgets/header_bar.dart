@@ -21,6 +21,7 @@ class PosHeaderBar extends StatelessWidget {
   final VoidCallback onOpenRestock;
   final VoidCallback onOpenRoleSwitcher;
   final VoidCallback? onLockScreen;
+  final VoidCallback? onLogoutOwner;
   final VoidCallback? onOpenDrawer;
 
   const PosHeaderBar({
@@ -42,6 +43,7 @@ class PosHeaderBar extends StatelessWidget {
     required this.onOpenRestock,
     required this.onOpenRoleSwitcher,
     this.onLockScreen,
+    this.onLogoutOwner,
     this.onOpenDrawer,
   });
 
@@ -173,6 +175,16 @@ class PosHeaderBar extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (currentUser.isOwner && onLogoutOwner != null) ...[
+                  const SizedBox(width: 4),
+                  IconButton(
+                    onPressed: onLogoutOwner,
+                    icon: const Icon(Icons.logout_rounded, size: 16, color: AppTheme.goldAccent),
+                    tooltip: 'Keluar Akun Pemilik (Kunci POS)',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                  ),
+                ],
                 const SizedBox(width: 6),
 
                 // Hamburger Menu Button
@@ -294,6 +306,16 @@ class PosHeaderBar extends StatelessWidget {
                         onPressed: onLockScreen,
                         icon: const Icon(Icons.lock_outline_rounded, size: 16, color: Colors.white70),
                         tooltip: 'Kunci Layar Kasir (Ganti Penjaga)',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                      ),
+                    ],
+                    if (currentUser.isOwner && onLogoutOwner != null) ...[
+                      const SizedBox(width: 4),
+                      IconButton(
+                        onPressed: onLogoutOwner,
+                        icon: const Icon(Icons.logout_rounded, size: 16, color: AppTheme.goldAccent),
+                        tooltip: 'Keluar Akun Pemilik (Kunci POS)',
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
                       ),

@@ -20,6 +20,7 @@ class AppMenuScreen extends StatelessWidget {
   final VoidCallback onOpenStockControl;
   final VoidCallback onOpenRestock;
   final VoidCallback onOpenRoleSwitcher;
+  final VoidCallback? onLogoutOwner;
 
   const AppMenuScreen({
     super.key,
@@ -39,6 +40,7 @@ class AppMenuScreen extends StatelessWidget {
     required this.onOpenStockControl,
     required this.onOpenRestock,
     required this.onOpenRoleSwitcher,
+    this.onLogoutOwner,
   });
 
   @override
@@ -429,6 +431,40 @@ class AppMenuScreen extends StatelessWidget {
                 ),
               ),
             ),
+            if (currentUser.isOwner && onLogoutOwner != null) ...[
+              const SizedBox(height: 14),
+              Material(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                child: ListTile(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(color: Color(0xFFFECACA)),
+                  ),
+                  leading: Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEE2E2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.logout_rounded, color: Color(0xFFDC2626), size: 20),
+                  ),
+                  title: const Text(
+                    'Keluar Akun Pemilik Toko',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFDC2626)),
+                  ),
+                  subtitle: const Text(
+                    'Kunci sistem POS dan kembali ke layar PIN kasir',
+                    style: TextStyle(fontSize: 10.5, color: AppTheme.textMuted),
+                  ),
+                  trailing: const Icon(Icons.lock_outline_rounded, size: 18, color: Color(0xFFDC2626)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    onLogoutOwner!();
+                  },
+                ),
+              ),
+            ],
           ],
         ),
       ),

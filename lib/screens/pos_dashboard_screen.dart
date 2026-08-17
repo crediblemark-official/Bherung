@@ -1367,6 +1367,21 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
   );
 }
 
+  void _logoutOwner() {
+    setState(() {
+      _isLocked = true;
+      if (_users.isNotEmpty) {
+        _currentUser = _scheduledNextUser ?? _users.firstWhere((u) => !u.isOwner, orElse: () => _users.first);
+      }
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Akun Pemilik Toko telah keluar. Layar POS terkunci.'),
+        backgroundColor: AppTheme.primaryDark,
+      ),
+    );
+  }
+
   // Full-Screen Menu Toko & Pengaturan
   void _openAppMenuScreen() {
     Navigator.push(
@@ -1389,6 +1404,7 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
           onOpenStockControl: _showStockControlDashboard,
           onOpenRestock: _showRestockDialog,
           onOpenRoleSwitcher: _showRoleSwitcherDialog,
+          onLogoutOwner: _logoutOwner,
         ),
       ),
     );
@@ -1451,6 +1467,7 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
               onOpenRestock: _showRestockDialog,
               onOpenRoleSwitcher: _showRoleSwitcherDialog,
               onLockScreen: () => setState(() => _isLocked = true),
+              onLogoutOwner: _logoutOwner,
               onOpenDrawer: _openAppMenuScreen,
             ),
 
