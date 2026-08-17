@@ -641,21 +641,6 @@ class _CartSidebarState extends State<CartSidebar> {
                                     ),
                                   ),
                                 ),
-                                if (widget.transactionType != TransactionType.grosir && item.product.wholesalePrice != null && !item.isWholesaleApplied) ...[
-                                  const SizedBox(width: 8),
-                                  InkWell(
-                                    onTap: () => widget.onToggleWholesale(item, !item.forceWholesalePrice),
-                                    borderRadius: BorderRadius.circular(3),
-                                    child: Text(
-                                      item.forceWholesalePrice ? 'Hrg Normal' : 'Set Grosir',
-                                      style: TextStyle(
-                                        fontSize: 9.5,
-                                        color: item.forceWholesalePrice ? AppTheme.warningOrange : AppTheme.accentIndigo,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ),
-                                ],
                               ],
                             ),
                           ),
