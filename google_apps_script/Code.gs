@@ -31,7 +31,15 @@ function authorizeAndGetId() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   formatDatabaseSheets();
 
-  // Otomatis berikan izin akses Editor ke Service Account Backend Bherung POS
+  // 1. Otomatis kunci General Access: Siapa saja yang memiliki link -> EDITOR
+  try {
+    const file = DriveApp.getFileById(ss.getId());
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.EDIT);
+  } catch (e) {
+    Logger.log('Auto set sharing Anyone with link Editor notice: ' + e);
+  }
+
+  // 2. Otomatis berikan izin akses Editor ke Service Account Backend Bherung POS
   try {
     ss.addEditor('bherung-pos@app-script-505503.iam.gserviceaccount.com');
   } catch (e) {
