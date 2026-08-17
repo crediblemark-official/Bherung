@@ -52,9 +52,17 @@ Anda dapat mengunduh berkas instalasi **APK Release** langsung dari halaman [Git
 - **Riwayat Mutasi Stok**: Pencatatan log lengkap (Restock, Penjualan Kasir, Penyesuaian/Barang Rusak).
 - **Valuasi Modal**: Estimasi total nilai aset modal toko secara *real-time*.
 
-### 🔐 6. Role Pengguna (Owner vs Kasir)
-- **Mode Owner**: Akses penuh ke laporan laba kotor, harga modal kulakan, dan konfigurasi master data yang dilindungi PIN.
-- **Mode Kasir/Staff**: Antarmuka bersih yang difokuskan khusus untuk kecepatan transaksi kasir.
+### 🔐 6. Role Pengguna & Autentikasi PIN Otomatis
+- **4-Digit PIN Auto-Identification**: Cukup masukkan 4-digit PIN, sistem langsung mengenali pemilik toko (`1234`) atau penjaga toko (`5678`).
+- **Mode Pemilik Toko (Owner)**: Hak akses penuh kelola akun/PIN kasir, otorisasi serah terima shift, audit fisik kas laci & rokok, serta tombol khusus *Keluar Akun Pemilik*.
+- **Mode Penjaga Toko (Staff)**: Antarmuka bersih, cepat, dan terproteksi dari menu sensitif.
+- **Sambutan Khas Madura**: *"Silahkan masuk Tretan [Nama Penjaga]"*.
+
+### ☁️ 7. Tiga Pilihan Sinkronisasi Cloud Google Spreadsheet
+- **Metode 1: Google OAuth (1-Click)**: Login akun Google langsung tanpa salin ID spreadsheet.
+- **Metode 2: Service Account + ID Spreadsheet**: Ideal untuk HP kasir (kasir tidak perlu login email Google Owner).
+- **Metode 3: Custom Google Apps Script Deployment**: Deploy backend `Code.gs` mandiri di Google Drive pribadi.
+- 📖 **Dokumentasi Lengkap**: Baca panduan arsitektur & kuota selengkapnya di [docs/ARSITEKTUR_CLOUD_DAN_ROLE.md](docs/ARSITEKTUR_CLOUD_DAN_ROLE.md).
 
 ---
 
