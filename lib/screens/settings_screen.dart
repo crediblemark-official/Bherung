@@ -73,9 +73,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     );
 
     _appsScriptUrlController = TextEditingController(
-      text: _appsScriptService.webAppUrl != AppsScriptService.masterBackendUrl
-          ? _appsScriptService.webAppUrl
-          : '',
+      text: _appsScriptService.webAppUrl,
     );
   }
 

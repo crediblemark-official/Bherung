@@ -40,11 +40,7 @@ class AppsScriptService {
   factory AppsScriptService() => _instance;
   AppsScriptService._internal();
 
-  // Master Router Endpoint Backend Bherung POS
-  static const String masterBackendUrl =
-      'https://script.google.com/macros/s/AKfycbyEU2-yYkYFPhWxQxuBte_I7ENLQWkqinu_Cvt1Xk28A2R01O-HjtN510S2U7_mAsCe/exec';
-
-  String _webAppUrl = masterBackendUrl;
+  String _webAppUrl = '';
   String _spreadsheetId = '';
   String _rawInput = '';
   bool _isConnected = false;
@@ -55,7 +51,7 @@ class AppsScriptService {
   String get webAppUrl => _webAppUrl;
   String get spreadsheetId => _spreadsheetId;
   String get rawInput => _rawInput;
-  bool get isConnected => _isConnected;
+  bool get isConnected => _isConnected && _webAppUrl.isNotEmpty;
   String get spreadsheetName => _spreadsheetName;
   int get offlineQueueCount => _offlineQueue.length;
 
@@ -66,9 +62,9 @@ class AppsScriptService {
       final prefs = await SharedPreferences.getInstance();
       _rawInput = prefs.getString('bherung_spreadsheet_input') ?? '';
       _spreadsheetId = prefs.getString('bherung_spreadsheet_id') ?? '';
-      _webAppUrl = prefs.getString('bherung_web_app_url') ?? masterBackendUrl;
+      _webAppUrl = prefs.getString('bherung_web_app_url') ?? '';
       _spreadsheetName = prefs.getString('bherung_spreadsheet_name') ?? 'Mode Offline (Belum Terhubung)';
-      _isConnected = prefs.getBool('bherung_is_connected') ?? false;
+      _isConnected = (prefs.getBool('bherung_is_connected') ?? false) && _webAppUrl.isNotEmpty;
       _isInitialized = true;
     } catch (e) {
       debugPrint('Error loading saved settings: $e');
@@ -135,12 +131,7 @@ class AppsScriptService {
   }
 
   Future<void> setCustomWebAppUrl(String url) async {
-    final clean = url.trim();
-    if (clean.isNotEmpty) {
-      _webAppUrl = clean;
-    } else {
-      _webAppUrl = masterBackendUrl;
-    }
+    _webAppUrl = url.trim();
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('bherung_web_app_url', _webAppUrl);
@@ -152,7 +143,7 @@ class AppsScriptService {
   Future<void> clearSettings() async {
     _rawInput = '';
     _spreadsheetId = '';
-    _webAppUrl = masterBackendUrl;
+    _webAppUrl = '';
     _isConnected = false;
     _spreadsheetName = 'Mode Offline (Belum Terhubung)';
 
@@ -189,33 +180,35 @@ class AppsScriptService {
       await setSpreadsheetInput(input);
     }
 
-    if (_spreadsheetId.isEmpty && !_webAppUrl.startsWith('http')) {
+    if (_webAppUrl.isEmpty && _spreadsheetId.isEmpty) {
       return {
         'success': false,
-        'message': 'Harap masukkan Link atau ID Spreadsheet toko Anda.',
+        'message': 'Harap masukkan URL Web App Google Apps Script atau Spreadsheet ID toko Anda.',
       };
     }
 
     try {
-      final response = await _sendAction('ping');
+      if (_webAppUrl.isNotEmpty) {
+        final response = await _sendAction('ping');
 
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        final data = jsonDecode(response.body);
-        if (data['status'] == 'success') {
-          _isConnected = true;
-          _spreadsheetName = data['spreadsheetName'] ?? 'Spreadsheet Toko';
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          final data = jsonDecode(response.body);
+          if (data['status'] == 'success') {
+            _isConnected = true;
+            _spreadsheetName = data['spreadsheetName'] ?? 'Spreadsheet Toko';
 
-          try {
-            final prefs = await SharedPreferences.getInstance();
-            await prefs.setBool('bherung_is_connected', true);
-            await prefs.setString('bherung_spreadsheet_name', _spreadsheetName);
-          } catch (_) {}
+            try {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('bherung_is_connected', true);
+              await prefs.setString('bherung_spreadsheet_name', _spreadsheetName);
+            } catch (_) {}
 
-          return {
-            'success': true,
-            'message': data['message'] ?? 'Berhasil terhubung ke Spreadsheet Toko!',
-            'spreadsheetName': _spreadsheetName,
-          };
+            return {
+              'success': true,
+              'message': data['message'] ?? 'Berhasil terhubung ke Spreadsheet Toko!',
+              'spreadsheetName': _spreadsheetName,
+            };
+          }
         }
       }
 
@@ -240,7 +233,7 @@ class AppsScriptService {
         }
       }
 
-      return {'success': false, 'message': 'Gagal merespons: ${response.statusCode} - ${response.body}'};
+      return {'success': false, 'message': 'Gagal merespons dari Web App Apps Script. Pastikan URL benar & memiliki izin akses Siapa saja.'};
     } catch (e) {
       if (_spreadsheetId.isNotEmpty) {
         final saRes = await ServiceAccountSheetsService().testConnection(_spreadsheetId);
