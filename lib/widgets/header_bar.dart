@@ -71,7 +71,6 @@ class PosHeaderBar extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final isMobileOrTablet = constraints.maxWidth < 950;
-          final isVerySmall = constraints.maxWidth < 420;
 
           return Row(
             children: [
@@ -108,7 +107,7 @@ class PosHeaderBar extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    if (storeTagline.isNotEmpty && !isVerySmall) ...[
+                    if (storeTagline.isNotEmpty && constraints.maxWidth >= 500) ...[
                       const SizedBox(width: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
@@ -127,7 +126,7 @@ class PosHeaderBar extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
 
               // Right Navigation
               if (isMobileOrTablet) ...[
@@ -136,7 +135,7 @@ class PosHeaderBar extends StatelessWidget {
                   onTap: onOpenRoleSwitcher,
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4.5),
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
                     decoration: BoxDecoration(
                       color: currentUser.isOwner
                           ? AppTheme.primaryGold.withValues(alpha: 0.18)
@@ -157,12 +156,17 @@ class PosHeaderBar extends StatelessWidget {
                           color: currentUser.isOwner ? AppTheme.goldAccent : Colors.white70,
                         ),
                         const SizedBox(width: 4),
-                        Text(
-                          currentUser.name.split(' ').first,
-                          style: TextStyle(
-                            color: currentUser.isOwner ? AppTheme.goldAccent : Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 85),
+                          child: Text(
+                            currentUser.name.split(' ').first,
+                            style: TextStyle(
+                              color: currentUser.isOwner ? AppTheme.goldAccent : Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
                         ),
                       ],

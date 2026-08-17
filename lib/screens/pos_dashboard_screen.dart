@@ -1137,6 +1137,7 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
           products: _products,
           storeName: _storeName,
           storeProfile: _storeProfile,
+          currentUser: _currentUser,
           onStoreNameChanged: (newName) {
             setState(() => _storeName = newName);
           },

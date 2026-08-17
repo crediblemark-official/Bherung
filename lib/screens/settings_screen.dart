@@ -11,6 +11,7 @@ class SettingsScreen extends StatefulWidget {
   final List<Product> products;
   final String storeName;
   final StoreProfile storeProfile;
+  final AppUser? currentUser;
   final ValueChanged<String>? onStoreNameChanged;
   final ValueChanged<StoreProfile>? onStoreProfileChanged;
   final VoidCallback onDataChanged;
@@ -20,6 +21,7 @@ class SettingsScreen extends StatefulWidget {
     required this.products,
     this.storeName = 'Bherung',
     this.storeProfile = const StoreProfile(),
+    this.currentUser,
     this.onStoreNameChanged,
     this.onStoreProfileChanged,
     required this.onDataChanged,
@@ -662,10 +664,12 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                             Text(
                               _googleDirectService.userDisplayName,
                               style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                              overflow: TextOverflow.ellipsis,
                             ),
                             Text(
                               _googleDirectService.userEmail,
                               style: const TextStyle(color: Colors.white70, fontSize: 11),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
@@ -674,36 +678,41 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                   ),
                 ),
                 const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: _isFullSyncing ? null : _handleGoogleSyncProducts,
-                        icon: _isFullSyncing
-                            ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryDark))
-                            : const Icon(Icons.sync_rounded, size: 16),
-                        label: const Text('Sinkronkan Produk', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryGold,
-                          foregroundColor: AppTheme.primaryDark,
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                Builder(
+                  builder: (context) {
+                    final isOwner = widget.currentUser?.isOwner ?? true;
+                    return Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      alignment: WrapAlignment.start,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: _isFullSyncing ? null : _handleGoogleSyncProducts,
+                          icon: _isFullSyncing
+                              ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryDark))
+                              : const Icon(Icons.sync_rounded, size: 16),
+                          label: const Text('Sinkronkan Produk', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryGold,
+                            foregroundColor: AppTheme.primaryDark,
+                            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    OutlinedButton.icon(
-                      onPressed: _handleGoogleSignOut,
-                      icon: const Icon(Icons.logout_rounded, size: 15),
-                      label: const Text('Keluar', style: TextStyle(fontSize: 11)),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white70,
-                        side: const BorderSide(color: Colors.white30),
-                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                    ),
-                  ],
+                        if (isOwner)
+                          OutlinedButton.icon(
+                            onPressed: _handleGoogleSignOut,
+                            icon: const Icon(Icons.logout_rounded, size: 15, color: Colors.white70),
+                            label: const Text('Keluar Akun Google (Owner)', style: TextStyle(fontSize: 11, color: Colors.white70)),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Colors.white30),
+                              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
                 ),
               ] else ...[
                 const Text(
