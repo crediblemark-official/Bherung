@@ -24,6 +24,7 @@ import 'restock_screen.dart';
 import 'kasbon_screen.dart';
 import 'held_orders_screen.dart';
 import 'user_guide_screen.dart';
+import 'pin_login_lock_screen.dart';
 
 class PosDashboardScreen extends StatefulWidget {
   const PosDashboardScreen({super.key});
@@ -40,6 +41,8 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
   String _customerName = '';
   double _discountPercent = 0;
   bool _isLoadingData = true;
+  bool _isLocked = true; // Layar terkunci secara default dengan sambutan Tretan
+  AppUser? _scheduledNextUser;
 
   // Real-Time Persisted Products List
   List<Product> _products = [];
@@ -102,6 +105,7 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
     final loadedUsers = await storage.loadUsers();
     final loadedKasbon = await storage.loadKasbon();
     final loadedProfile = await storage.loadStoreProfile();
+    final loadedScheduled = await storage.loadScheduledNextUser();
 
     if (mounted) {
       setState(() {
@@ -113,8 +117,9 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
         _storeProfile = loadedProfile;
         _storeName = loadedProfile.name;
         _storeTagline = loadedProfile.tagline;
+        _scheduledNextUser = loadedScheduled;
         if (_users.isNotEmpty) {
-          _currentUser = _users.firstWhere((u) => !u.isOwner, orElse: () => _users.first);
+          _currentUser = loadedScheduled ?? _users.firstWhere((u) => !u.isOwner, orElse: () => _users.first);
         }
         _isLoadingData = false;
       });
@@ -951,8 +956,10 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
               _completedTransactions = 0;
               _totalSalesToday = 0;
               if (nextUser != null) {
+                _scheduledNextUser = nextUser;
                 _currentUser = nextUser;
               }
+              _isLocked = true; // Kunci layar agar penjaga berikutnya menyambut dengan PIN
             });
 
             // Simpan rekap shift ke storage lokal
@@ -998,57 +1005,36 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
           onUserAdded: (newUser) {
             setState(() => _users.add(newUser));
             InventoryStorageService().saveUsers(_users);
-            if (AppsScriptService().isConnected) {
-              AppsScriptService().syncAllUsers(_users);
-            }
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Akun penjaga baru "${newUser.name}" berhasil ditambahkan & tersimpan.'),
-                backgroundColor: AppTheme.successGreen,
-              ),
-            );
+            AppsScriptService().syncAllUsers(_users);
           },
           onUserUpdated: (updatedUser) {
             setState(() {
               final idx = _users.indexWhere((u) => u.id == updatedUser.id);
               if (idx != -1) {
                 _users[idx] = updatedUser;
-              }
-              if (_currentUser.id == updatedUser.id) {
-                _currentUser = updatedUser;
+                if (_currentUser.id == updatedUser.id) {
+                  _currentUser = updatedUser;
+                }
               }
             });
             InventoryStorageService().saveUsers(_users);
-            if (AppsScriptService().isConnected) {
-              AppsScriptService().syncAllUsers(_users);
-            }
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Data akun "${updatedUser.name}" berhasil diperbarui.'),
-                backgroundColor: AppTheme.successGreen,
-              ),
-            );
+            AppsScriptService().syncAllUsers(_users);
           },
           onUserDeleted: (deletedUser) {
             setState(() {
               _users.removeWhere((u) => u.id == deletedUser.id);
+              if (_currentUser.id == deletedUser.id) {
+                _currentUser = _users.firstWhere((u) => !u.isOwner, orElse: () => _users.first);
+              }
             });
             InventoryStorageService().saveUsers(_users);
-            if (AppsScriptService().isConnected) {
-              AppsScriptService().syncAllUsers(_users);
-            }
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Akun "${deletedUser.name}" telah dihapus.'),
-                backgroundColor: AppTheme.warningOrange,
-              ),
-            );
+            AppsScriptService().syncAllUsers(_users);
           },
           onUsersSynced: (syncedUsers) {
             setState(() {
               _users = syncedUsers;
               if (!_users.any((u) => u.id == _currentUser.id)) {
-                _currentUser = _users.first;
+                _currentUser = _users.firstWhere((u) => !u.isOwner, orElse: () => _users.first);
               }
             });
             InventoryStorageService().saveUsers(_users);
@@ -1316,6 +1302,30 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLocked && !_isLoadingData) {
+      return PinLoginLockScreen(
+        users: _users,
+        scheduledUser: _scheduledNextUser,
+        storeName: _storeName,
+        onAuthenticated: (authUser) {
+          setState(() {
+            _currentUser = authUser;
+            _isLocked = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Selamat Bertugas Tretan ${authUser.name}! (${authUser.isOwner ? "👑 Pemilik Toko" : "💼 Penjaga Toko"})',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              backgroundColor: authUser.isOwner ? AppTheme.primaryDark : AppTheme.primaryTeal,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        },
+      );
+    }
+
     final double screenWidth = MediaQuery.of(context).size.width;
     final bool isWideScreen = screenWidth >= 900;
     final int totalCartCount = _cartItems.fold(0, (sum, item) => sum + item.quantity);
@@ -1346,6 +1356,7 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
               onOpenStockControl: _showStockControlDashboard,
               onOpenRestock: _showRestockDialog,
               onOpenRoleSwitcher: _showRoleSwitcherDialog,
+              onLockScreen: () => setState(() => _isLocked = true),
               onOpenDrawer: _openAppMenuScreen,
             ),
 

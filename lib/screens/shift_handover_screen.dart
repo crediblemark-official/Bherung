@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/product.dart';
+import '../services/inventory_storage_service.dart';
 import '../theme/app_theme.dart';
 
 class ShiftHandoverScreen extends StatefulWidget {
@@ -96,6 +97,88 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
   }
 
   void _submit() {
+    // Cari akun Pemilik Toko (Owner)
+    final ownerUser = widget.users.where((u) => u.isOwner).firstOrNull;
+    final ownerPin = ownerUser?.pin.trim().isNotEmpty == true ? ownerUser!.pin.trim() : '1234';
+
+    final pinController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.verified_user_rounded, color: AppTheme.primaryGold, size: 22),
+            SizedBox(width: 8),
+            Text(
+              'Otorisasi Pemilik Toko',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Serah terima shift hanya boleh disetujui & disahkan oleh Pemilik Toko (Owner).',
+              style: TextStyle(fontSize: 12, color: AppTheme.textMuted, height: 1.3),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Penjaga Shift Selanjutnya: ${_selectedNextUser?.name ?? _nextCashierController.text}',
+              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppTheme.primaryTeal),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: pinController,
+              obscureText: true,
+              keyboardType: TextInputType.number,
+              maxLength: 4,
+              autofocus: true,
+              style: const TextStyle(fontSize: 18, letterSpacing: 6, fontWeight: FontWeight.bold),
+              decoration: InputDecoration(
+                hintText: 'PIN Owner',
+                counterText: '',
+                prefixIcon: const Icon(Icons.password_rounded, color: AppTheme.primaryGold),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal', style: TextStyle(color: AppTheme.textMuted)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (pinController.text.trim() == ownerPin) {
+                Navigator.pop(ctx);
+                _finalizeSubmit();
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('PIN Pemilik Toko salah! Otorisasi ditolak.'),
+                    backgroundColor: AppTheme.dangerRed,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryGold,
+              foregroundColor: AppTheme.primaryDark,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Sahkan Shift', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _finalizeSubmit() async {
     final List<SensitiveProductAudit> audits = [];
     for (final p in _sensitiveProducts) {
       final physical = int.tryParse(_auditControllers[p.id]?.text.trim() ?? '') ?? p.stock;
@@ -128,8 +211,14 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
       nextCashierName: recipientName,
     );
 
+    if (_selectedNextUser != null) {
+      await InventoryStorageService().saveScheduledNextUser(_selectedNextUser!);
+    }
+
     widget.onShiftHandoverCompleted(shiftRecord, _selectedNextUser);
-    Navigator.pop(context);
+    if (mounted) {
+      Navigator.pop(context);
+    }
   }
 
   @override

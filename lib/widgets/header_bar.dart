@@ -20,6 +20,7 @@ class PosHeaderBar extends StatelessWidget {
   final VoidCallback onOpenStockControl;
   final VoidCallback onOpenRestock;
   final VoidCallback onOpenRoleSwitcher;
+  final VoidCallback? onLockScreen;
   final VoidCallback? onOpenDrawer;
 
   const PosHeaderBar({
@@ -40,6 +41,7 @@ class PosHeaderBar extends StatelessWidget {
     required this.onOpenStockControl,
     required this.onOpenRestock,
     required this.onOpenRoleSwitcher,
+    this.onLockScreen,
     this.onOpenDrawer,
   });
 
@@ -282,6 +284,16 @@ class PosHeaderBar extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (onLockScreen != null) ...[
+                      const SizedBox(width: 4),
+                      IconButton(
+                        onPressed: onLockScreen,
+                        icon: const Icon(Icons.lock_outline_rounded, size: 16, color: Colors.white70),
+                        tooltip: 'Kunci Layar Kasir (Ganti Penjaga)',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                      ),
+                    ],
                     const SizedBox(width: 8),
 
                     // Cloud Online Status

@@ -157,6 +157,31 @@ class InventoryStorageService {
     }
   }
 
+  // 4b. Next Scheduled Cashier for Lock Screen ("Silahkan masuk Tretan...")
+  static const String _keyScheduledNextUser = 'bherung_scheduled_next_user';
+
+  Future<void> saveScheduledNextUser(AppUser user) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_keyScheduledNextUser, jsonEncode(user.toJson()));
+    } catch (e) {
+      debugPrint('Error saving scheduled next user: $e');
+    }
+  }
+
+  Future<AppUser?> loadScheduledNextUser() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final str = prefs.getString(_keyScheduledNextUser);
+      if (str != null && str.isNotEmpty) {
+        return AppUser.fromJson(jsonDecode(str) as Map<String, dynamic>);
+      }
+    } catch (e) {
+      debugPrint('Error loading scheduled next user: $e');
+    }
+    return null;
+  }
+
   // 5. Load & Save Kasbon
   Future<List<KasbonRecord>> loadKasbon() async {
     try {
