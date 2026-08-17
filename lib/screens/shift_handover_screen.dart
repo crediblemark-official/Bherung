@@ -325,6 +325,40 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 12),
+
+                  // Direct Owner-to-Cashier Physical Inspection Card
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF3C7),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFF59E0B)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.verified_user_rounded, color: Color(0xFFB45309), size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Audit Fisik Bersama Penjaga Toko',
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF92400E)),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                'Hitung uang kas di laci dan stok rokok fisik bersama ${widget.currentCashier}. Setelah disahkan, sesi kasir ini akan otomatis terlogout dan terkunci.',
+                                style: const TextStyle(fontSize: 11, color: Color(0xFF78350F), height: 1.3),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 14),
 
                   // 2. Rekonsiliasi Uang Fisik Laci

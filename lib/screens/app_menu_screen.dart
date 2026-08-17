@@ -347,17 +347,19 @@ class AppMenuScreen extends StatelessWidget {
                       subtitle: 'Restock barang masuk dari agen sembako',
                       onTap: onOpenRestock,
                     ),
-                    const Divider(height: 1, indent: 56),
+                    if (currentUser.isOwner) ...[
+                      const Divider(height: 1, indent: 56),
 
-                    // Shift & Kas
-                    _buildMenuItem(
-                      context: context,
-                      icon: Icons.sync_alt_rounded,
-                      iconColor: const Color(0xFF3B82F6),
-                      title: 'Serah Terima Shift & Kas',
-                      subtitle: 'Tutup shift kasir, rekonsiliasi kas laci & rokok',
-                      onTap: onOpenShiftHandover,
-                    ),
+                      // Shift & Kas (Khusus Pemilik Toko)
+                      _buildMenuItem(
+                        context: context,
+                        icon: Icons.sync_alt_rounded,
+                        iconColor: const Color(0xFF3B82F6),
+                        title: 'Serah Terima Shift & Kas (Owner)',
+                        subtitle: 'Tutup shift kasir, hitung fisik kas & rokok dengan penjaga',
+                        onTap: onOpenShiftHandover,
+                      ),
+                    ],
                     const Divider(height: 1, indent: 56),
 
                     // Kasbon

@@ -595,31 +595,51 @@ class _RoleSwitcherScreenState extends State<RoleSwitcherScreen> {
                             ),
                           ),
                           const SizedBox(width: 10),
-                          InkWell(
-                            onTap: () => _handleShiftHandover(
-                              widget.users.firstWhere((u) => u.id != widget.currentUser.id, orElse: () => widget.currentUser),
-                            ),
-                            borderRadius: BorderRadius.circular(8),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          if (widget.currentUser.isOwner)
+                            InkWell(
+                              onTap: () => _handleShiftHandover(
+                                widget.users.firstWhere((u) => u.id != widget.currentUser.id, orElse: () => widget.currentUser),
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  gradient: AppTheme.goldGradient,
+                                  borderRadius: BorderRadius.circular(8),
+                                  boxShadow: AppTheme.softShadow,
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.sync_alt_rounded, size: 14, color: AppTheme.primaryDark),
+                                    SizedBox(width: 5),
+                                    Text(
+                                      'Serah Terima Shift',
+                                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w900, color: AppTheme.primaryDark),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          else
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                               decoration: BoxDecoration(
-                                gradient: AppTheme.goldGradient,
+                                color: Colors.white.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
-                                boxShadow: AppTheme.softShadow,
                               ),
                               child: const Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.sync_alt_rounded, size: 14, color: AppTheme.primaryDark),
-                                  SizedBox(width: 5),
+                                  Icon(Icons.verified_rounded, size: 13, color: AppTheme.primaryTeal),
+                                  SizedBox(width: 4),
                                   Text(
-                                    'Serah Terima Shift',
-                                    style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w900, color: AppTheme.primaryDark),
+                                    'Kasir Bertugas',
+                                    style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Colors.white70),
                                   ),
                                 ],
                               ),
                             ),
-                          ),
                         ],
                       ),
                     ),
@@ -868,38 +888,40 @@ class _RoleSwitcherScreenState extends State<RoleSwitcherScreen> {
 
                               // Action buttons
                               if (!isCurrent) ...[
-                                // 1. Oper Shift button
-                                InkWell(
-                                  onTap: () => _handleShiftHandover(u),
-                                  borderRadius: BorderRadius.circular(6),
-                                  child: Container(
-                                    height: 30,
-                                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                                    decoration: BoxDecoration(
-                                      gradient: AppTheme.goldGradient,
-                                      borderRadius: BorderRadius.circular(6),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: AppTheme.primaryGold.withValues(alpha: 0.25),
-                                          blurRadius: 3,
-                                          offset: const Offset(0, 1),
-                                        ),
-                                      ],
-                                    ),
-                                    child: const Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.sync_alt_rounded, size: 13, color: AppTheme.primaryDark),
-                                        SizedBox(width: 4),
-                                        Text(
-                                          'Oper Shift',
-                                          style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900, color: AppTheme.primaryDark),
-                                        ),
-                                      ],
+                                // 1. Oper Shift button (Khusus Pemilik Toko)
+                                if (widget.currentUser.isOwner) ...[
+                                  InkWell(
+                                    onTap: () => _handleShiftHandover(u),
+                                    borderRadius: BorderRadius.circular(6),
+                                    child: Container(
+                                      height: 30,
+                                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                                      decoration: BoxDecoration(
+                                        gradient: AppTheme.goldGradient,
+                                        borderRadius: BorderRadius.circular(6),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: AppTheme.primaryGold.withValues(alpha: 0.25),
+                                            blurRadius: 3,
+                                            offset: const Offset(0, 1),
+                                          ),
+                                        ],
+                                      ),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.sync_alt_rounded, size: 13, color: AppTheme.primaryDark),
+                                          SizedBox(width: 4),
+                                          Text(
+                                            'Oper Shift',
+                                            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900, color: AppTheme.primaryDark),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
-                                ),
-                                const SizedBox(width: 5),
+                                  const SizedBox(width: 5),
+                                ],
 
                                 // 2. Fast switch button
                                 InkWell(
