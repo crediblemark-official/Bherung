@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/product.dart';
 import '../models/store_profile.dart';
 import '../theme/app_theme.dart';
+import 'service_account_sheets_service.dart';
 
 class SyncAllResult {
   final bool success;
@@ -171,8 +172,49 @@ class AppsScriptService {
           };
         }
       }
+
+      // Fallback: Coba koneksi langsung via Google Service Account jika Master Apps Script gagal
+      if (_spreadsheetId.isNotEmpty) {
+        final saRes = await ServiceAccountSheetsService().testConnection(_spreadsheetId);
+        if (saRes['success'] == true) {
+          _isConnected = true;
+          _spreadsheetName = saRes['name'] ?? 'Spreadsheet Toko';
+
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setBool('bherung_is_connected', true);
+            await prefs.setString('bherung_spreadsheet_name', _spreadsheetName);
+          } catch (_) {}
+
+          return {
+            'success': true,
+            'message': 'Terhubung via Google Service Account Resmi!',
+            'spreadsheetName': _spreadsheetName,
+          };
+        }
+      }
+
       return {'success': false, 'message': 'Gagal merespons: ${response.statusCode} - ${response.body}'};
     } catch (e) {
+      if (_spreadsheetId.isNotEmpty) {
+        final saRes = await ServiceAccountSheetsService().testConnection(_spreadsheetId);
+        if (saRes['success'] == true) {
+          _isConnected = true;
+          _spreadsheetName = saRes['name'] ?? 'Spreadsheet Toko';
+
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setBool('bherung_is_connected', true);
+            await prefs.setString('bherung_spreadsheet_name', _spreadsheetName);
+          } catch (_) {}
+
+          return {
+            'success': true,
+            'message': 'Terhubung via Google Service Account Resmi!',
+            'spreadsheetName': _spreadsheetName,
+          };
+        }
+      }
       return {'success': false, 'message': 'Error koneksi: $e'};
     }
   }
