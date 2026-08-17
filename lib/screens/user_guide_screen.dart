@@ -104,10 +104,100 @@ class UserGuideScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 22),
 
-                  // Section 2: Operasional Kasir
+                  // Section 2: Panduan Deploy Apps Script Mandiri (Opsional)
+                  _buildSectionHeader(
+                    icon: Icons.code_rounded,
+                    title: '2. Panduan Deploy Apps Script Mandiri (Opsional / Custom URL)',
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFBFDBFE)),
+                    ),
+                    child: const Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.info_outline_rounded, color: Color(0xFF2563EB), size: 18),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Bagian ini bersifat OPSIONAL. Anda hanya perlu melakukannya jika ingin mendeploy backend script sendiri di Google Drive pribadi Anda untuk mendapatkan URL Web App khusus.',
+                            style: TextStyle(fontSize: 11, color: Color(0xFF1E40AF), height: 1.35),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  _buildVisualStepCard(
+                    context,
+                    stepNumber: 'A',
+                    title: 'Buka Editor Apps Script dari Spreadsheet',
+                    desc:
+                        'Di Google Spreadsheet toko Anda (di laptop/komputer), klik menu "Ekstensi" (Extensions) di bilah atas, lalu pilih opsi "Apps Script".',
+                    imagePaths: [
+                      'assets/docs/gas_step1_ekstensi.png',
+                    ],
+                    badgeText: 'Langkah A (Opsional)',
+                    badgeColor: const Color(0xFF2563EB),
+                  ),
+                  const SizedBox(height: 12),
+
+                  _buildVisualStepCard(
+                    context,
+                    stepNumber: 'B',
+                    title: 'Pilih Menu "Terapkan" ➡️ "Deployment baru"',
+                    desc:
+                        'Pada editor Google Apps Script, klik tombol biru "Terapkan" (Deploy) di pojok kanan atas, kemudian pilih menu "Deployment baru" (New deployment).',
+                    imagePaths: [
+                      'assets/docs/gas_step2_editor.png',
+                      'assets/docs/gas_step3_terapkan.png',
+                    ],
+                    badgeText: 'Langkah B (Opsional)',
+                    badgeColor: const Color(0xFF2563EB),
+                  ),
+                  const SizedBox(height: 12),
+
+                  _buildVisualStepCard(
+                    context,
+                    stepNumber: 'C',
+                    title: 'Konfigurasi Hak Akses "Siapa saja (Anyone)"',
+                    desc:
+                        'Pada jendela Deployment baru, atur konfigurasi berikut:\n'
+                        '• Pilih jenis: Aplikasi web (Web app)\n'
+                        '• Jalankan sebagai: Saya (email akun Google Anda)\n'
+                        '• Yang memiliki akses: Siapa saja (Anyone)\n\n'
+                        '⚠️ PENTING: Wajib pilih "Siapa saja" agar HP kasir & toko dapat menyimpan data penjualan secara instan. Lalu klik tombol biru "Terapkan".',
+                    imagePaths: [
+                      'assets/docs/gas_step4_konfigurasi.png',
+                    ],
+                    badgeText: 'PENTING: Akses Siapa Saja',
+                    badgeColor: AppTheme.dangerRed,
+                  ),
+                  const SizedBox(height: 12),
+
+                  _buildVisualStepCard(
+                    context,
+                    stepNumber: 'D',
+                    title: 'Salin "Aplikasi Web URL" ke Bherung POS',
+                    desc:
+                        'Setelah penerapan selesai, klik tombol "Salin" pada bagian Aplikasi web URL (link berakhiran /exec).\n\nTempelkan link URL tersebut ke kolom input "URL Web App Google Apps Script" di menu Pengaturan Bherung POS, lalu klik "Hubungkan & Simpan Database". Selesai!',
+                    imagePaths: [
+                      'assets/docs/gas_step5_salin_url.png',
+                    ],
+                    badgeText: 'URL Web App Siap',
+                    badgeColor: AppTheme.successGreen,
+                  ),
+                  const SizedBox(height: 22),
+
+                  // Section 3: Operasional Kasir
                   _buildSectionHeader(
                     icon: Icons.point_of_sale_rounded,
-                    title: '2. Panduan Transaksi Kasir Cepat',
+                    title: '3. Panduan Transaksi Kasir Cepat',
                   ),
                   const SizedBox(height: 8),
                   _buildGuideCard([
@@ -139,10 +229,10 @@ class UserGuideScreen extends StatelessWidget {
                   ]),
                   const SizedBox(height: 22),
 
-                  // Section 3: Shift & Oper Kasir
+                  // Section 4: Shift & Oper Kasir
                   _buildSectionHeader(
                     icon: Icons.sync_alt_rounded,
-                    title: '3. Serah Terima Shift & Ganti Penjaga 24 Jam (Khusus Owner)',
+                    title: '4. Serah Terima Shift & Ganti Penjaga 24 Jam (Khusus Owner)',
                   ),
                   const SizedBox(height: 8),
                   _buildGuideCard([
@@ -164,10 +254,10 @@ class UserGuideScreen extends StatelessWidget {
                   ]),
                   const SizedBox(height: 22),
 
-                  // Section 4: Manajemen Akun & PIN
+                  // Section 5: Manajemen Akun & PIN
                   _buildSectionHeader(
                     icon: Icons.badge_rounded,
-                    title: '4. Role Akun Kasir & Autentikasi PIN',
+                    title: '5. Role Akun Kasir & Autentikasi PIN',
                   ),
                   const SizedBox(height: 8),
                   _buildGuideCard([
