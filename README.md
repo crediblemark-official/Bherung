@@ -58,10 +58,10 @@ Anda dapat mengunduh berkas instalasi **APK Release** langsung dari halaman [Git
 - **Mode Penjaga Toko (Staff)**: Antarmuka bersih, cepat, dan terproteksi dari menu sensitif.
 - **Sambutan Khas Madura**: *"Silahkan masuk Tretan [Nama Penjaga]"*.
 
-### ☁️ 7. Tiga Pilihan Sinkronisasi Cloud Google Spreadsheet
-- **Metode 1: Google OAuth (1-Click)**: Login akun Google langsung tanpa salin ID spreadsheet.
-- **Metode 2: Service Account + ID Spreadsheet**: Ideal untuk HP kasir (kasir tidak perlu login email Google Owner).
-- **Metode 3: Custom Google Apps Script Deployment**: Deploy backend `Code.gs` mandiri di Google Drive pribadi.
+### ☁️ 7. Sinkronisasi Cloud Google Spreadsheet (Bebas Limit & Unlimited)
+- **Metode 1: Service Account + ID Spreadsheet**: Paling direkomendasikan untuk HP kasir & pemilik (tanpa perlu login email Owner di HP kasir).
+- **Metode 2: Custom Google Apps Script Deployment**: Deploy backend `Code.gs` mandiri di Google Drive pribadi.
+- **Mode Offline**: Penyimpanan lokal aman dan otomatis tersinkronisasi saat online.
 - 📖 **Dokumentasi Lengkap**: Baca panduan arsitektur & kuota selengkapnya di [docs/ARSITEKTUR_CLOUD_DAN_ROLE.md](docs/ARSITEKTUR_CLOUD_DAN_ROLE.md).
 
 ---

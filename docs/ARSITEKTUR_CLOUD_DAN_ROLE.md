@@ -49,24 +49,20 @@ graph TD
 
 ---
 
-## 3. 3 Metode Koneksi Database Cloud
+## 3. Metode Koneksi Database Cloud (Bebas Limit 100 User & 100% Unlimited)
 
-Bherung POS menyediakan 3 pilihan metode koneksi cloud (+ 1 mode offline):
+Bherung POS menggunakan arsitektur koneksi cloud yang **bebas dari batas 100 user Google OAuth** dan tidak memerlukan verifikasi rumit:
 
 ```mermaid
 graph TD
-    subgraph Metode1 ["🌟 Metode 1: Login Google (OAuth 1-Click)"]
-        M1["Tekan 'Masuk dengan Akun Google' di HP Pemilik"] --> GDrive1["Akses Langsung ke Google Drive & Sheets Pemilik"]
+    subgraph Metode1 ["🤖 Metode 1: Service Account + ID Spreadsheet (Sangat Direkomendasikan)"]
+        M1["Input ID Spreadsheet Toko di HP Kasir / Owner"] --> SA["Robot Service Account (bherung-pos@...)"]
+        SA --> GDrive1["Tulis & Baca Data ke Sheets Toko Pemilik (Bebas Limit)"]
     end
 
-    subgraph Metode2 ["🤖 Metode 2: Service Account + ID Spreadsheet (Multi-Device)"]
-        M2["Input ID Spreadsheet Toko di HP Kasir"] --> SA["Robot Service Account (bherung-pos@...)"]
-        SA --> GDrive2["Tulis & Baca Data ke Sheets Toko Pemilik"]
-    end
-
-    subgraph Metode3 ["⚙️ Metode 3: Custom Deploy Apps Script (Mandiri)"]
-        M3["Deploy Code.gs Sendiri di Spreadsheet ➡️ Input URL Web App"] --> GAS["Endpoint Apps Script Pribadi (.../exec)"]
-        GAS --> GDrive3["Eksekusi Mandiri di Akun Gmail Pemilik"]
+    subgraph Metode2 ["⚙️ Metode 2: Custom Deploy Apps Script (Mandiri)"]
+        M2["Deploy Code.gs Sendiri di Spreadsheet ➡️ Input URL Web App"] --> GAS["Endpoint Apps Script Pribadi (.../exec)"]
+        GAS --> GDrive2["Eksekusi Mandiri di Akun Gmail Pemilik"]
     end
 ```
 
@@ -74,10 +70,9 @@ graph TD
 
 | No | Metode | Cara Kerja | Siapa yang Memakai? | Kelebihan |
 | :---: | :--- | :--- | :--- | :--- |
-| **1** | **Google OAuth (1-Click)** | Login langsung dengan email Google Owner | HP Pribadi Pemilik Toko | Paling praktis, otomatis membuat database spreadsheet tanpa salin ID. |
-| **2** | **Service Account + ID Spreadsheet** | Service Account robot membaca/menulis spreadsheet via API | HP Kasir / Karyawan di Meja Kasir | **Sangat Aman**: Kasir tidak perlu tahu / login email Google Owner di HP toko. |
-| **3** | **Custom Deploy Apps Script** | Deploy `Code.gs` mandiri dan masukkan URL Web App | Pemilik Toko Tingkat Lanjut | 100% independen di bawah kendali script Google Drive sendiri. |
-| **4** | **Mode Offline 100%** | Penyimpanan lokal SQLite & SharedPreferences | Kondisi tanpa internet / darurat | Transaksi tetap berjalan normal tanpa gangguan saat internet mati. |
+| **1** | **Service Account + ID Spreadsheet** *(Paling Direkomendasikan)* | Service Account robot membaca & menulis spreadsheet secara otomatis | HP Pemilik & HP Kasir di Meja Kasir | 🟢 **UNLIMITED User**, sangat aman (kasir tidak perlu tahu email Google Owner), 100% tanpa limit 100 user. |
+| **2** | **Custom Deploy Apps Script** | Deploy `Code.gs` mandiri dan masukkan URL Web App pribadi | Pemilik Toko Tingkat Lanjut | 🟢 **UNLIMITED User**, 100% independen di bawah kendali script Google Drive sendiri. |
+| **3** | **Mode Offline 100% (Cadangan)** | Penyimpanan lokal SQLite & SharedPreferences | Kondisi tanpa internet / darurat | Transaksi kasir tetap berjalan normal tanpa gangguan saat internet mati. |
 
 ---
 

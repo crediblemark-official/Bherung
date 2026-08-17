@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import '../models/product.dart';
 import '../models/store_profile.dart';
 import '../services/apps_script_service.dart';
-import '../services/google_sheets_direct_service.dart';
 import '../services/inventory_storage_service.dart';
 import '../theme/app_theme.dart';
 
@@ -33,7 +32,6 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProviderStateMixin {
   final AppsScriptService _appsScriptService = AppsScriptService();
-  final GoogleSheetsDirectService _googleDirectService = GoogleSheetsDirectService();
 
   // Link Template Master "Make a Copy" untuk Pembeli Toko
   static const String templateCopyUrl =
@@ -53,16 +51,12 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
 
   bool _isTesting = false;
   bool _isFullSyncing = false;
-  bool _isGoogleSigningIn = false;
   String? _statusMessage;
   bool _isStatusSuccess = false;
 
   @override
   void initState() {
     super.initState();
-    _googleDirectService.init().then((_) {
-      if (mounted) setState(() {});
-    });
     _tabController = TabController(length: 3, vsync: this);
     _storeNameController = TextEditingController(text: widget.storeProfile.name.isNotEmpty ? widget.storeProfile.name : widget.storeName);
     _storeTaglineController = TextEditingController(text: widget.storeProfile.tagline);
@@ -297,72 +291,6 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     }
   }
 
-  // Handle Login Resmi dengan Akun Google (1-Click Google Drive / Sheets API)
-  Future<void> _handleGoogleSignIn() async {
-    setState(() => _isGoogleSigningIn = true);
-
-    final success = await _googleDirectService.signIn();
-    if (mounted) {
-      setState(() => _isGoogleSigningIn = false);
-
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Berhasil terhubung ke Akun Google: ${_googleDirectService.userEmail}!'),
-            backgroundColor: AppTheme.successGreen,
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Gagal login ke Akun Google atau proses dibatalkan.'),
-            backgroundColor: AppTheme.dangerRed,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _handleGoogleSignOut() async {
-    await _googleDirectService.signOut();
-    if (mounted) {
-      setState(() {});
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Berhasil keluar dari Akun Google.'),
-          backgroundColor: AppTheme.primaryDark,
-        ),
-      );
-    }
-  }
-
-  Future<void> _handleGoogleSyncProducts() async {
-    setState(() => _isFullSyncing = true);
-    final fetched = await _googleDirectService.fetchProducts();
-    if (mounted) {
-      setState(() => _isFullSyncing = false);
-      if (fetched != null && fetched.isNotEmpty) {
-        widget.products.clear();
-        widget.products.addAll(fetched);
-        InventoryStorageService().saveProducts(widget.products);
-        widget.onDataChanged();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Berhasil menyinkronkan ${fetched.length} produk dari Google Sheets!'),
-            backgroundColor: AppTheme.successGreen,
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Belum ada produk di Google Sheets atau sheet masih kosong.'),
-            backgroundColor: AppTheme.primaryTeal,
-          ),
-        );
-      }
-    }
-  }
-
   void _openAddOrEditBankDialog([BankAccount? existing, int? index]) {
     final nameCtrl = TextEditingController(text: existing?.bankName ?? 'BCA');
     final numCtrl = TextEditingController(text: existing?.accountNumber ?? '');
@@ -549,7 +477,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                 height: 10,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: isConnected || _googleDirectService.isSignedIn ? AppTheme.successGreen : const Color(0xFF94A3B8),
+                  color: isConnected ? AppTheme.successGreen : const Color(0xFF94A3B8),
                 ),
               ),
               const SizedBox(width: 10),
@@ -558,38 +486,28 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _googleDirectService.isSignedIn
-                          ? 'Status: Terhubung Akun Google (${_googleDirectService.userEmail})'
-                          : isConnected
-                              ? 'Status: Terhubung ke Google Spreadsheet'
-                              : 'Status: Mode Offline (Belum Terhubung)',
+                      isConnected
+                          ? 'Status: Terhubung ke Google Spreadsheet'
+                          : 'Status: Mode Offline (Belum Terhubung)',
                       style: TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.bold,
-                        color: (_googleDirectService.isSignedIn || isConnected) ? const Color(0xFF166534) : AppTheme.textDark,
+                        color: isConnected ? const Color(0xFF166534) : AppTheme.textDark,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      _googleDirectService.isSignedIn
-                          ? 'File: ${_googleDirectService.spreadsheetName ?? "Bherung POS - Database Toko"}'
-                          : isConnected
-                              ? 'ID: ${_appsScriptService.spreadsheetId}'
-                              : 'Transaksi kasir disimpan lokal & siap disinkronkan',
+                      isConnected
+                          ? 'ID: ${_appsScriptService.spreadsheetId.isNotEmpty ? _appsScriptService.spreadsheetId : "Custom Apps Script URL"}'
+                          : 'Transaksi kasir disimpan lokal & siap disinkronkan',
                       style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
-              if (_googleDirectService.isSignedIn)
-                IconButton(
-                  icon: const Icon(Icons.logout_rounded, color: AppTheme.dangerRed, size: 20),
-                  tooltip: 'Keluar Akun Google',
-                  onPressed: _handleGoogleSignOut,
-                )
-              else if (isConnected)
+              if (isConnected)
                 IconButton(
                   icon: const Icon(Icons.link_off_rounded, color: AppTheme.dangerRed, size: 20),
                   tooltip: 'Putuskan Koneksi',
@@ -600,185 +518,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
         ),
         const SizedBox(height: 12),
 
-        // 2. KARTU GOOGLE SIGN-IN RESMI (1-CLICK SETUP)
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.4)),
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.primaryGold.withValues(alpha: 0.15),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.cloud_done_rounded, color: AppTheme.primaryTeal, size: 20),
-                  ),
-                  const SizedBox(width: 10),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Hubungkan Akun Google (1-Click)',
-                          style: TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w900),
-                        ),
-                        Text(
-                          'Tanpa salin ID manual, kuota 100% milik toko Anda',
-                          style: TextStyle(color: AppTheme.goldAccent, fontSize: 10.5, fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              if (_googleDirectService.isSignedIn) ...[
-                // Info Akun Terhubung
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 16,
-                        backgroundColor: AppTheme.primaryGold,
-                        child: Text(
-                          _googleDirectService.userDisplayName.isNotEmpty
-                              ? _googleDirectService.userDisplayName[0].toUpperCase()
-                              : 'G',
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryDark),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _googleDirectService.userDisplayName,
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              _googleDirectService.userEmail,
-                              style: const TextStyle(color: Colors.white70, fontSize: 11),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Builder(
-                  builder: (context) {
-                    final isOwner = widget.currentUser?.isOwner ?? true;
-                    return Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      alignment: WrapAlignment.start,
-                      children: [
-                        ElevatedButton.icon(
-                          onPressed: _isFullSyncing ? null : _handleGoogleSyncProducts,
-                          icon: _isFullSyncing
-                              ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryDark))
-                              : const Icon(Icons.sync_rounded, size: 16),
-                          label: const Text('Sinkronkan Produk', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryGold,
-                            foregroundColor: AppTheme.primaryDark,
-                            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          ),
-                        ),
-                        if (isOwner)
-                          OutlinedButton.icon(
-                            onPressed: _handleGoogleSignOut,
-                            icon: const Icon(Icons.logout_rounded, size: 15, color: Colors.white70),
-                            label: const Text('Keluar Akun Google (Owner)', style: TextStyle(fontSize: 11, color: Colors.white70)),
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: Colors.white30),
-                              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                          ),
-                      ],
-                    );
-                  },
-                ),
-              ] else ...[
-                const Text(
-                  'Aplikasi otomatis membuatkan file Google Spreadsheet "Bherung POS - Database Toko" langsung di Google Drive pribadi toko Anda.',
-                  style: TextStyle(color: Colors.white70, fontSize: 11.5, height: 1.35),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  height: 42,
-                  child: ElevatedButton.icon(
-                    onPressed: _isGoogleSigningIn ? null : _handleGoogleSignIn,
-                    icon: _isGoogleSigningIn
-                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryDark))
-                        : const Icon(Icons.login_rounded, size: 18),
-                    label: Text(
-                      _isGoogleSigningIn ? 'Menghubungkan Akun...' : 'Masuk dengan Akun Google',
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryGold,
-                      foregroundColor: AppTheme.primaryDark,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      elevation: 2,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-
-        // Divider atau Pemisah
-        const Row(
-          children: [
-            Expanded(child: Divider(color: AppTheme.borderColor)),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 10),
-              child: Text(
-                'ATAU METODE MANUAL SPREADSHEET',
-                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.textMuted),
-              ),
-            ),
-            Expanded(child: Divider(color: AppTheme.borderColor)),
-          ],
-        ),
-        const SizedBox(height: 14),
-
-        // 3. Panduan 10 Detik
+        // 2. Panduan 10 Detik
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
