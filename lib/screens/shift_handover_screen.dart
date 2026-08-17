@@ -366,7 +366,7 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                   ),
                   const SizedBox(height: 14),
 
-                  // 2. Rekonsiliasi Uang Fisik Laci
+                  // 1. Hitung Uang di Laci Kasir
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
@@ -390,7 +390,7 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                             ),
                             const SizedBox(width: 8),
                             const Text(
-                              '1. Rekonsiliasi Uang Fisik Laci Kasir',
+                              '1. Hitung Uang di Laci Kasir',
                               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppTheme.textDark),
                             ),
                           ],
@@ -403,7 +403,7 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('Modal Kas Awal (Rp)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.textDark)),
+                                  const Text('Uang Modal Awal (Rp)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.textDark)),
                                   const SizedBox(height: 5),
                                   TextField(
                                     controller: _startingCashController,
@@ -426,7 +426,7 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('Uang Fisik di Laci (Rp) *', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.textDark)),
+                                  const Text('Uang di Laci Saat Ini (Rp) *', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.textDark)),
                                   const SizedBox(height: 5),
                                   TextField(
                                     controller: _physicalCashController,
@@ -467,8 +467,8 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                             children: [
                               Text(
                                 _cashDiff == 0
-                                    ? 'Kas Sesuai / Pas (Target: ${AppTheme.formatRupiah(_expectedCash)})'
-                                    : (_cashDiff > 0 ? 'Kas Lebih (+)' : 'Kas Selisih / Kurang (-)'),
+                                    ? 'Uang Pas / Cocok (Target: ${AppTheme.formatRupiah(_expectedCash)})'
+                                    : (_cashDiff > 0 ? 'Uang Laci Lebih (+)' : 'Uang Laci Kurang (-)'),
                                 style: TextStyle(
                                   fontSize: 11.5,
                                   fontWeight: FontWeight.bold,
@@ -519,14 +519,14 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                             ),
                             const SizedBox(width: 8),
                             const Text(
-                              '2. Hitung Fisik Barang Sensitif (Rokok & Sembako)',
+                              '2. Cek Stok Rokok & Barang Penting',
                               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppTheme.textDark),
                             ),
                           ],
                         ),
                         const SizedBox(height: 3),
                         const Text(
-                          'Pastikan jumlah fisik di etalase cocok dengan stok sistem:',
+                          'Pastikan jumlah barang di etalase cocok dengan stok sistem:',
                           style: TextStyle(fontSize: 10.5, color: AppTheme.textMuted),
                         ),
                         const SizedBox(height: 10),
@@ -599,7 +599,7 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                   ),
                   const SizedBox(height: 14),
 
-                  // 4. Kasir Penerima Shift & Catatan Serah Terima (Terintegrasi Akun)
+                  // 3. Pilih Penjaga Toko Berikutnya
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
@@ -623,14 +623,14 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                             ),
                             const SizedBox(width: 8),
                             const Text(
-                              '3. Pilih Kasir Penerima Jaga Baru',
+                              '3. Pilih Penjaga Toko Berikutnya',
                               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppTheme.textDark),
                             ),
                           ],
                         ),
                         const SizedBox(height: 4),
                         const Text(
-                          'Pilih akun kasir yang bertugas di jaga selanjutnya:',
+                          'Pilih nama penjaga yang bertugas di giliran jaga berikutnya:',
                           style: TextStyle(fontSize: 10.5, color: AppTheme.textMuted),
                         ),
                         const SizedBox(height: 10),
@@ -695,7 +695,7 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                           maxLines: 2,
                           style: const TextStyle(fontSize: 12),
                           decoration: InputDecoration(
-                            labelText: 'Catatan Khusus Serah Terima (Opsional)',
+                            labelText: 'Catatan Oper Jaga (Opsional)',
                             hintText: 'cth: Uang rokok kurang 5rb, gas 3kg titipan ibu RT, koin kembalian menipis...',
                             labelStyle: const TextStyle(fontSize: 11),
                             isDense: true,
