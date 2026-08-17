@@ -16,21 +16,16 @@ class CartItem {
   });
 
   double get unitPrice {
-    // 1. Jika Tab Transaksi = Grosir / Dus, otomatis gunakan harga grosir jika produk memiliki harga grosir
+    // 1. Jika Tab Transaksi = Grosir / Dus, otomatis gunakan harga grosir
     if (transactionType == TransactionType.grosir && product.wholesalePrice != null) {
       return product.wholesalePrice!;
     }
-    // 2. Jika dipaksa manual grosir
-    if (forceWholesalePrice && product.wholesalePrice != null) {
-      return product.wholesalePrice!;
-    }
-    // 3. Standar perhitungan qty grosir
+    // 2. Jika Tab Transaksi = Eceran atau Antar / Titip, kembali ke harga eceran normal (kecuali qty >= minimal grosir)
     return product.getEffectiveUnitPrice(quantity);
   }
 
   bool get isWholesaleApplied =>
       (transactionType == TransactionType.grosir && product.wholesalePrice != null) ||
-      (forceWholesalePrice && product.wholesalePrice != null) ||
       (product.hasWholesale && quantity >= product.wholesaleMinQty!);
 
   double get totalPrice => unitPrice * quantity;

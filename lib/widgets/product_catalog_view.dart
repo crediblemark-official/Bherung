@@ -7,6 +7,7 @@ class ProductCatalogView extends StatelessWidget {
   final List<Product> filteredProducts;
   final int totalStoreProducts;
   final bool isListView;
+  final TransactionType transactionType;
   final int Function(String productId) getCartQuantity;
   final ValueChanged<Product> onAddToCart;
   final ValueChanged<Product> onIncrement;
@@ -22,6 +23,7 @@ class ProductCatalogView extends StatelessWidget {
     required this.filteredProducts,
     this.totalStoreProducts = 0,
     required this.isListView,
+    this.transactionType = TransactionType.eceran,
     required this.getCartQuantity,
     required this.onAddToCart,
     required this.onIncrement,
@@ -59,6 +61,7 @@ class ProductCatalogView extends StatelessWidget {
           return ProductListItem(
             product: product,
             cartQuantity: qty,
+            transactionType: transactionType,
             onTap: () => onAddToCart(product),
             onIncrement: () => onIncrement(product),
             onDecrement: () => onDecrement(product),
@@ -103,6 +106,7 @@ class ProductCatalogView extends StatelessWidget {
               return ProductCard(
                 product: product,
                 cartQuantity: qty,
+                transactionType: transactionType,
                 onTap: () => onAddToCart(product),
                 onIncrement: () => onIncrement(product),
                 onDecrement: () => onDecrement(product),

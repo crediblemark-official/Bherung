@@ -356,7 +356,6 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
           product: product,
           quantity: 1,
           transactionType: _selectedTransactionType,
-          forceWholesalePrice: _selectedTransactionType == TransactionType.grosir,
         ));
       }
     });
@@ -367,9 +366,6 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
       _selectedTransactionType = type;
       for (var item in _cartItems) {
         item.transactionType = type;
-        if (type == TransactionType.grosir) {
-          item.forceWholesalePrice = true;
-        }
       }
     });
   }
@@ -1520,6 +1516,7 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
                                   filteredProducts: _filteredProducts,
                                   totalStoreProducts: _products.length,
                                   isListView: _isListView,
+                                  transactionType: _selectedTransactionType,
                                   getCartQuantity: _getCartQuantity,
                                   onAddToCart: _addToCart,
                                   onIncrement: (p) {

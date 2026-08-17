@@ -5,6 +5,7 @@ import '../theme/app_theme.dart';
 class ProductCard extends StatelessWidget {
   final Product product;
   final int cartQuantity;
+  final TransactionType transactionType;
   final VoidCallback onTap;
   final VoidCallback? onIncrement;
   final VoidCallback? onDecrement;
@@ -14,6 +15,7 @@ class ProductCard extends StatelessWidget {
     super.key,
     required this.product,
     required this.cartQuantity,
+    this.transactionType = TransactionType.eceran,
     required this.onTap,
     this.onIncrement,
     this.onDecrement,
@@ -23,7 +25,8 @@ class ProductCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isInCart = cartQuantity > 0;
-    final bool isWholesaleApplied = product.hasWholesale && cartQuantity >= product.wholesaleMinQty!;
+    final bool isWholesaleApplied = (transactionType == TransactionType.grosir && product.wholesalePrice != null) ||
+        (product.hasWholesale && cartQuantity >= product.wholesaleMinQty!);
 
     return Material(
       color: Colors.transparent,
@@ -313,6 +316,7 @@ class ProductCard extends StatelessWidget {
 class ProductListItem extends StatelessWidget {
   final Product product;
   final int cartQuantity;
+  final TransactionType transactionType;
   final VoidCallback onTap;
   final VoidCallback? onIncrement;
   final VoidCallback? onDecrement;
@@ -322,6 +326,7 @@ class ProductListItem extends StatelessWidget {
     super.key,
     required this.product,
     required this.cartQuantity,
+    this.transactionType = TransactionType.eceran,
     required this.onTap,
     this.onIncrement,
     this.onDecrement,
@@ -331,7 +336,8 @@ class ProductListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isInCart = cartQuantity > 0;
-    final bool isWholesale = product.hasWholesale && cartQuantity >= product.wholesaleMinQty!;
+    final bool isWholesale = (transactionType == TransactionType.grosir && product.wholesalePrice != null) ||
+        (product.hasWholesale && cartQuantity >= product.wholesaleMinQty!);
 
     return Material(
       color: Colors.transparent,
