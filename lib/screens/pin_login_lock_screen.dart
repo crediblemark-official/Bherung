@@ -189,191 +189,187 @@ class _PinLoginLockScreenState extends State<PinLoginLockScreen> with SingleTick
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   // 1. Header & Greeting
-                  Column(
-                    children: [
-                      const SizedBox(height: 10),
-                      // App Icon
-                      Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppTheme.surfaceDark,
-                          border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.5), width: 2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppTheme.primaryGold.withValues(alpha: 0.25),
-                              blurRadius: 16,
-                              spreadRadius: 2,
-                            ),
-                          ],
-                        ),
-                        child: ClipOval(
-                          child: Image.asset(
-                            'assets/images/bherung_logo.png',
-                            fit: BoxFit.cover,
-                            errorBuilder: (c, e, s) => const Icon(
-                              Icons.storefront_rounded,
-                              color: AppTheme.primaryGold,
-                              size: 32,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        widget.storeName.toUpperCase(),
-                        style: const TextStyle(
-                          color: AppTheme.goldAccent,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 2,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Welcoming Madura Card
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              AppTheme.surfaceDark,
-                              AppTheme.primaryTeal.withValues(alpha: 0.25),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.4), width: 1.2),
-                          boxShadow: AppTheme.softShadow,
-                        ),
-                        child: Column(
-                          children: [
-                            const Text(
-                              '🏪 SISTEM KASIR SIAP DIGUNAKAN',
-                              style: TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'Silahkan masuk Tretan $targetName',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w900,
-                                height: 1.2,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              _currentScheduledUser?.isOwner == true
-                                  ? '👑 Akun Pemilik Toko (Akses Penuh)'
-                                  : '💼 Jadwal Jaga Shift Berikutnya',
-                              style: TextStyle(
-                                color: _currentScheduledUser?.isOwner == true ? AppTheme.primaryGold : const Color(0xFF5EEAD4),
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  // 2. PIN Dots Display & Error
-                  Column(
-                    children: [
-                      const Text(
-                        'Masukkan 4-Digit PIN Anda',
-                        style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
-                      ),
-                      const SizedBox(height: 14),
-
-                      // Animated PIN Dots
-                      AnimatedBuilder(
-                        animation: _shakeController,
-                        builder: (context, child) {
-                          final offset = _shakeController.value == 0
-                              ? 0.0
-                              : (10.0 * (1 - _shakeController.value) * ((_shakeController.value * 6).round() % 2 == 0 ? 1 : -1));
-                          return Transform.translate(
-                            offset: Offset(offset, 0),
-                            child: child,
-                          );
-                        },
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: List.generate(4, (index) {
-                            final isFilled = index < _pin.length;
-                            return Container(
-                              margin: const EdgeInsets.symmetric(horizontal: 10),
-                              width: 18,
-                              height: 18,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: isFilled ? AppTheme.primaryGold : Colors.transparent,
-                                border: Border.all(
-                                  color: isFilled ? AppTheme.primaryGold : Colors.white38,
-                                  width: 2,
-                                ),
-                                boxShadow: isFilled
-                                    ? [
-                                        BoxShadow(
-                                          color: AppTheme.primaryGold.withValues(alpha: 0.5),
-                                          blurRadius: 10,
-                                          spreadRadius: 2,
-                                        )
-                                      ]
-                                    : null,
-                              ),
-                            );
-                          }),
-                        ),
-                      ),
-
-                      if (_errorMessage != null) ...[
-                        const SizedBox(height: 12),
-                        Text(
-                          _errorMessage!,
-                          style: const TextStyle(color: Color(0xFFF87171), fontSize: 11.5, fontWeight: FontWeight.bold),
-                          textAlign: TextAlign.center,
+                  const SizedBox(height: 4),
+                  // App Icon
+                  Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppTheme.surfaceDark,
+                      border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.5), width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.primaryGold.withValues(alpha: 0.25),
+                          blurRadius: 12,
+                          spreadRadius: 1,
                         ),
                       ],
-                    ],
+                    ),
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/images/bherung_logo.png',
+                        fit: BoxFit.cover,
+                        errorBuilder: (c, e, s) => const Icon(
+                          Icons.storefront_rounded,
+                          color: AppTheme.primaryGold,
+                          size: 26,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.storeName.toUpperCase(),
+                    style: const TextStyle(
+                      color: AppTheme.goldAccent,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Welcoming Madura Card
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppTheme.surfaceDark,
+                          AppTheme.primaryTeal.withValues(alpha: 0.25),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.4), width: 1.2),
+                      boxShadow: AppTheme.softShadow,
+                    ),
+                    child: Column(
+                      children: [
+                        const Text(
+                          '🏪 SISTEM KASIR SIAP DIGUNAKAN',
+                          style: TextStyle(color: Colors.white60, fontSize: 9.5, fontWeight: FontWeight.bold, letterSpacing: 1.1),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Silahkan masuk Tretan $targetName',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            height: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          _currentScheduledUser?.isOwner == true
+                              ? '👑 Akun Pemilik Toko (Akses Penuh)'
+                              : '💼 Jadwal Jaga Shift Berikutnya',
+                          style: TextStyle(
+                            color: _currentScheduledUser?.isOwner == true ? AppTheme.primaryGold : const Color(0xFF5EEAD4),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
 
-                  // 3. Custom Numpad
-                  Column(
-                    children: [
-                      _buildNumpadRow(['1', '2', '3']),
-                      const SizedBox(height: 12),
-                      _buildNumpadRow(['4', '5', '6']),
-                      const SizedBox(height: 12),
-                      _buildNumpadRow(['7', '8', '9']),
-                      const SizedBox(height: 12),
-                      _buildNumpadRow(['C', '0', '⌫']),
-                    ],
+                  const SizedBox(height: 14),
+
+                  // 2. PIN Dots Display & Error
+                  const Text(
+                    'Masukkan 4-Digit PIN Anda',
+                    style: TextStyle(color: Colors.white70, fontSize: 11.5, fontWeight: FontWeight.w600),
                   ),
+                  const SizedBox(height: 10),
+
+                  // Animated PIN Dots
+                  AnimatedBuilder(
+                    animation: _shakeController,
+                    builder: (context, child) {
+                      final offset = _shakeController.value == 0
+                          ? 0.0
+                          : (10.0 * (1 - _shakeController.value) * ((_shakeController.value * 6).round() % 2 == 0 ? 1 : -1));
+                      return Transform.translate(
+                        offset: Offset(offset, 0),
+                        child: child,
+                      );
+                    },
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(4, (index) {
+                        final isFilled = index < _pin.length;
+                        return Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 8),
+                          width: 16,
+                          height: 16,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isFilled ? AppTheme.primaryGold : Colors.transparent,
+                            border: Border.all(
+                              color: isFilled ? AppTheme.primaryGold : Colors.white38,
+                              width: 2,
+                            ),
+                            boxShadow: isFilled
+                                ? [
+                                    BoxShadow(
+                                      color: AppTheme.primaryGold.withValues(alpha: 0.5),
+                                      blurRadius: 8,
+                                      spreadRadius: 1,
+                                    )
+                                  ]
+                                : null,
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+
+                  if (_errorMessage != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      _errorMessage!,
+                      style: const TextStyle(color: Color(0xFFF87171), fontSize: 11, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+
+                  const SizedBox(height: 14),
+
+                  // 3. Custom Numpad
+                  _buildNumpadRow(['1', '2', '3']),
+                  const SizedBox(height: 8),
+                  _buildNumpadRow(['4', '5', '6']),
+                  const SizedBox(height: 8),
+                  _buildNumpadRow(['7', '8', '9']),
+                  const SizedBox(height: 8),
+                  _buildNumpadRow(['C', '0', '⌫']),
+
+                  const SizedBox(height: 10),
 
                   // 4. Footer Switch User Button
                   TextButton.icon(
                     onPressed: _showSwitchUserModal,
-                    icon: const Icon(Icons.swap_horiz_rounded, size: 16, color: AppTheme.primaryGold),
+                    icon: const Icon(Icons.swap_horiz_rounded, size: 15, color: AppTheme.primaryGold),
                     label: const Text(
                       'Bukan Anda? Ganti Penjaga Lain / Masuk Owner',
-                      style: TextStyle(color: AppTheme.primaryGold, fontSize: 11.5, fontWeight: FontWeight.w700),
+                      style: TextStyle(color: AppTheme.primaryGold, fontSize: 11, fontWeight: FontWeight.w700),
                     ),
                   ),
+                  const SizedBox(height: 6),
                 ],
               ),
             ),
@@ -385,7 +381,7 @@ class _PinLoginLockScreenState extends State<PinLoginLockScreen> with SingleTick
 
   Widget _buildNumpadRow(List<String> keys) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: keys.map((key) {
         if (key == 'C') {
           return _buildNumpadButton(
@@ -394,14 +390,14 @@ class _PinLoginLockScreenState extends State<PinLoginLockScreen> with SingleTick
           );
         } else if (key == '⌫') {
           return _buildNumpadButton(
-            child: const Icon(Icons.backspace_outlined, size: 20, color: Colors.white70),
+            child: const Icon(Icons.backspace_outlined, size: 18, color: Colors.white70),
             onTap: _onBackspace,
           );
         } else {
           return _buildNumpadButton(
             child: Text(
               key,
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white),
             ),
             onTap: () => _onKeyPress(key),
           );
@@ -411,18 +407,21 @@ class _PinLoginLockScreenState extends State<PinLoginLockScreen> with SingleTick
   }
 
   Widget _buildNumpadButton({required Widget child, required VoidCallback onTap}) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(35),
-      child: Container(
-        width: 68,
-        height: 68,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: AppTheme.surfaceDark.withValues(alpha: 0.9),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 10),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(30),
+        child: Container(
+          width: 58,
+          height: 58,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppTheme.surfaceDark.withValues(alpha: 0.9),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          ),
+          child: Center(child: child),
         ),
-        child: Center(child: child),
       ),
     );
   }
