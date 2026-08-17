@@ -403,7 +403,7 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('Uang Modal Awal (Rp)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.textDark)),
+                                  const Text('Uang Kembalian di Laci (Rp)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.textDark)),
                                   const SizedBox(height: 5),
                                   TextField(
                                     controller: _startingCashController,

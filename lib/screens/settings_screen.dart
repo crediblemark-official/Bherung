@@ -967,7 +967,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                 controller: _startingCashController,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
-                  labelText: 'Modal Kas Awal Laci Kasir Default (Rp)',
+                  labelText: 'Uang Kembalian di Laci Default (Rp)',
                   hintText: '200000',
                   prefixIcon: Icon(Icons.payments_rounded, size: 18, color: AppTheme.primaryTeal),
                   isDense: true,
