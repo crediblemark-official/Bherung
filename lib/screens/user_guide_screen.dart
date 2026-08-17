@@ -50,7 +50,7 @@ class UserGuideScreen extends StatelessWidget {
                     stepNumber: '1',
                     title: 'Salin Link Template & Buat Salinan di Google Drive',
                     desc:
-                        'Buka menu Pengaturan > Tab 1: Google Sheets, lalu klik tombol "Salin Link Template Google Sheets". Buka link tersebut di browser laptop/HP Anda, lalu klik tombol "Make a copy / Buat salinan" agar database resmi toko tersimpan di akun Google Drive pribadi Anda.',
+                        'Buka menu Pengaturan > Tab Database & Cloud, lalu klik tombol "Salin Link Template Google Sheets". Buka link tersebut di browser laptop/HP Anda, lalu klik tombol "Make a copy / Buat salinan" agar database resmi toko tersimpan di akun Google Drive pribadi Anda.',
                     imagePaths: [
                       'assets/docs/step0_salin_template.png',
                     ],
@@ -64,7 +64,7 @@ class UserGuideScreen extends StatelessWidget {
                     stepNumber: '2',
                     title: 'Buka Hak Akses Link Menjadi "Editor"',
                     desc:
-                        'Di Google Spreadsheet hasil salinan Anda, klik tombol "Bagikan (Share)". Pada bagian Akses umum, ubah menjadi "Siapa saja yang memiliki link (Anyone with the link)" dan pastikan perannya dipilih "Editor" (bukan Viewer/Pelihat) agar aplikasi kasir dapat mencatat penjualan, memperbarui stok, dan buku kasbon.',
+                        'Di Google Spreadsheet hasil salinan Anda, klik tombol "Bagikan (Share)". Pada bagian Akses umum, ubah menjadi "Siapa saja yang memiliki link (Anyone with the link)" dan pastikan perannya dipilih "Editor" (bukan Viewer/Pelihat) agar aplikasi kasir dapat mencatat penjualan, memperbarui stok, dan buku kasbon secara otomatis.',
                     imagePaths: [
                       'assets/docs/step1_akses_siapa_saja.png',
                       'assets/docs/step2_pilih_editor.png',
@@ -79,7 +79,7 @@ class UserGuideScreen extends StatelessWidget {
                     stepNumber: '3',
                     title: 'Jalankan Menu "Bherung POS" di Spreadsheet',
                     desc:
-                        'Buka Google Spreadsheet di laptop/komputer. Klik menu khusus "Bherung POS" di bilah atas, lalu pilih opsi:\n"1. Otorisasi & Aktifkan Database Kasir" untuk mengaktifkan seluruh tabel database secara otomatis.',
+                        'Buka Google Spreadsheet di laptop/komputer. Klik menu khusus "🏪 Bherung POS" di bilah atas, lalu pilih opsi:\n"🔑 1. Otorisasi & Aktifkan Database Kasir" untuk mengaktifkan seluruh 7 tabel database toko serta memberikan akses robot Service Account secara otomatis.',
                     imagePaths: [
                       'assets/docs/step3_menu_otorisasi.png',
                     ],
@@ -91,9 +91,9 @@ class UserGuideScreen extends StatelessWidget {
                   _buildVisualStepCard(
                     context,
                     stepNumber: '4',
-                    title: 'Izinkan Otorisasi Keamanan Google',
+                    title: 'Izinkan Otorisasi Keamanan Akun Google',
                     desc:
-                        'Google akan menampilkan dialog "Otorisasi diperlukan". Klik "Oke", lalu pilih akun Google Anda. Jika muncul peringatan "Google belum memverifikasi aplikasi ini", klik tautan "Lanjutan (Advanced)" di bagian bawah kiri, lalu klik "Buka Untitled project (tidak aman)", dan klik "Lanjutkan / Izinkan".',
+                        'Google akan menampilkan dialog otorisasi izin keamanan. Klik "Oke", pilih akun Google Anda, centang izin Google Drive & Spreadsheet, lalu klik tombol "Lanjutkan / Izinkan". Otorisasi ini hanya perlu dilakukan satu kali saja di awal.',
                     imagePaths: [
                       'assets/docs/step4_dialog_izin.png',
                       'assets/docs/step5_lanjutan_otorisasi.png',
@@ -106,14 +106,14 @@ class UserGuideScreen extends StatelessWidget {
                   _buildVisualStepCard(
                     context,
                     stepNumber: '5',
-                    title: 'Salin Link atau ID Spreadsheet ke Aplikasi Kasir',
+                    title: 'Salin ID Spreadsheet atau URL Apps Script ke Aplikasi',
                     desc:
-                        'Setelah otorisasi berhasil, ID Spreadsheet akan muncul di layar. Anda juga bisa menyalin link URL lengkap dari address bar browser. Buka menu Pengaturan > Tab 1: Google Sheets di aplikasi Bherung POS, tempelkan link tersebut, lalu klik tombol emas "Hubungkan & Simpan Database". Aplikasi kini langsung terhubung dengan Google Drive & Spreadsheet toko Anda!',
+                        'Setelah otorisasi selesai, ID Spreadsheet akan muncul di layar. Anda juga bisa menyalin link URL lengkap dari address bar browser.\n\nBuka menu Pengaturan > Tab Database & Cloud di aplikasi Bherung POS, tempelkan ID Spreadsheet atau URL Web App Apps Script, lalu klik tombol "Hubungkan & Simpan Database". Aplikasi kini langsung terhubung tanpa batas limit pengguna (Unlimited)!',
                     imagePaths: [
                       'assets/docs/step4_otorisasi_sukses.png',
                       'assets/docs/step6_layar_pengaturan.png',
                     ],
-                    badgeText: 'Siap Digunakan 24 Jam',
+                    badgeText: 'Bebas Limit 100 User (Unlimited)',
                     badgeColor: AppTheme.primaryDark,
                   ),
                   const SizedBox(height: 22),
@@ -128,7 +128,7 @@ class UserGuideScreen extends StatelessWidget {
                     _buildGuideItem(
                       icon: Icons.qr_code_scanner_rounded,
                       title: 'Scan Barcode Cepat:',
-                      desc: 'Arahkan scanner kamera HP atau ketik barcode/nama di kolom cari atas untuk langsung memasukkan ke keranjang.',
+                      desc: 'Arahkan scanner kamera HP atau ketik barcode/nama di kolom cari atas untuk langsung memasukkan barang ke keranjang.',
                     ),
                     _buildGuideItem(
                       icon: Icons.price_change_outlined,
@@ -142,13 +142,13 @@ class UserGuideScreen extends StatelessWidget {
                     ),
                     _buildGuideItem(
                       icon: Icons.menu_book_rounded,
-                      title: 'Pencatatan Buku Kasbon:',
+                      title: 'Pencatatan Buku Kasbon Pelanggan:',
                       desc: 'Untuk pembeli langganan yang berutang, pilih "Kasbon", isi nama & jatuh tempo. Data tersimpan rapi dan stok otomatis berkurang.',
                     ),
                     _buildGuideItem(
                       icon: Icons.refresh_rounded,
                       title: 'Pull-to-Refresh (Tarik ke Bawah):',
-                      desc: 'Tarik ke bawah di katalog atau daftar kasbon untuk menyinkronkan seluruh master barang, akun kasir, rekap shift, dan mutasi dengan Spreadsheet.',
+                      desc: 'Tarik ke bawah di katalog atau daftar kasbon untuk menyinkronkan seluruh master barang, stok, dan mutasi dengan Spreadsheet toko.',
                     ),
                   ]),
                   const SizedBox(height: 22),
@@ -156,24 +156,49 @@ class UserGuideScreen extends StatelessWidget {
                   // Section 3: Shift & Oper Kasir
                   _buildSectionHeader(
                     icon: Icons.sync_alt_rounded,
-                    title: '3. Serah Terima Shift & Ganti Penjaga 24 Jam',
+                    title: '3. Serah Terima Shift & Ganti Penjaga 24 Jam (Khusus Owner)',
                   ),
                   const SizedBox(height: 8),
                   _buildGuideCard([
                     _buildGuideItem(
-                      icon: Icons.account_balance_wallet_outlined,
-                      title: 'Rekonsiliasi Uang Fisik Laci:',
-                      desc: 'Hitung uang kertas dan uang koin di laci kasir, sistem akan menghitung selisih pas, lebih, atau minus secara otomatis.',
+                      icon: Icons.admin_panel_settings_rounded,
+                      title: 'Otorisasi Khusus Pemilik Toko (Owner):',
+                      desc: 'Menu Serah Terima Shift hanya bisa dibuka dan disahkan oleh Pemilik Toko (PIN 1234) untuk menjamin transparansi & keamanan toko.',
                     ),
                     _buildGuideItem(
-                      icon: Icons.smoking_rooms_rounded,
-                      title: 'Audit Rokok & Barang Sensitif:',
-                      desc: 'Cek stok fisik etalase rokok sebelum ganti shift untuk mencegah barang hilang atau selisih hitung.',
+                      icon: Icons.point_of_sale_rounded,
+                      title: 'Audit & Rekonsiliasi Fisik Langsung:',
+                      desc: 'Pemilik Toko menghitung uang kas riil di laci dan stok fisik rokok/barang berharga bersama penjaga yang sedang bertugas di meja kasir.',
                     ),
                     _buildGuideItem(
-                      icon: Icons.switch_account_rounded,
-                      title: 'Ganti Shift Otomatis:',
-                      desc: 'Pilih nama kasir pengganti dari daftar akun terdaftar. Sesi kasir langsung berpindah ke akun kasir baru.',
+                      icon: Icons.lock_clock_rounded,
+                      title: 'Auto-Logout & Sambutan Kasir Baru:',
+                      desc: 'Begitu shift disahkan, sesi kasir lama otomatis terlogout dan layar terkunci menyambut penjaga shift berikutnya: "Silahkan masuk Tretan [Nama Penjaga]".',
+                    ),
+                  ]),
+                  const SizedBox(height: 22),
+
+                  // Section 4: Manajemen Akun & PIN
+                  _buildSectionHeader(
+                    icon: Icons.badge_rounded,
+                    title: '4. Role Akun Kasir & Autentikasi PIN',
+                  ),
+                  const SizedBox(height: 8),
+                  _buildGuideCard([
+                    _buildGuideItem(
+                      icon: Icons.workspace_premium_rounded,
+                      title: 'Pemilik Toko (Owner / PIN 1234):',
+                      desc: 'Akses penuh ke pengaturan toko, harga modal, tambah/edit kasir, serah terima shift, dan memiliki tombol "Keluar Akun Pemilik Toko" di bilah atas.',
+                    ),
+                    _buildGuideItem(
+                      icon: Icons.person_rounded,
+                      title: 'Penjaga Toko (Kasir / PIN 5678):',
+                      desc: 'Fokus pada kecepatan transaksi belanja, cetak nota, dan scan barcode tanpa bisa mengakses pengaturan master atau menu oper shift.',
+                    ),
+                    _buildGuideItem(
+                      icon: Icons.pin_outlined,
+                      title: 'Auto Identifikasi Role:',
+                      desc: 'Cukup masukkan 4-digit PIN pada layar login, sistem otomatis mengenali peran pengguna secara instan.',
                     ),
                   ]),
                   const SizedBox(height: 28),
