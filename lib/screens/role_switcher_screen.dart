@@ -56,25 +56,124 @@ class _RoleSwitcherScreenState extends State<RoleSwitcherScreen> {
   }
 
   void _openAddUserForm() {
-    setState(() {
-      _editingUser = null;
-      _nameController.clear();
-      _phoneController.clear();
-      _pinController.text = '1234';
-      _role = UserRoleType.staff;
-      _showForm = true;
-    });
+    _requireOwnerAuth(
+      title: 'Otorisasi Kelola Pengguna',
+      message: 'Hanya Pemilik Toko (Owner) yang berhak menambah akun kasir baru.',
+      onAuthorized: () {
+        setState(() {
+          _editingUser = null;
+          _nameController.clear();
+          _phoneController.clear();
+          _pinController.text = '5678';
+          _role = UserRoleType.staff;
+          _showForm = true;
+        });
+      },
+    );
   }
 
   void _openEditUserForm(AppUser user) {
-    setState(() {
-      _editingUser = user;
-      _nameController.text = user.name;
-      _phoneController.text = user.phone;
-      _pinController.text = user.pin;
-      _role = user.role;
-      _showForm = true;
-    });
+    _requireOwnerAuth(
+      title: 'Otorisasi Kelola Pengguna',
+      message: 'Hanya Pemilik Toko (Owner) yang berhak mengubah data & PIN kasir.',
+      onAuthorized: () {
+        setState(() {
+          _editingUser = user;
+          _nameController.text = user.name;
+          _phoneController.text = user.phone;
+          _pinController.text = user.pin;
+          _role = user.role;
+          _showForm = true;
+        });
+      },
+    );
+  }
+
+  void _requireOwnerAuth({
+    required String title,
+    required String message,
+    required VoidCallback onAuthorized,
+  }) {
+    if (widget.currentUser.isOwner) {
+      onAuthorized();
+      return;
+    }
+
+    final ownerUser = widget.users.where((u) => u.isOwner).firstOrNull;
+    final ownerPin = ownerUser?.pin.trim().isNotEmpty == true ? ownerUser!.pin.trim() : '1234';
+    final pinController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.security_rounded, color: AppTheme.primaryGold, size: 22),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                title,
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              message,
+              style: const TextStyle(fontSize: 12, color: AppTheme.textMuted, height: 1.35),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: pinController,
+              obscureText: true,
+              keyboardType: TextInputType.number,
+              maxLength: 4,
+              autofocus: true,
+              style: const TextStyle(fontSize: 18, letterSpacing: 6, fontWeight: FontWeight.bold),
+              decoration: InputDecoration(
+                hintText: 'PIN Pemilik (1234)',
+                counterText: '',
+                prefixIcon: const Icon(Icons.password_rounded, color: AppTheme.primaryGold),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal', style: TextStyle(color: AppTheme.textMuted)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (pinController.text.trim() == ownerPin) {
+                Navigator.pop(ctx);
+                onAuthorized();
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('PIN Pemilik Toko salah! Akses ditolak.'),
+                    backgroundColor: AppTheme.dangerRed,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryGold,
+              foregroundColor: AppTheme.primaryDark,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Buka Akses', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _verifyAndSwitch(AppUser user) {
@@ -83,63 +182,94 @@ class _RoleSwitcherScreenState extends State<RoleSwitcherScreen> {
       return;
     }
 
-    if (user.isOwner) {
-      // Prompt PIN untuk Owner
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          title: const Row(
-            children: [
-              Icon(Icons.lock_rounded, color: AppTheme.primaryGold, size: 20),
-              SizedBox(width: 8),
-              Text('Masukkan PIN Pemilik (Owner)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          content: TextField(
-            controller: _verifyPinController,
-            obscureText: true,
-            keyboardType: TextInputType.number,
-            autofocus: true,
-            maxLength: 4,
-            decoration: const InputDecoration(
-              hintText: 'PIN default: 1234',
-              prefixIcon: Icon(Icons.password_rounded, size: 18),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Batal', style: TextStyle(color: AppTheme.textMuted)),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final requiredPin = user.pin.trim().isEmpty ? '1234' : user.pin.trim();
-                if (_verifyPinController.text.trim() == requiredPin) {
-                  Navigator.pop(ctx);
-                  widget.onUserSelected(user);
-                  Navigator.pop(context);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('PIN Owner salah! Periksa kembali PIN Anda.')),
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryGold, foregroundColor: AppTheme.primaryDark),
-              child: const Text('Masuk Cepat', style: TextStyle(fontWeight: FontWeight.bold)),
+    _verifyPinController.clear();
+    final requiredPin = user.pin.trim().isEmpty ? (user.isOwner ? '1234' : '5678') : user.pin.trim();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(user.isOwner ? Icons.workspace_premium_rounded : Icons.lock_rounded,
+                color: user.isOwner ? AppTheme.primaryGold : AppTheme.primaryTeal, size: 20),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                'Masukkan PIN ${user.name}',
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),
-      );
-    } else {
-      widget.onUserSelected(user);
-      Navigator.pop(context);
-    }
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              user.isOwner
+                  ? 'Masukkan PIN Pemilik Toko untuk beralih ke hak akses penuh.'
+                  : 'Masukkan PIN Penjaga Toko untuk beralih ke sesi kasir ${user.name}.',
+              style: const TextStyle(fontSize: 11.5, color: AppTheme.textMuted),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _verifyPinController,
+              obscureText: true,
+              keyboardType: TextInputType.number,
+              autofocus: true,
+              maxLength: 4,
+              style: const TextStyle(fontSize: 18, letterSpacing: 6, fontWeight: FontWeight.bold),
+              decoration: InputDecoration(
+                hintText: 'PIN 4-Digit',
+                counterText: '',
+                prefixIcon: const Icon(Icons.password_rounded, size: 18),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal', style: TextStyle(color: AppTheme.textMuted)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (_verifyPinController.text.trim() == requiredPin) {
+                Navigator.pop(ctx);
+                widget.onUserSelected(user);
+                Navigator.pop(context);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('PIN Salah! Akses ditolak.'),
+                    backgroundColor: AppTheme.dangerRed,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: user.isOwner ? AppTheme.primaryGold : AppTheme.primaryTeal,
+              foregroundColor: user.isOwner ? AppTheme.primaryDark : Colors.white,
+            ),
+            child: const Text('Beralih Akun', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _handleShiftHandover(AppUser targetUser) {
-    Navigator.pop(context);
-    widget.onStartShiftHandover(targetUser);
+    _requireOwnerAuth(
+      title: 'Otorisasi Oper Shift',
+      message: 'Hanya Pemilik Toko (Owner) yang berhak melakukan serah terima shift & tutup kas.',
+      onAuthorized: () {
+        Navigator.pop(context);
+        widget.onStartShiftHandover(targetUser);
+      },
+    );
   }
 
   void _submitUserForm() {

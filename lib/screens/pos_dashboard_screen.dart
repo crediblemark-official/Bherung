@@ -935,48 +935,141 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
     );
   }
 
-  // Serah Terima Shift Penjaga & Rekonsiliasi Kas (Full Screen Terintegrasi)
-  void _showShiftHandoverDialog([AppUser? initialIncomingUser]) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (ctx) => ShiftHandoverScreen(
-          currentCashier: _currentUser.name,
-          currentShiftSales: _totalSalesToday,
-          currentShiftTransactions: _completedTransactions,
-          products: _products,
-          users: _users,
-          initialIncomingUser: initialIncomingUser,
-          defaultStartingCash: _storeProfile.defaultStartingCash,
-          storeName: _storeProfile.name,
-          onShiftHandoverCompleted: (shiftRecord, nextUser) {
-            setState(() {
-              _shiftRecords.insert(0, shiftRecord);
-              // Reset shift counter untuk penjaga shift berikutnya
-              _completedTransactions = 0;
-              _totalSalesToday = 0;
-              if (nextUser != null) {
-                _scheduledNextUser = nextUser;
-                _currentUser = nextUser;
-              }
-              _isLocked = true; // Kunci layar agar penjaga berikutnya menyambut dengan PIN
-            });
+  void _requireOwnerAuthForAction({
+    required String title,
+    required String message,
+    required VoidCallback onAuthorized,
+  }) {
+    if (_currentUser.isOwner) {
+      onAuthorized();
+      return;
+    }
 
-            // Simpan rekap shift ke storage lokal
-            InventoryStorageService().saveShifts(_shiftRecords);
+    final ownerUser = _users.where((u) => u.isOwner).firstOrNull;
+    final ownerPin = ownerUser?.pin.trim().isNotEmpty == true ? ownerUser!.pin.trim() : '1234';
+    final pinController = TextEditingController();
 
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'Serah terima shift berhasil! Shift beralih ke: ${_currentUser.name} (Selisih: ${AppTheme.formatRupiah(shiftRecord.cashDifference)})',
-                ),
-                backgroundColor: shiftRecord.cashDifference == 0 ? AppTheme.successGreen : AppTheme.warningOrange,
-                duration: const Duration(seconds: 4),
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.security_rounded, color: AppTheme.primaryGold, size: 22),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                title,
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900),
+                overflow: TextOverflow.ellipsis,
               ),
-            );
-          },
+            ),
+          ],
         ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              message,
+              style: const TextStyle(fontSize: 12, color: AppTheme.textMuted, height: 1.35),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: pinController,
+              obscureText: true,
+              keyboardType: TextInputType.number,
+              maxLength: 4,
+              autofocus: true,
+              style: const TextStyle(fontSize: 18, letterSpacing: 6, fontWeight: FontWeight.bold),
+              decoration: InputDecoration(
+                hintText: 'PIN Pemilik (1234)',
+                counterText: '',
+                prefixIcon: const Icon(Icons.password_rounded, color: AppTheme.primaryGold),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal', style: TextStyle(color: AppTheme.textMuted)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (pinController.text.trim() == ownerPin) {
+                Navigator.pop(ctx);
+                onAuthorized();
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('PIN Pemilik Toko salah! Akses ditolak.'),
+                    backgroundColor: AppTheme.dangerRed,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryGold,
+              foregroundColor: AppTheme.primaryDark,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Buka Akses', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
       ),
+    );
+  }
+
+  // Serah Terima Shift Penjaga & Rekonsiliasi Kas (Full Screen Terintegrasi - Khusus Pemilik Toko)
+  void _showShiftHandoverDialog([AppUser? initialIncomingUser]) {
+    _requireOwnerAuthForAction(
+      title: 'Otorisasi Oper Shift',
+      message: 'Hanya Pemilik Toko (Owner) yang berhak melakukan serah terima shift & tutup kas.',
+      onAuthorized: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (ctx) => ShiftHandoverScreen(
+              currentCashier: _currentUser.name,
+              currentShiftSales: _totalSalesToday,
+              currentShiftTransactions: _completedTransactions,
+              products: _products,
+              users: _users,
+              initialIncomingUser: initialIncomingUser,
+              defaultStartingCash: _storeProfile.defaultStartingCash,
+              storeName: _storeProfile.name,
+              onShiftHandoverCompleted: (shiftRecord, nextUser) {
+                setState(() {
+                  _shiftRecords.insert(0, shiftRecord);
+                  // Reset shift counter untuk penjaga shift berikutnya
+                  _completedTransactions = 0;
+                  _totalSalesToday = 0;
+                  if (nextUser != null) {
+                    _scheduledNextUser = nextUser;
+                    _currentUser = nextUser;
+                  }
+                  _isLocked = true; // Kunci layar agar penjaga berikutnya menyambut dengan PIN
+                });
+
+                // Simpan rekap shift ke storage lokal
+                InventoryStorageService().saveShifts(_shiftRecords);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Serah terima shift berhasil! Shift beralih ke: ${_currentUser.name} (Selisih: ${AppTheme.formatRupiah(shiftRecord.cashDifference)})',
+                    ),
+                    backgroundColor: shiftRecord.cashDifference == 0 ? AppTheme.successGreen : AppTheme.warningOrange,
+                    duration: const Duration(seconds: 4),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      },
     );
   }
 
