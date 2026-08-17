@@ -41,8 +41,10 @@ class GoogleSheetsDirectService {
       _spreadsheetId = prefs.getString('bherung_gcp_spreadsheet_id');
       _spreadsheetName = prefs.getString('bherung_gcp_spreadsheet_name') ?? 'Bherung POS - Database Toko';
 
-      // Coba silent sign-in otomatis jika user pernah login sebelumnya
-      _currentUser = await _googleSignIn.signInSilently();
+      // Coba silent sign-in otomatis jika user pernah login sebelumnya (di Android/iOS)
+      if (!kIsWeb) {
+        _currentUser = await _googleSignIn.signInSilently();
+      }
       _isInitialized = true;
     } catch (e) {
       if (kDebugMode) {
