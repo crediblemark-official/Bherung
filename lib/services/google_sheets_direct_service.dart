@@ -12,6 +12,7 @@ class GoogleSheetsDirectService {
   GoogleSheetsDirectService._internal();
 
   final GoogleSignIn _googleSignIn = GoogleSignIn(
+    clientId: kIsWeb ? '576140887919-b7i4e44ih2depjr8kddkmufobmndjik3.apps.googleusercontent.com' : null,
     serverClientId: '576140887919-b7i4e44ih2depjr8kddkmufobmndjik3.apps.googleusercontent.com',
     scopes: <String>[
       'email',

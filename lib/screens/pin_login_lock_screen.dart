@@ -143,33 +143,36 @@ class _PinLoginLockScreenState extends State<PinLoginLockScreen> with SingleTick
               itemBuilder: (c, i) {
                 final u = widget.users[i];
                 final isSelected = _currentScheduledUser?.id == u.id;
-                return ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: CircleAvatar(
-                    backgroundColor: u.isOwner ? AppTheme.primaryGold : AppTheme.primaryTeal,
-                    child: Icon(
-                      u.isOwner ? Icons.workspace_premium_rounded : Icons.person_rounded,
-                      color: AppTheme.primaryDark,
-                      size: 20,
+                return Material(
+                  color: Colors.transparent,
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: CircleAvatar(
+                      backgroundColor: u.isOwner ? AppTheme.primaryGold : AppTheme.primaryTeal,
+                      child: Icon(
+                        u.isOwner ? Icons.workspace_premium_rounded : Icons.person_rounded,
+                        color: AppTheme.primaryDark,
+                        size: 20,
+                      ),
                     ),
+                    title: Text(
+                      u.name,
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
+                    subtitle: Text(
+                      u.isOwner ? '👑 Pemilik Toko (Akses Penuh)' : '💼 Penjaga Toko (Kasir)',
+                      style: TextStyle(color: u.isOwner ? AppTheme.primaryGold : Colors.white60, fontSize: 11),
+                    ),
+                    trailing: isSelected ? const Icon(Icons.check_circle_rounded, color: AppTheme.primaryGold) : null,
+                    onTap: () {
+                      setState(() {
+                        _currentScheduledUser = u;
+                        _pin = '';
+                        _errorMessage = null;
+                      });
+                      Navigator.pop(ctx);
+                    },
                   ),
-                  title: Text(
-                    u.name,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-                  ),
-                  subtitle: Text(
-                    u.isOwner ? '👑 Pemilik Toko (Akses Penuh)' : '💼 Penjaga Toko (Kasir)',
-                    style: TextStyle(color: u.isOwner ? AppTheme.primaryGold : Colors.white60, fontSize: 11),
-                  ),
-                  trailing: isSelected ? const Icon(Icons.check_circle_rounded, color: AppTheme.primaryGold) : null,
-                  onTap: () {
-                    setState(() {
-                      _currentScheduledUser = u;
-                      _pin = '';
-                      _errorMessage = null;
-                    });
-                    Navigator.pop(ctx);
-                  },
                 );
               },
             ),
