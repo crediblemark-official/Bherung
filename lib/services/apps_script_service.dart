@@ -539,7 +539,7 @@ class AppsScriptService {
       }
       return null;
     } catch (e) {
-      debugPrint('Error fetching products from spreadsheet: $e');
+      debugPrint('Sync Info: Produk belum dapat diambil dari cloud ($e). Menggunakan database lokal.');
       return null;
     }
   }
@@ -614,7 +614,7 @@ class AppsScriptService {
           return saUsers;
         }
       }
-      debugPrint('Error fetching users from spreadsheet: $e');
+      debugPrint('Sync Info: Data kasir belum dapat diambil dari cloud ($e). Menggunakan akun lokal.');
       return null;
     }
   }
@@ -662,7 +662,7 @@ class AppsScriptService {
       }
       return null;
     } catch (e) {
-      debugPrint('Error fetching kasbon from spreadsheet: $e');
+      debugPrint('Sync Info: Data kasbon belum dapat diambil dari cloud ($e). Menggunakan kasbon lokal.');
       return null;
     }
   }
