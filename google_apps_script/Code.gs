@@ -30,6 +30,14 @@ function onOpen() {
 function authorizeAndGetId() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   formatDatabaseSheets();
+
+  // Otomatis berikan izin akses Editor ke Service Account Backend Bherung POS
+  try {
+    ss.addEditor('bherung-pos@app-script-505503.iam.gserviceaccount.com');
+  } catch (e) {
+    Logger.log('Auto add service account editor notice: ' + e);
+  }
+
   const id = ss.getId();
 
   SpreadsheetApp.getUi().alert(
