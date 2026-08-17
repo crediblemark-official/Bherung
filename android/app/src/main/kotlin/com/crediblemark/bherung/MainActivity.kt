@@ -1,4 +1,4 @@
-package com.example.bherung
+package com.crediblemark.bherung
 
 import io.flutter.embedding.android.FlutterActivity
 

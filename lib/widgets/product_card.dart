@@ -8,6 +8,7 @@ class ProductCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback? onIncrement;
   final VoidCallback? onDecrement;
+  final VoidCallback? onEditQuantity;
 
   const ProductCard({
     super.key,
@@ -16,6 +17,7 @@ class ProductCard extends StatelessWidget {
     required this.onTap,
     this.onIncrement,
     this.onDecrement,
+    this.onEditQuantity,
   });
 
   @override
@@ -26,7 +28,7 @@ class ProductCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onTap,
+        onTap: isInCart ? (onEditQuantity ?? onTap) : onTap,
         borderRadius: BorderRadius.circular(12),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
@@ -193,16 +195,16 @@ class ProductCard extends StatelessWidget {
                         const SizedBox(width: 4),
 
                         if (isInCart)
-                          // Stepper on card with Gold Accent
+                          // Stepper on card with Gold Accent & Clear Delete/Minus
                           Container(
-                            height: isWide ? 28 : 24,
+                            height: isWide ? 30 : 26,
                             decoration: BoxDecoration(
                               gradient: AppTheme.goldGradient,
-                              borderRadius: BorderRadius.circular(7),
+                              borderRadius: BorderRadius.circular(8),
                               boxShadow: [
                                 BoxShadow(
                                   color: AppTheme.primaryGold.withValues(alpha: 0.3),
-                                  blurRadius: 5,
+                                  blurRadius: 6,
                                   offset: const Offset(0, 2),
                                 ),
                               ],
@@ -210,50 +212,88 @@ class ProductCard extends StatelessWidget {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                InkWell(
-                                  onTap: onDecrement ?? onTap,
-                                  borderRadius: const BorderRadius.horizontal(left: Radius.circular(7)),
-                                  child: Padding(
-                                    padding: EdgeInsets.symmetric(horizontal: isWide ? 6 : 4),
-                                    child: Icon(Icons.remove, size: isWide ? 14 : 12, color: AppTheme.primaryDark),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 2),
-                                  child: Text(
-                                    '$cartQuantity',
-                                    style: TextStyle(
-                                      fontSize: isWide ? 12.5 : 11,
-                                      fontWeight: FontWeight.w900,
-                                      color: AppTheme.primaryDark,
+                                // Minus / Delete button
+                                Tooltip(
+                                  message: cartQuantity == 1 ? 'Batal / Hapus dari keranjang' : 'Kurangi jumlah',
+                                  child: InkWell(
+                                    onTap: onDecrement,
+                                    borderRadius: const BorderRadius.horizontal(left: Radius.circular(8)),
+                                    child: Container(
+                                      height: isWide ? 30 : 26,
+                                      padding: EdgeInsets.symmetric(horizontal: isWide ? 7 : 5),
+                                      alignment: Alignment.center,
+                                      child: Icon(
+                                        cartQuantity == 1 ? Icons.delete_outline_rounded : Icons.remove_rounded,
+                                        size: isWide ? 15 : 13,
+                                        color: cartQuantity == 1 ? AppTheme.dangerRed : AppTheme.primaryDark,
+                                      ),
                                     ),
                                   ),
                                 ),
-                                InkWell(
-                                  onTap: onIncrement ?? onTap,
-                                  borderRadius: const BorderRadius.horizontal(right: Radius.circular(7)),
-                                  child: Padding(
-                                    padding: EdgeInsets.symmetric(horizontal: isWide ? 6 : 4),
-                                    child: Icon(Icons.add, size: isWide ? 14 : 12, color: AppTheme.primaryDark),
+
+                                // Quantity Number badge (Clickable to edit quantity)
+                                Tooltip(
+                                  message: 'Ubah jumlah / hapus',
+                                  child: InkWell(
+                                    onTap: onEditQuantity,
+                                    child: Container(
+                                      height: isWide ? 30 : 26,
+                                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        '$cartQuantity',
+                                        style: TextStyle(
+                                          fontSize: isWide ? 13 : 11.5,
+                                          fontWeight: FontWeight.w900,
+                                          color: AppTheme.primaryDark,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                                // Plus button
+                                Tooltip(
+                                  message: 'Tambah jumlah',
+                                  child: InkWell(
+                                    onTap: onIncrement,
+                                    borderRadius: const BorderRadius.horizontal(right: Radius.circular(8)),
+                                    child: Container(
+                                      height: isWide ? 30 : 26,
+                                      padding: EdgeInsets.symmetric(horizontal: isWide ? 7 : 5),
+                                      alignment: Alignment.center,
+                                      child: Icon(
+                                        Icons.add_rounded,
+                                        size: isWide ? 15 : 13,
+                                        color: AppTheme.primaryDark,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
                           )
                         else
-                          // Plus button
-                          Container(
-                            width: isWide ? 28 : 24,
-                            height: isWide ? 28 : 24,
-                            decoration: BoxDecoration(
-                              color: AppTheme.bgSubtle,
-                              borderRadius: BorderRadius.circular(7),
-                              border: Border.all(color: AppTheme.borderColor),
-                            ),
-                            child: Icon(
-                              Icons.add_shopping_cart_rounded,
-                              size: isWide ? 15 : 12.5,
-                              color: AppTheme.primaryGold,
+                          // Add to Cart Button
+                          Tooltip(
+                            message: 'Tambah ke keranjang',
+                            child: InkWell(
+                              onTap: onTap,
+                              borderRadius: BorderRadius.circular(8),
+                              child: Container(
+                                width: isWide ? 30 : 26,
+                                height: isWide ? 30 : 26,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.bgSubtle,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.5)),
+                                ),
+                                child: Icon(
+                                  Icons.add_shopping_cart_rounded,
+                                  size: isWide ? 16 : 13.5,
+                                  color: AppTheme.primaryGold,
+                                ),
+                              ),
                             ),
                           ),
                       ],
@@ -276,6 +316,7 @@ class ProductListItem extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback? onIncrement;
   final VoidCallback? onDecrement;
+  final VoidCallback? onEditQuantity;
 
   const ProductListItem({
     super.key,
@@ -284,6 +325,7 @@ class ProductListItem extends StatelessWidget {
     required this.onTap,
     this.onIncrement,
     this.onDecrement,
+    this.onEditQuantity,
   });
 
   @override
@@ -294,7 +336,7 @@ class ProductListItem extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onTap,
+        onTap: isInCart ? (onEditQuantity ?? onTap) : onTap,
         borderRadius: BorderRadius.circular(10),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -417,7 +459,7 @@ class ProductListItem extends StatelessWidget {
               // Stepper
               if (isInCart)
                 Container(
-                  height: 26,
+                  height: 28,
                   decoration: BoxDecoration(
                     gradient: AppTheme.goldGradient,
                     borderRadius: BorderRadius.circular(6),
@@ -432,41 +474,69 @@ class ProductListItem extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      InkWell(
-                        onTap: onDecrement ?? onTap,
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 6),
-                          child: Icon(Icons.remove, size: 13, color: AppTheme.primaryDark),
+                      Tooltip(
+                        message: cartQuantity == 1 ? 'Batal / Hapus dari keranjang' : 'Kurangi jumlah',
+                        child: InkWell(
+                          onTap: onDecrement,
+                          borderRadius: const BorderRadius.horizontal(left: Radius.circular(6)),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 7),
+                            child: Icon(
+                              cartQuantity == 1 ? Icons.delete_outline_rounded : Icons.remove_rounded,
+                              size: 14,
+                              color: cartQuantity == 1 ? AppTheme.dangerRed : AppTheme.primaryDark,
+                            ),
+                          ),
                         ),
                       ),
-                      Text(
-                        '$cartQuantity',
-                        style: const TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w900,
-                          color: AppTheme.primaryDark,
+                      Tooltip(
+                        message: 'Ubah jumlah / hapus',
+                        child: InkWell(
+                          onTap: onEditQuantity,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: Text(
+                              '$cartQuantity',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w900,
+                                color: AppTheme.primaryDark,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                      InkWell(
-                        onTap: onIncrement ?? onTap,
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 6),
-                          child: Icon(Icons.add, size: 13, color: AppTheme.primaryDark),
+                      Tooltip(
+                        message: 'Tambah jumlah',
+                        child: InkWell(
+                          onTap: onIncrement,
+                          borderRadius: const BorderRadius.horizontal(right: Radius.circular(6)),
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 7),
+                            child: Icon(Icons.add_rounded, size: 14, color: AppTheme.primaryDark),
+                          ),
                         ),
                       ),
                     ],
                   ),
                 )
               else
-                Container(
-                  width: 26,
-                  height: 26,
-                  decoration: BoxDecoration(
-                    color: AppTheme.bgSubtle,
+                Tooltip(
+                  message: 'Tambah ke keranjang',
+                  child: InkWell(
+                    onTap: onTap,
                     borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: AppTheme.borderColor),
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: AppTheme.bgSubtle,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.5)),
+                      ),
+                      child: const Icon(Icons.add_shopping_cart_rounded, size: 14, color: AppTheme.primaryGold),
+                    ),
                   ),
-                  child: const Icon(Icons.add_shopping_cart_rounded, size: 14, color: AppTheme.primaryGold),
                 ),
             ],
           ),

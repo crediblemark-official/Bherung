@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import '../services/sound_service.dart';
 import '../theme/app_theme.dart';
 
 class CameraBarcodeScannerDialog extends StatefulWidget {
@@ -20,6 +21,7 @@ class CameraBarcodeScannerDialog extends StatefulWidget {
 class _CameraBarcodeScannerDialogState extends State<CameraBarcodeScannerDialog> with SingleTickerProviderStateMixin {
   MobileScannerController? _controller;
   final TextEditingController _manualInputController = TextEditingController();
+  final SoundService _soundService = SoundService();
   late AnimationController _laserAnimController;
   bool _isProcessing = false;
   bool _torchEnabled = false;
@@ -27,6 +29,7 @@ class _CameraBarcodeScannerDialogState extends State<CameraBarcodeScannerDialog>
   bool _cameraInitialized = false;
   bool _useNativeScanner = false;
   String? _lastScannedCode;
+  DateTime? _lastScannedTimestamp;
 
   @override
   void initState() {
@@ -40,7 +43,8 @@ class _CameraBarcodeScannerDialogState extends State<CameraBarcodeScannerDialog>
     if (!kIsWeb) {
       try {
         _controller = MobileScannerController(
-          detectionSpeed: DetectionSpeed.normal,
+          detectionSpeed: DetectionSpeed.noDuplicates,
+          detectionTimeoutMs: 1200,
           facing: CameraFacing.back,
           torchEnabled: false,
         );
@@ -92,16 +96,36 @@ class _CameraBarcodeScannerDialogState extends State<CameraBarcodeScannerDialog>
 
   void _handleBarcode(String code) {
     final cleanCode = code.trim();
-    if (cleanCode.isEmpty || _isProcessing) return;
+    if (cleanCode.isEmpty) return;
+
+    final now = DateTime.now();
+
+    // Cegah multi-scan saat sedang processing
+    if (_isProcessing) return;
+
+    // Cegah scan ganda tidak sengaja pada barcode yang sama dalam 2 detik
+    if (_lastScannedCode == cleanCode && _lastScannedTimestamp != null) {
+      final diff = now.difference(_lastScannedTimestamp!).inMilliseconds;
+      if (diff < 2000) {
+        return;
+      }
+    }
+
+    _lastScannedTimestamp = now;
+    _lastScannedCode = cleanCode;
 
     setState(() {
       _isProcessing = true;
-      _lastScannedCode = cleanCode;
     });
 
+    // 1. Putar bunyi BEEP POS Scanner dan getaran haptic
+    _soundService.playScanBeep();
+
+    // 2. Kirim callback
     widget.onBarcodeDetected(cleanCode);
 
-    Future.delayed(const Duration(milliseconds: 1300), () {
+    // 3. Debounce jeda cooldown
+    Future.delayed(const Duration(milliseconds: 1200), () {
       if (mounted) {
         setState(() {
           _isProcessing = false;
@@ -294,6 +318,27 @@ class _CameraBarcodeScannerDialogState extends State<CameraBarcodeScannerDialog>
                     color: _torchEnabled ? AppTheme.goldAccent : Colors.white70,
                     tooltip: 'Senter Kamera',
                     onTap: _safeToggleTorch,
+                  ),
+                  const SizedBox(width: 8),
+
+                  // Suara Beep Toggle
+                  _buildFooterIconButton(
+                    icon: _soundService.isSoundEnabled ? Icons.volume_up_rounded : Icons.volume_off_rounded,
+                    color: _soundService.isSoundEnabled ? AppTheme.goldAccent : Colors.white60,
+                    tooltip: _soundService.isSoundEnabled ? 'Matikan Suara Beep' : 'Nyalakan Suara Beep',
+                    onTap: () {
+                      setState(() {
+                        _soundService.setSoundEnabled(!_soundService.isSoundEnabled);
+                      });
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(_soundService.isSoundEnabled ? 'Bunyi scanner aktif (BEEP)' : 'Bunyi scanner dinonaktifkan (Mute)'),
+                          duration: const Duration(milliseconds: 900),
+                          backgroundColor: AppTheme.surfaceDark,
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(width: 8),
 

@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import '../services/sound_service.dart';
 import '../theme/app_theme.dart';
 
 class ScannerScreen extends StatefulWidget {
@@ -20,12 +21,14 @@ class ScannerScreen extends StatefulWidget {
 class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProviderStateMixin {
   MobileScannerController? _controller;
   final TextEditingController _manualInputController = TextEditingController();
+  final SoundService _soundService = SoundService();
   late AnimationController _laserAnimController;
   bool _isProcessing = false;
   bool _torchEnabled = false;
   bool _useNativeScanner = false;
   bool _hasCameraError = false;
   String? _lastScannedCode;
+  DateTime? _lastScannedTimestamp;
   int _scannedCount = 0;
 
   @override
@@ -46,8 +49,8 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
         formats: const [
           BarcodeFormat.all,
         ],
-        detectionSpeed: DetectionSpeed.unrestricted,
-        detectionTimeoutMs: 250,
+        detectionSpeed: DetectionSpeed.noDuplicates,
+        detectionTimeoutMs: 1200,
       );
       setState(() {
         _useNativeScanner = true;
@@ -103,26 +106,36 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
 
   void _handleBarcode(String code) {
     final cleanCode = code.trim();
-    if (cleanCode.isEmpty || _isProcessing) return;
+    if (cleanCode.isEmpty) return;
+
+    final now = DateTime.now();
+
+    // Cegah multi-scan instan / saat transisi processing
+    if (_isProcessing) return;
+
+    // Cegah scan ganda secara tidak sengaja pada barcode yang sama dalam kurun 2 detik
+    if (_lastScannedCode == cleanCode && _lastScannedTimestamp != null) {
+      final diff = now.difference(_lastScannedTimestamp!).inMilliseconds;
+      if (diff < 2000) {
+        return;
+      }
+    }
+
+    _lastScannedTimestamp = now;
+    _lastScannedCode = cleanCode;
 
     setState(() {
       _isProcessing = true;
-      _lastScannedCode = cleanCode;
       _scannedCount++;
     });
 
+    // 1. Putar bunyi BEEP POS Scanner dan getaran Haptic
+    _soundService.playScanBeep();
+
+    // 2. Kirim callback ke keranjang/POS
     widget.onBarcodeDetected(cleanCode);
 
-    // Toast notifikasi scan berhasil
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Barcode "$cleanCode" terdeteksi!'),
-        backgroundColor: AppTheme.successGreen,
-        duration: const Duration(milliseconds: 1000),
-      ),
-    );
-
-    // Debounce agar kasir bisa scan barang berikutnya dengan lancar
+    // 3. Debounce jeda cooldown agar kasir tidak sengaja scan berulang
     Future.delayed(const Duration(milliseconds: 1200), () {
       if (mounted) {
         setState(() {
@@ -179,6 +192,27 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
           ],
         ),
         actions: [
+          IconButton(
+            icon: Icon(
+              _soundService.isSoundEnabled ? Icons.volume_up_rounded : Icons.volume_off_rounded,
+              color: _soundService.isSoundEnabled ? AppTheme.goldAccent : Colors.white60,
+              size: 19,
+            ),
+            onPressed: () {
+              setState(() {
+                _soundService.setSoundEnabled(!_soundService.isSoundEnabled);
+              });
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(_soundService.isSoundEnabled ? 'Bunyi scanner aktif (BEEP)' : 'Bunyi scanner dinonaktifkan (Mute)'),
+                  duration: const Duration(milliseconds: 900),
+                  backgroundColor: AppTheme.surfaceDark,
+                ),
+              );
+            },
+            tooltip: _soundService.isSoundEnabled ? 'Matikan Suara Beep' : 'Nyalakan Suara Beep',
+          ),
           if (!_hasCameraError) ...[
             IconButton(
               icon: Icon(_torchEnabled ? Icons.flash_on_rounded : Icons.flash_off_rounded, color: Colors.white, size: 19),

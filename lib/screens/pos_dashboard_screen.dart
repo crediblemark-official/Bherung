@@ -348,6 +348,369 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
     });
   }
 
+  void _setCartQuantity(Product product, int quantity) {
+    setState(() {
+      final index = _cartItems.indexWhere((item) => item.product.id == product.id);
+      if (quantity <= 0) {
+        if (index != -1) {
+          _cartItems.removeAt(index);
+        }
+      } else {
+        if (index != -1) {
+          _cartItems[index].quantity = quantity;
+        } else {
+          _cartItems.add(CartItem(
+            product: product,
+            quantity: quantity,
+            forceWholesalePrice: _selectedTransactionType == TransactionType.grosir,
+          ));
+        }
+      }
+    });
+  }
+
+  // Dialog Cepat: Ubah Jumlah / Batal Hapus dari Keranjang / Pilih Grosir
+  void _showProductQuantityDialog(Product product) {
+    final cartItem = _cartItems.where((i) => i.product.id == product.id).firstOrNull;
+    final int initialQty = cartItem?.quantity ?? 1;
+    final TextEditingController qtyCtrl = TextEditingController(text: '$initialQty');
+    bool forceWholesale = cartItem?.forceWholesalePrice ?? (_selectedTransactionType == TransactionType.grosir);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          final int parsedQty = int.tryParse(qtyCtrl.text) ?? 1;
+          final bool isWholesaleApplicable = forceWholesale ||
+              (product.hasWholesale && parsedQty >= (product.wholesaleMinQty ?? 999999));
+          final double unitPrice = isWholesaleApplicable && product.hasWholesale
+              ? product.wholesalePrice!
+              : product.price;
+          final double subtotal = unitPrice * parsedQty;
+
+          void updateQty(int newQty) {
+            final validQty = newQty.clamp(1, product.stock > 0 ? product.stock : 9999);
+            qtyCtrl.text = '$validQty';
+            setDialogState(() {});
+          }
+
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            titlePadding: const EdgeInsets.fromLTRB(18, 16, 18, 8),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+            actionsPadding: const EdgeInsets.fromLTRB(18, 8, 18, 16),
+            title: Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: product.color.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(product.icon, color: product.color, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        product.name,
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: AppTheme.primaryDark),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Text(
+                            'Stok: ${product.stock} ${product.unit}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: product.stock <= 5 ? AppTheme.dangerRed : AppTheme.textMuted,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '• ${AppTheme.formatRupiah(product.price)}/${product.unit}',
+                            style: const TextStyle(fontSize: 11, color: AppTheme.goldMuted, fontWeight: FontWeight.w800),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            content: SizedBox(
+              width: 340,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Divider(height: 16),
+
+                  // Stepper Jumlah Besar & Input Angka Langsung
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Minus Button
+                      Material(
+                        color: AppTheme.bgSubtle,
+                        borderRadius: BorderRadius.circular(10),
+                        child: InkWell(
+                          onTap: () => updateQty(parsedQty - 1),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              border: Border.all(color: AppTheme.borderColor),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.remove_rounded, color: AppTheme.primaryDark, size: 22),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+
+                      // Direct Quantity Input Field
+                      SizedBox(
+                        width: 90,
+                        height: 44,
+                        child: TextField(
+                          controller: qtyCtrl,
+                          keyboardType: TextInputType.number,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppTheme.primaryDark),
+                          decoration: InputDecoration(
+                            contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                            isDense: true,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(color: AppTheme.primaryGold, width: 2),
+                            ),
+                          ),
+                          onChanged: (val) => setDialogState(() {}),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+
+                      // Plus Button
+                      Material(
+                        color: AppTheme.primaryGold,
+                        borderRadius: BorderRadius.circular(10),
+                        child: InkWell(
+                          onTap: () => updateQty(parsedQty + 1),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.add_rounded, color: AppTheme.primaryDark, size: 22),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Quick Quantity Add Chips (+1, +5, +10, Max)
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      _buildQuickQtyChip('+1', () => updateQty(parsedQty + 1)),
+                      _buildQuickQtyChip('+5', () => updateQty(parsedQty + 5)),
+                      _buildQuickQtyChip('+10', () => updateQty(parsedQty + 10)),
+                      if (product.hasWholesale)
+                        _buildQuickQtyChip('Grosir (${product.wholesaleMinQty})', () => updateQty(product.wholesaleMinQty!)),
+                      if (product.stock > 0)
+                        _buildQuickQtyChip('Maks (${product.stock})', () => updateQty(product.stock)),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Wholesale Toggle (if product supports wholesale)
+                  if (product.hasWholesale)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: isWholesaleApplicable ? AppTheme.goldLight : AppTheme.bgSubtle,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isWholesaleApplicable ? AppTheme.primaryGold : AppTheme.borderColor,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.local_offer_rounded,
+                            size: 15,
+                            color: isWholesaleApplicable ? AppTheme.goldMuted : AppTheme.textMuted,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Harga Grosir (≥${product.wholesaleMinQty}: ${AppTheme.formatRupiah(product.wholesalePrice!)})',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: isWholesaleApplicable ? AppTheme.goldMuted : AppTheme.textDark,
+                              ),
+                            ),
+                          ),
+                          Switch(
+                            value: forceWholesale,
+                            onChanged: (val) {
+                              setDialogState(() {
+                                forceWholesale = val;
+                              });
+                            },
+                            activeTrackColor: AppTheme.primaryGold,
+                            activeThumbColor: AppTheme.primaryDark,
+                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  const SizedBox(height: 12),
+
+                  // Calculated Subtotal Box
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppTheme.surfaceDark,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Total Belanja:',
+                          style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
+                        ),
+                        Text(
+                          AppTheme.formatRupiah(subtotal),
+                          style: const TextStyle(
+                            color: AppTheme.goldAccent,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              Row(
+                children: [
+                  // Hapus / Batal Button (Hanya jika produk sudah ada di keranjang)
+                  if (cartItem != null)
+                    Expanded(
+                      flex: 4,
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          _removeFromCart(cartItem);
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('"${product.name}" dibatalkan/dihapus dari keranjang.'),
+                              duration: const Duration(milliseconds: 1000),
+                              backgroundColor: AppTheme.dangerRed,
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.delete_outline_rounded, size: 16),
+                        label: const Text('Batal / Hapus', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.dangerRed,
+                          side: const BorderSide(color: AppTheme.dangerRed),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                    )
+                  else
+                    Expanded(
+                      flex: 4,
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.textMuted,
+                          side: const BorderSide(color: AppTheme.borderColor),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: const Text('Batal', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  const SizedBox(width: 8),
+
+                  // Simpan / Update Button
+                  Expanded(
+                    flex: 6,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        _setCartQuantity(product, parsedQty);
+                        if (cartItem != null) {
+                          _toggleWholesale(cartItem, forceWholesale);
+                        }
+                        Navigator.pop(ctx);
+                      },
+                      icon: const Icon(Icons.check_rounded, size: 16),
+                      label: Text(
+                        cartItem != null ? 'Update Jumlah' : 'Tambah Keranjang',
+                        style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w900),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryGold,
+                        foregroundColor: AppTheme.primaryDark,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildQuickQtyChip(String label, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: AppTheme.bgSubtle,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: AppTheme.borderColor),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.textDark),
+        ),
+      ),
+    );
+  }
+
   // Handle barcode quick scan / enter key in search box / mobile camera scanner
   void _handleBarcodeSubmitted(String code) {
     final cleanCode = code.trim();
@@ -975,13 +1338,20 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
                                   getCartQuantity: _getCartQuantity,
                                   onAddToCart: _addToCart,
                                   onIncrement: (p) {
-                                    final item = _cartItems.firstWhere((i) => i.product.id == p.id);
-                                    _incrementCart(item);
+                                    final item = _cartItems.where((i) => i.product.id == p.id).firstOrNull;
+                                    if (item != null) {
+                                      _incrementCart(item);
+                                    } else {
+                                      _addToCart(p);
+                                    }
                                   },
                                   onDecrement: (p) {
-                                    final item = _cartItems.firstWhere((i) => i.product.id == p.id);
-                                    _decrementCart(item);
+                                    final item = _cartItems.where((i) => i.product.id == p.id).firstOrNull;
+                                    if (item != null) {
+                                      _decrementCart(item);
+                                    }
                                   },
+                                  onEditQuantity: (p) => _showProductQuantityDialog(p),
                                   onResetSearch: () {
                                     _searchController.clear();
                                     setState(() {

@@ -11,6 +11,7 @@ class ProductCatalogView extends StatelessWidget {
   final ValueChanged<Product> onAddToCart;
   final ValueChanged<Product> onIncrement;
   final ValueChanged<Product> onDecrement;
+  final ValueChanged<Product>? onEditQuantity;
   final VoidCallback onResetSearch;
   final Future<void> Function()? onRefresh;
   final VoidCallback? onOpenSettings;
@@ -25,6 +26,7 @@ class ProductCatalogView extends StatelessWidget {
     required this.onAddToCart,
     required this.onIncrement,
     required this.onDecrement,
+    this.onEditQuantity,
     required this.onResetSearch,
     this.onRefresh,
     this.onOpenSettings,
@@ -60,6 +62,7 @@ class ProductCatalogView extends StatelessWidget {
             onTap: () => onAddToCart(product),
             onIncrement: () => onIncrement(product),
             onDecrement: () => onDecrement(product),
+            onEditQuantity: onEditQuantity != null ? () => onEditQuantity!(product) : null,
           );
         },
       );
@@ -103,6 +106,7 @@ class ProductCatalogView extends StatelessWidget {
                 onTap: () => onAddToCart(product),
                 onIncrement: () => onIncrement(product),
                 onDecrement: () => onDecrement(product),
+                onEditQuantity: onEditQuantity != null ? () => onEditQuantity!(product) : null,
               );
             },
           );
