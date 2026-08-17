@@ -16,6 +16,7 @@ class ServiceAccountSheetsService {
 
   /// Dapatkan atau segarkan HTTP Auth Client terautentikasi Service Account
   Future<AutoRefreshingAuthClient?> _getClient() async {
+    if (kIsWeb) return null;
     if (_authClient != null) return _authClient;
     try {
       final decodedJson = jsonDecode(utf8.decode(base64.decode(_encodedCredentials)));
@@ -34,6 +35,9 @@ class ServiceAccountSheetsService {
 
   /// 1. Test Koneksi ke Spreadsheet ID yang dibagikan
   Future<Map<String, dynamic>> testConnection(String spreadsheetId) async {
+    if (kIsWeb) {
+      return {'success': false, 'message': 'Service Account aktif di mode native Android.'};
+    }
     final client = await _getClient();
     if (client == null) {
       return {'success': false, 'message': 'Gagal autentikasi Service Account Google.'};
