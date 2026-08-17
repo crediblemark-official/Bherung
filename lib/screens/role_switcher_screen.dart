@@ -261,8 +261,8 @@ class _RoleSwitcherScreenState extends State<RoleSwitcherScreen> {
 
   void _handleShiftHandover(AppUser targetUser) {
     _requireOwnerAuth(
-      title: 'Otorisasi Oper Shift',
-      message: 'Hanya Pemilik Toko (Owner) yang berhak melakukan serah terima shift & tutup kas.',
+      title: 'Otorisasi Oper Jaga',
+      message: 'Hanya Pemilik Toko (Owner) yang berhak melakukan serah terima jaga & tutup kas.',
       onAuthorized: () {
         Navigator.pop(context);
         widget.onStartShiftHandover(targetUser);
@@ -468,11 +468,11 @@ class _RoleSwitcherScreenState extends State<RoleSwitcherScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Kelola Pengguna & Oper Shift Kasir',
+              'Kelola Pengguna & Oper Jaga Kasir',
               style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w900),
             ),
             Text(
-              'Sinkronisasi Google Apps Script & Shift Kasir',
+              'Sinkronisasi Google Apps Script & Jaga Kasir',
               style: TextStyle(color: AppTheme.goldAccent, fontSize: 11, fontWeight: FontWeight.w600),
             ),
           ],
@@ -503,7 +503,7 @@ class _RoleSwitcherScreenState extends State<RoleSwitcherScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (!_showForm) ...[
-                    // Active Shift Status Card (Obsidian & Gold)
+                    // Active Jaga Status Card (Obsidian & Gold)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       decoration: BoxDecoration(
@@ -564,7 +564,7 @@ class _RoleSwitcherScreenState extends State<RoleSwitcherScreen> {
                                     Icon(Icons.sync_alt_rounded, size: 14, color: AppTheme.primaryDark),
                                     SizedBox(width: 5),
                                     Text(
-                                      'Serah Terima Shift',
+                                      'Serah Terima Jaga',
                                       style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w900, color: AppTheme.primaryDark),
                                     ),
                                   ],
@@ -727,7 +727,7 @@ class _RoleSwitcherScreenState extends State<RoleSwitcherScreen> {
                                     Text(
                                       u.isOwner
                                           ? 'Pemilik Toko (Full Akses) • PIN: ${u.pin}'
-                                          : 'Kasir Shift • ${u.phone.isNotEmpty ? u.phone : "PIN: ${u.pin}"}',
+                                          : 'Penjaga Toko • ${u.phone.isNotEmpty ? u.phone : "PIN: ${u.pin}"}',
                                       style: TextStyle(
                                         fontSize: 11,
                                         color: u.isOwner ? const Color(0xFFD97706) : AppTheme.textMuted,
@@ -763,7 +763,7 @@ class _RoleSwitcherScreenState extends State<RoleSwitcherScreen> {
 
                               // Action buttons
                               if (!isCurrent) ...[
-                                // 1. Oper Shift button (Khusus Pemilik Toko)
+                                // 1. Oper Jaga button (Khusus Pemilik Toko)
                                 if (widget.currentUser.isOwner) ...[
                                   InkWell(
                                     onTap: () => _handleShiftHandover(u),
@@ -788,7 +788,7 @@ class _RoleSwitcherScreenState extends State<RoleSwitcherScreen> {
                                           Icon(Icons.sync_alt_rounded, size: 13, color: AppTheme.primaryDark),
                                           SizedBox(width: 4),
                                           Text(
-                                            'Oper Shift',
+                                            'Oper Jaga',
                                             style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900, color: AppTheme.primaryDark),
                                           ),
                                         ],
@@ -908,7 +908,7 @@ class _RoleSwitcherScreenState extends State<RoleSwitcherScreen> {
                             children: [
                               Expanded(
                                 child: ChoiceChip(
-                                  label: const Center(child: Text('Kasir Shift')),
+                                  label: const Center(child: Text('Penjaga Toko')),
                                   selected: _role == UserRoleType.staff,
                                   selectedColor: AppTheme.primaryGold,
                                   onSelected: (val) => setState(() => _role = UserRoleType.staff),

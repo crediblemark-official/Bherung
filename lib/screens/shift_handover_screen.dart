@@ -66,9 +66,13 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
         (u) => u.name != widget.currentCashier,
         orElse: () => widget.users.first,
       );
-      _nextCashierController.text = _selectedNextUser?.name ?? 'Penjaga Shift Selanjutnya';
+      if (_selectedNextUser != null) {
+        _nextCashierController.text = _selectedNextUser?.name ?? 'Penjaga Jaga Selanjutnya';
+      } else {
+        _nextCashierController.text = 'Penjaga Jaga Selanjutnya';
+      }
     } else {
-      _nextCashierController.text = 'Penjaga Shift Selanjutnya';
+      _nextCashierController.text = 'Penjaga Jaga Selanjutnya';
     }
   }
 
@@ -84,11 +88,6 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
     super.dispose();
   }
 
-  double get _startingCash => double.tryParse(_startingCashController.text.replaceAll('.', '')) ?? 0;
-  double get _physicalCash => double.tryParse(_physicalCashController.text.replaceAll('.', '')) ?? 0;
-  double get _expectedCash => _startingCash + widget.currentShiftSales;
-  double get _cashDiff => _physicalCash - _expectedCash;
-
   void _selectNextUser(AppUser user) {
     setState(() {
       _selectedNextUser = user;
@@ -96,25 +95,31 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
     });
   }
 
+  double get _startingCash => double.tryParse(_startingCashController.text.replaceAll('.', '')) ?? widget.defaultStartingCash;
+  double get _physicalCash => double.tryParse(_physicalCashController.text.replaceAll('.', '').replaceAll(',', '')) ?? 0;
+  double get _expectedCash => _startingCash + widget.currentShiftSales;
+  double get _cashDiff => _physicalCash - _expectedCash;
+
   void _submit() {
-    // Cari akun Pemilik Toko (Owner)
+    _showOwnerAuthorizationDialog();
+  }
+
+  // Owner Authorization Modal (Wajib PIN Pemilik Toko)
+  void _showOwnerAuthorizationDialog() {
+    final pinController = TextEditingController();
     final ownerUser = widget.users.where((u) => u.isOwner).firstOrNull;
     final ownerPin = ownerUser?.pin.trim().isNotEmpty == true ? ownerUser!.pin.trim() : '1234';
 
-    final pinController = TextEditingController();
-
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Row(
           children: [
-            Icon(Icons.verified_user_rounded, color: AppTheme.primaryGold, size: 22),
+            Icon(Icons.shield_rounded, color: AppTheme.primaryGold, size: 22),
             SizedBox(width: 8),
-            Text(
-              'Otorisasi Pemilik Toko',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900),
-            ),
+            Text('Otorisasi Pemilik Toko', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
           ],
         ),
         content: Column(
@@ -122,12 +127,12 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Serah terima shift hanya boleh disetujui & disahkan oleh Pemilik Toko (Owner).',
+              'Serah terima jaga hanya boleh disetujui & disahkan oleh Pemilik Toko (Owner).',
               style: TextStyle(fontSize: 12, color: AppTheme.textMuted, height: 1.3),
             ),
             const SizedBox(height: 12),
             Text(
-              'Penjaga Shift Selanjutnya: ${_selectedNextUser?.name ?? _nextCashierController.text}',
+              'Penjaga Jaga Selanjutnya: ${_selectedNextUser?.name ?? _nextCashierController.text}',
               style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppTheme.primaryTeal),
             ),
             const SizedBox(height: 14),
@@ -171,7 +176,7 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
               foregroundColor: AppTheme.primaryDark,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-            child: const Text('Sahkan Shift', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text('Sahkan Jaga', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -247,7 +252,7 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
             ),
             const SizedBox(width: 8),
             const Text(
-              'Serah Terima Shift Kasir',
+              'Serah Terima Jaga Kasir',
               style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900),
             ),
             const SizedBox(width: 8),
@@ -273,7 +278,7 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 children: [
-                  // 1. Ringkasan Shift Aktif Banner (Obsidian & Gold)
+                  // 1. Ringkasan Jaga Aktif Banner (Obsidian & Gold)
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
@@ -298,7 +303,7 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('Total Transaksi Shift Ini:', style: TextStyle(fontSize: 11, color: AppTheme.textSubtle)),
+                              const Text('Total Transaksi Jaga Ini:', style: TextStyle(fontSize: 11, color: AppTheme.textSubtle)),
                               const SizedBox(height: 3),
                               Text(
                                 '${widget.currentShiftTransactions} Transaksi',
@@ -313,7 +318,7 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('Total Omzet Shift:', style: TextStyle(fontSize: 11, color: AppTheme.textSubtle)),
+                              const Text('Total Omzet Jaga:', style: TextStyle(fontSize: 11, color: AppTheme.textSubtle)),
                               const SizedBox(height: 3),
                               Text(
                                 AppTheme.formatRupiah(widget.currentShiftSales),
@@ -618,14 +623,14 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                             ),
                             const SizedBox(width: 8),
                             const Text(
-                              '3. Pilih Kasir Penerima Shift Baru',
+                              '3. Pilih Kasir Penerima Jaga Baru',
                               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppTheme.textDark),
                             ),
                           ],
                         ),
                         const SizedBox(height: 4),
                         const Text(
-                          'Pilih akun kasir yang bertugas di shift selanjutnya:',
+                          'Pilih akun kasir yang bertugas di jaga selanjutnya:',
                           style: TextStyle(fontSize: 10.5, color: AppTheme.textMuted),
                         ),
                         const SizedBox(height: 10),
@@ -728,7 +733,7 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                   label: Text(
                     _selectedNextUser != null
                         ? 'SELESAIKAN & SERAHKAN KE ${_selectedNextUser!.name.toUpperCase()}'
-                        : 'SELESAIKAN SERAH TERIMA SHIFT',
+                        : 'SELESAIKAN SERAH TERIMA JAGA',
                     style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12.5, letterSpacing: 0.2),
                   ),
                   style: ElevatedButton.styleFrom(

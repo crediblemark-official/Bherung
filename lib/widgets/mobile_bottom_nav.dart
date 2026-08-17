@@ -80,7 +80,7 @@ class CurvedNotchedBottomBar extends StatelessWidget {
                   children: [
                     _buildBarItem(
                       icon: Icons.sync_alt_rounded,
-                      label: 'Shift',
+                      label: 'Jaga',
                       isActive: false,
                       onTap: onOpenShiftHandover,
                     ),

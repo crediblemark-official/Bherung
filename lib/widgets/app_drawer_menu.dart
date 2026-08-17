@@ -213,7 +213,7 @@ class AppDrawerMenu extends StatelessWidget {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Omzet Shift Ini:', style: TextStyle(color: AppTheme.textSubtle, fontSize: 11)),
+                          const Text('Omzet Jaga Ini:', style: TextStyle(color: AppTheme.textSubtle, fontSize: 11)),
                           const SizedBox(height: 3),
                           Text(
                             AppTheme.formatRupiah(totalSalesToday),
@@ -297,8 +297,8 @@ class AppDrawerMenu extends StatelessWidget {
                   context: context,
                   icon: Icons.sync_alt_rounded,
                   iconColor: const Color(0xFF3B82F6),
-                  title: 'Serah Terima Shift & Kas',
-                  subtitle: 'Tutup shift, rekonsiliasi kas laci & rokok',
+                  title: 'Serah Terima Jaga & Kas',
+                  subtitle: 'Tutup jaga, rekonsiliasi kas laci & rokok',
                   onTap: onOpenShiftHandover,
                 ),
 

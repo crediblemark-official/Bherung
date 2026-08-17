@@ -126,7 +126,7 @@ class _PinLoginLockScreenState extends State<PinLoginLockScreen> with SingleTick
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Pilih Penjaga Toko / Shift',
+                  'Pilih Penjaga Toko / Jaga',
                   style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 IconButton(
@@ -279,7 +279,7 @@ class _PinLoginLockScreenState extends State<PinLoginLockScreen> with SingleTick
                         Text(
                           _currentScheduledUser?.isOwner == true
                               ? '👑 Akun Pemilik Toko (Akses Penuh)'
-                              : '💼 Jadwal Jaga Shift Berikutnya',
+                              : '💼 Jadwal Jaga Berikutnya',
                           style: TextStyle(
                             color: _currentScheduledUser?.isOwner == true ? AppTheme.primaryGold : const Color(0xFF5EEAD4),
                             fontSize: 11,

@@ -433,7 +433,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
           labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5),
           tabs: const [
             Tab(icon: Icon(Icons.table_chart_rounded, size: 16), text: 'Google Sheets'),
-            Tab(icon: Icon(Icons.storefront_rounded, size: 16), text: 'Profil Toko & Shift'),
+            Tab(icon: Icon(Icons.storefront_rounded, size: 16), text: 'Profil Toko & Jaga'),
             Tab(icon: Icon(Icons.payment_rounded, size: 16), text: 'QRIS & Rekening'),
           ],
         ),
@@ -961,7 +961,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Operasional Shift & Kasir', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textDark)),
+              const Text('Operasional Jaga & Kasir', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textDark)),
               const SizedBox(height: 10),
               TextField(
                 controller: _startingCashController,

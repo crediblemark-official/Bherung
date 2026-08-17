@@ -230,17 +230,17 @@ class UserGuideScreen extends StatelessWidget {
                   ]),
                   const SizedBox(height: 22),
 
-                  // Section 4: Shift & Oper Kasir
+                  // Section 4: Oper Jaga & Ganti Kasir
                   _buildSectionHeader(
                     icon: Icons.sync_alt_rounded,
-                    title: '4. Serah Terima Shift & Ganti Penjaga 24 Jam (Khusus Owner)',
+                    title: '4. Serah Terima Jaga & Ganti Penjaga 24 Jam (Khusus Owner)',
                   ),
                   const SizedBox(height: 8),
                   _buildGuideCard([
                     _buildGuideItem(
                       icon: Icons.admin_panel_settings_rounded,
                       title: 'Otorisasi Khusus Pemilik Toko (Owner):',
-                      desc: 'Menu Serah Terima Shift hanya bisa dibuka dan disahkan oleh Pemilik Toko (PIN 1234) untuk menjamin transparansi & keamanan toko.',
+                      desc: 'Menu Serah Terima Jaga hanya bisa dibuka dan disahkan oleh Pemilik Toko (PIN 1234) untuk menjamin transparansi & keamanan toko.',
                     ),
                     _buildGuideItem(
                       icon: Icons.point_of_sale_rounded,
@@ -250,7 +250,7 @@ class UserGuideScreen extends StatelessWidget {
                     _buildGuideItem(
                       icon: Icons.lock_clock_rounded,
                       title: 'Auto-Logout & Sambutan Kasir Baru:',
-                      desc: 'Begitu shift disahkan, sesi kasir lama otomatis terlogout dan layar terkunci menyambut penjaga shift berikutnya: "Silahkan masuk Tretan [Nama Penjaga]".',
+                      desc: 'Begitu serah terima jaga disahkan, sesi kasir lama otomatis terlogout dan layar terkunci menyambut penjaga jaga berikutnya: "Silahkan masuk Tretan [Nama Penjaga]".',
                     ),
                   ]),
                   const SizedBox(height: 22),

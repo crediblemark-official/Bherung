@@ -1036,8 +1036,8 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
   // Serah Terima Shift Penjaga & Rekonsiliasi Kas (Full Screen Terintegrasi - Khusus Pemilik Toko)
   void _showShiftHandoverDialog([AppUser? initialIncomingUser]) {
     _requireOwnerAuthForAction(
-      title: 'Otorisasi Oper Shift',
-      message: 'Hanya Pemilik Toko (Owner) yang berhak melakukan serah terima shift & tutup kas.',
+      title: 'Otorisasi Oper Jaga',
+      message: 'Hanya Pemilik Toko (Owner) yang berhak melakukan serah terima jaga & tutup kas.',
       onAuthorized: () {
         Navigator.push(
           context,
@@ -1054,7 +1054,7 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
               onShiftHandoverCompleted: (shiftRecord, nextUser) {
                 setState(() {
                   _shiftRecords.insert(0, shiftRecord);
-                  // Reset shift counter untuk penjaga shift berikutnya
+                  // Reset shift counter untuk penjaga berikutnya
                   _completedTransactions = 0;
                   _totalSalesToday = 0;
                   if (nextUser != null) {
@@ -1070,7 +1070,7 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                      'Serah terima shift berhasil! Shift beralih ke: ${_currentUser.name} (Selisih: ${AppTheme.formatRupiah(shiftRecord.cashDifference)})',
+                      'Serah terima jaga berhasil! Jaga beralih ke: ${_currentUser.name} (Selisih: ${AppTheme.formatRupiah(shiftRecord.cashDifference)})',
                     ),
                     backgroundColor: shiftRecord.cashDifference == 0 ? AppTheme.successGreen : AppTheme.warningOrange,
                     duration: const Duration(seconds: 4),
