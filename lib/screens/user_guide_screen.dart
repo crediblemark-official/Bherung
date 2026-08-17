@@ -53,6 +53,7 @@ class UserGuideScreen extends StatelessWidget {
                         'Buka menu Pengaturan > Tab Database & Cloud, lalu klik tombol "Salin Link Template Google Sheets". Buka link tersebut di browser laptop/HP Anda, lalu klik tombol "Make a copy / Buat salinan" agar database resmi toko tersimpan di akun Google Drive pribadi Anda.',
                     imagePaths: [
                       'assets/docs/step0_salin_template.png',
+                      'assets/docs/step0_buat_salinan.png',
                     ],
                     badgeText: 'Langkah Pertama (10 Detik)',
                     badgeColor: AppTheme.primaryTeal,
