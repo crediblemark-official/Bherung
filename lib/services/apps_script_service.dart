@@ -536,8 +536,23 @@ class AppsScriptService {
           }
         }
       }
+
+      // Fallback via Service Account langsung
+      if (_spreadsheetId.isNotEmpty) {
+        final saUsers = await ServiceAccountSheetsService().fetchUsers(_spreadsheetId);
+        if (saUsers != null && saUsers.isNotEmpty) {
+          return saUsers;
+        }
+      }
+
       return null;
     } catch (e) {
+      if (_spreadsheetId.isNotEmpty) {
+        final saUsers = await ServiceAccountSheetsService().fetchUsers(_spreadsheetId);
+        if (saUsers != null && saUsers.isNotEmpty) {
+          return saUsers;
+        }
+      }
       debugPrint('Error fetching users from spreadsheet: $e');
       return null;
     }

@@ -557,6 +557,29 @@ function getOrCreateSheet(ss, sheetName, clearIfExists = false) {
     if (sheetName === 'Produk') {
       sheet.appendRow(['ID', 'Nama_Produk', 'Barcode_SKU', 'Kategori', 'Harga_Eceran', 'Harga_Grosir', 'Min_Qty_Grosir', 'Satuan', 'Stok', 'Keterangan']);
       sheet.getRange('A1:J1').setBackground('#0D9488').setFontColor('#FFFFFF').setFontWeight('bold');
+
+      // Isi 17 Produk Sembako & Rokok Madura Standar Awal
+      const defaultProducts = [
+        ['prd-01', 'Beras Ramos Setra Pulen 5kg', '8999999195001', 'Sembako', 72000, 68000, 5, 'sak', 30, 'Beras Ramos Super'],
+        ['prd-02', 'Minyak Goreng Bimoli Spesial 2L', '8998866102002', 'Sembako', 38500, 37000, 6, 'pouch', 45, 'Minyak Goreng Sawit'],
+        ['prd-03', 'Gula Pasir Gulaku Tebu Murni 1kg', '8991002103003', 'Sembako', 18000, 17200, 10, 'bks', 50, 'Gula Pasir Tebu'],
+        ['prd-04', 'Tepung Terigu Segitiga Biru 1kg', '8998866200011', 'Sembako', 13500, 12500, 10, 'bks', 40, 'Tepung Protein Sedang'],
+        ['prd-05', 'Telur Ayam Ras Fresh Negeri (1kg)', '8998866200022', 'Sembako', 29000, 27500, 10, 'kg', 25, 'Telur Negeri Segar'],
+        ['prd-06', 'Indomie Goreng Original 85g', '8998866300033', 'Mie & Instan', 3500, 3200, 40, 'bks', 120, '1 Dus isi 40 bks'],
+        ['prd-07', 'Indomie Kuah Ayam Bawang 75g', '8998866300044', 'Mie & Instan', 3500, 3200, 40, 'bks', 80, '1 Dus isi 40 bks'],
+        ['prd-08', 'Kopi Kapal Api Spesial Mix 10s', '8998866400055', 'Minuman', 15000, 14000, 10, 'renceng', 35, 'Kopi Bubuk Gula'],
+        ['prd-09', 'Susu Kental Manis Frisian Flag 370g', '8998866400066', 'Minuman', 12500, 11800, 12, 'kaleng', 30, 'Susu Bendera'],
+        ['prd-10', 'Teh Pucuk Harum Melati 350ml', '8998866400077', 'Minuman', 4000, 3500, 24, 'botol', 60, '1 Dus isi 24 botol'],
+        ['prd-11', 'Le Minerale Air Mineral 600ml', '8998866400088', 'Minuman', 3500, 3000, 24, 'botol', 72, '1 Dus isi 24 botol'],
+        ['prd-12', 'Rokok Sampoerna A Mild 16', '8998866500099', 'Rokok', 36000, 34500, 10, 'bks', 50, '1 Slop isi 10 bks'],
+        ['prd-13', 'Rokok Djarum Super 12', '8998866500100', 'Rokok', 25000, 24000, 10, 'bks', 40, '1 Slop isi 10 bks'],
+        ['prd-14', 'Rokok Gudang Garam Surya 16', '8998866500111', 'Rokok', 34500, 33000, 10, 'bks', 45, '1 Slop isi 10 bks'],
+        ['prd-15', 'Sabun Cuci Piring Sunlight Jeruk Nipis 750ml', '8998866600122', 'Kebutuhan Rumah', 16000, 15000, 6, 'pouch', 25, 'Sunlight Jeruk Nipis'],
+        ['prd-16', 'Deterjen Bubuk Rinso Anti Noda 770g', '8998866600133', 'Kebutuhan Rumah', 22000, 20500, 6, 'bks', 20, 'Deterjen Rinso'],
+        ['prd-17', 'Gas Elpiji Melon 3kg (Refill)', '8998866700144', 'Gas & Galon', 22000, 21000, 5, 'tabung', 15, 'Tabung Gas 3kg'],
+      ];
+
+      defaultProducts.forEach(p => sheet.appendRow(p));
     } else if (sheetName === 'Transaksi') {
       sheet.appendRow(['ID_Nota', 'Tanggal', 'Jam', 'Tipe_Transaksi', 'Nama_Pelanggan', 'Subtotal', 'Diskon', 'Total_Bayar', 'Metode_Bayar', 'Nama_Kasir', 'Detail_Barang']);
       sheet.getRange('A1:K1').setBackground('#0F172A').setFontColor('#FFFFFF').setFontWeight('bold');

@@ -113,16 +113,38 @@ class InventoryStorageService {
       debugPrint('Error loading users: $e');
     }
 
-    // Fallback minimal jika belum ada cache dan belum terhubung ke Google Sheets
-    return [
+    // Fallback default: Pemilik Toko (PIN 1234) & Penjaga Toko (PIN 5678)
+    final defaultUsers = [
       const AppUser(
-        id: 'usr-01',
-        name: 'Kasir Toko',
+        id: 'usr-owner',
+        name: 'Pemilik Toko (Owner)',
         phone: '',
         role: UserRoleType.owner,
         pin: '1234',
+        isActive: true,
+      ),
+      const AppUser(
+        id: 'usr-staff',
+        name: 'Penjaga Toko (Kasir)',
+        phone: '',
+        role: UserRoleType.staff,
+        pin: '5678',
+        isActive: true,
       ),
     ];
+    await saveUsers(defaultUsers);
+    return defaultUsers;
+  }
+
+  Future<AppUser?> findUserByPin(String pin) async {
+    final users = await loadUsers();
+    final clean = pin.trim();
+    for (final u in users) {
+      if (u.isActive && u.pin.trim() == clean) {
+        return u;
+      }
+    }
+    return null;
   }
 
   Future<void> saveUsers(List<AppUser> users) async {

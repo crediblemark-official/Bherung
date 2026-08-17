@@ -167,7 +167,7 @@ class GoogleSheetsDirectService {
     return null;
   }
 
-  /// 5. Isi Header Kolom Default untuk 7 Tab Spreadsheet Baru
+  /// 5. Isi Header Kolom Default & Data Awal untuk 7 Tab Spreadsheet Baru
   Future<void> _initializeSheetHeaders(String ssId, Map<String, String> headers) async {
     final batchUrl = Uri.parse(
       'https://sheets.googleapis.com/v4/spreadsheets/$ssId/values:batchUpdate',
@@ -177,9 +177,26 @@ class GoogleSheetsDirectService {
       'valueInputOption': 'USER_ENTERED',
       'data': [
         {
-          'range': 'Produk!A1:H1',
+          'range': 'Produk!A1:H18',
           'values': [
-            ['ID', 'Barcode', 'Nama_Produk', 'Harga_Jual', 'Harga_Modal', 'Satuan', 'Kategori', 'Stok']
+            ['ID', 'Barcode', 'Nama_Produk', 'Harga_Jual', 'Harga_Modal', 'Satuan', 'Kategori', 'Stok'],
+            ['prd-01', '8999999195001', 'Beras Ramos Setra Pulen 5kg', 72000, 65000, 'sak', 'Sembako', 30],
+            ['prd-02', '8998866102002', 'Minyak Goreng Bimoli Spesial 2L', 38500, 34000, 'pouch', 'Sembako', 45],
+            ['prd-03', '8991002103003', 'Gula Pasir Gulaku Tebu Murni 1kg', 18000, 15500, 'bks', 'Sembako', 50],
+            ['prd-04', '8998866200011', 'Tepung Terigu Segitiga Biru 1kg', 13500, 11000, 'bks', 'Sembako', 40],
+            ['prd-05', '8998866200022', 'Telur Ayam Ras Fresh Negeri (1kg)', 29000, 26000, 'kg', 'Sembako', 25],
+            ['prd-06', '8998866300033', 'Indomie Goreng Original 85g', 3500, 2900, 'bks', 'Mie & Instan', 120],
+            ['prd-07', '8998866300044', 'Indomie Kuah Ayam Bawang 75g', 3500, 2900, 'bks', 'Mie & Instan', 80],
+            ['prd-08', '8998866400055', 'Kopi Kapal Api Spesial Mix 10s', 15000, 12500, 'renceng', 'Minuman', 35],
+            ['prd-09', '8998866400066', 'Susu Kental Manis Frisian Flag 370g', 12500, 10500, 'kaleng', 'Minuman', 30],
+            ['prd-10', '8998866400077', 'Teh Pucuk Harum Melati 350ml', 4000, 3000, 'botol', 'Minuman', 60],
+            ['prd-11', '8998866400088', 'Le Minerale Air Mineral 600ml', 3500, 2400, 'botol', 'Minuman', 72],
+            ['prd-12', '8998866500099', 'Rokok Sampoerna A Mild 16', 36000, 33500, 'bks', 'Rokok', 50],
+            ['prd-13', '8998866500100', 'Rokok Djarum Super 12', 25000, 22800, 'bks', 'Rokok', 40],
+            ['prd-14', '8998866500111', 'Rokok Gudang Garam Surya 16', 34500, 32000, 'bks', 'Rokok', 45],
+            ['prd-15', '8998866600122', 'Sabun Cuci Piring Sunlight Jeruk Nipis 750ml', 16000, 13500, 'pouch', 'Kebutuhan Rumah', 25],
+            ['prd-16', '8998866600133', 'Deterjen Bubuk Rinso Anti Noda 770g', 22000, 18500, 'bks', 'Kebutuhan Rumah', 20],
+            ['prd-17', '8998866700144', 'Gas Elpiji Melon 3kg (Refill)', 22000, 19000, 'tabung', 'Gas & Galon', 15],
           ]
         },
         {
@@ -195,9 +212,11 @@ class GoogleSheetsDirectService {
           ]
         },
         {
-          'range': 'Pengguna_Kasir!A1:E1',
+          'range': 'Pengguna_Kasir!A1:E3',
           'values': [
-            ['ID_User', 'Nama_Kasir', 'Role', 'PIN', 'Status_Aktif']
+            ['ID_User', 'Nama_Kasir', 'Role', 'PIN', 'Status_Aktif'],
+            ['usr-owner', 'Pemilik Toko (Owner)', 'owner', '1234', 'Aktif'],
+            ['usr-staff', 'Penjaga Toko (Kasir)', 'staff', '5678', 'Aktif'],
           ]
         },
         {
@@ -303,32 +322,25 @@ class GoogleSheetsDirectService {
         final List rows = data['values'] ?? [];
         final List<Product> products = [];
 
+        // Jika sheet kosong, isi otomatis dengan produk awal default
+        if (rows.isEmpty) {
+          await _initializeSheetHeaders(ssId, headers);
+          final secondRes = await http.get(url, headers: headers);
+          if (secondRes.statusCode == 200) {
+            final secondData = jsonDecode(secondRes.body);
+            final List secondRows = secondData['values'] ?? [];
+            for (final row in secondRows) {
+              if (row is List && row.length >= 4) {
+                products.add(_parseProductRow(row));
+              }
+            }
+          }
+          return products;
+        }
+
         for (final row in rows) {
           if (row is List && row.length >= 4) {
-            final id = row.isNotEmpty ? row[0].toString() : 'prd-${DateTime.now().millisecondsSinceEpoch}';
-            final code = row.length > 1 ? row[1].toString() : '';
-            final name = row.length > 2 ? row[2].toString() : 'Produk';
-            final price = row.length > 3 ? (double.tryParse(row[3].toString()) ?? 0.0) : 0.0;
-            final costPrice = row.length > 4 ? (double.tryParse(row[4].toString()) ?? 0.0) : 0.0;
-            final unit = row.length > 5 ? row[5].toString() : 'pcs';
-            final category = row.length > 6 ? row[6].toString() : 'Sembako';
-            final stock = row.length > 7 ? (int.tryParse(row[7].toString()) ?? 0) : 0;
-
-            products.add(
-              Product(
-                id: id,
-                name: name,
-                price: price,
-                costPrice: costPrice,
-                unit: unit,
-                categoryId: category.toLowerCase().replaceAll(' ', '_'),
-                icon: AppTheme.getCategoryIcon(category),
-                color: AppTheme.getCategoryColor(category),
-                code: code,
-                stock: stock,
-                minStockAlert: 5,
-              ),
-            );
+            products.add(_parseProductRow(row));
           }
         }
         return products;
@@ -340,4 +352,130 @@ class GoogleSheetsDirectService {
     }
     return null;
   }
+
+  Product _parseProductRow(List row) {
+    final id = row.isNotEmpty ? row[0].toString() : 'prd-${DateTime.now().millisecondsSinceEpoch}';
+    final code = row.length > 1 ? row[1].toString() : '';
+    final name = row.length > 2 ? row[2].toString() : 'Produk';
+    final price = row.length > 3 ? (double.tryParse(row[3].toString()) ?? 0.0) : 0.0;
+    final costPrice = row.length > 4 ? (double.tryParse(row[4].toString()) ?? 0.0) : 0.0;
+    final unit = row.length > 5 ? row[5].toString() : 'pcs';
+    final category = row.length > 6 ? row[6].toString() : 'Sembako';
+    final stock = row.length > 7 ? (int.tryParse(row[7].toString()) ?? 0) : 0;
+
+    return Product(
+      id: id,
+      name: name,
+      price: price,
+      costPrice: costPrice,
+      unit: unit,
+      categoryId: category.toLowerCase().replaceAll(' ', '_'),
+      icon: AppTheme.getCategoryIcon(category),
+      color: AppTheme.getCategoryColor(category),
+      code: code,
+      stock: stock,
+      minStockAlert: 5,
+    );
+  }
+
+  /// 8. Sync & Muat Daftar Pengguna Kasir & PIN dari Tab "Pengguna_Kasir"
+  Future<List<AppUser>?> fetchUsers() async {
+    final headers = await _getAuthHeaders();
+    final ssId = _spreadsheetId;
+    if (headers == null || ssId == null) return null;
+
+    final url = Uri.parse(
+      'https://sheets.googleapis.com/v4/spreadsheets/$ssId/values/Pengguna_Kasir!A2:E?valueRenderOption=UNFORMATTED_VALUE',
+    );
+
+    try {
+      final res = await http.get(url, headers: headers);
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        final List rows = data['values'] ?? [];
+        final List<AppUser> users = [];
+
+        for (final row in rows) {
+          if (row is List && row.length >= 4) {
+            final id = row[0].toString();
+            final name = row[1].toString();
+            final roleStr = row[2].toString().toLowerCase();
+            final pin = row[3].toString();
+            final status = row.length > 4 ? row[4].toString() : 'Aktif';
+
+            final role = (roleStr == 'owner' || roleStr.contains('pemilik'))
+                ? UserRoleType.owner
+                : UserRoleType.staff;
+
+            users.add(
+              AppUser(
+                id: id,
+                name: name,
+                phone: '',
+                role: role,
+                pin: pin,
+                isActive: !status.toLowerCase().contains('nonaktif'),
+              ),
+            );
+          }
+        }
+        return users;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetchUsers: $e');
+      }
+    }
+    return null;
+  }
+
+  /// 9. Update PIN Pengguna di Google Sheets Tab "Pengguna_Kasir"
+  Future<bool> updateUserPin(String userId, String newPin) async {
+    final headers = await _getAuthHeaders();
+    final ssId = _spreadsheetId;
+    if (headers == null || ssId == null) return false;
+
+    // Ambil data baris untuk temukan baris userId yang cocok
+    final getUrl = Uri.parse(
+      'https://sheets.googleapis.com/v4/spreadsheets/$ssId/values/Pengguna_Kasir!A2:E',
+    );
+
+    try {
+      final res = await http.get(getUrl, headers: headers);
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        final List rows = data['values'] ?? [];
+        int rowIndex = -1;
+
+        for (int i = 0; i < rows.length; i++) {
+          if (rows[i] is List && (rows[i] as List).isNotEmpty && rows[i][0].toString() == userId) {
+            rowIndex = i + 2; // 1-based index including header
+            break;
+          }
+        }
+
+        if (rowIndex != -1) {
+          final updateUrl = Uri.parse(
+            'https://sheets.googleapis.com/v4/spreadsheets/$ssId/values/Pengguna_Kasir!D$rowIndex?valueInputOption=USER_ENTERED',
+          );
+          final updateRes = await http.put(
+            updateUrl,
+            headers: {...headers, 'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'values': [
+                [newPin]
+              ]
+            }),
+          );
+          return updateRes.statusCode == 200;
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error updateUserPin: $e');
+      }
+    }
+    return false;
+  }
 }
+

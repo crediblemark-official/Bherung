@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/product.dart';
 import '../models/store_profile.dart';
 import '../services/apps_script_service.dart';
+import '../services/google_sheets_direct_service.dart';
 import '../services/inventory_storage_service.dart';
 import '../services/barcode_master_lookup_service.dart';
 import '../theme/app_theme.dart';
@@ -119,6 +120,28 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
       });
     }
 
+    // Direct Google Sheets OAuth Sync
+    if (GoogleSheetsDirectService().isSignedIn) {
+      try {
+        final gProducts = await GoogleSheetsDirectService().fetchProducts();
+        final gUsers = await GoogleSheetsDirectService().fetchUsers();
+        if (mounted) {
+          setState(() {
+            if (gProducts != null && gProducts.isNotEmpty) {
+              _products = gProducts;
+              storage.saveProducts(_products);
+            }
+            if (gUsers != null && gUsers.isNotEmpty) {
+              _users = gUsers;
+              storage.saveUsers(_users);
+            }
+          });
+        }
+      } catch (e) {
+        debugPrint('Direct Google Sheets sync error: $e');
+      }
+    }
+
     // Ambil seluruh data sistem terbaru dari Google Spreadsheet jika terhubung
     if (AppsScriptService().isConnected) {
       final syncResult = await AppsScriptService().syncAllDataFromSpreadsheet();
@@ -166,6 +189,33 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
   Future<void> _handlePullToRefresh() async {
     final appsScript = AppsScriptService();
     final storage = InventoryStorageService();
+
+    if (GoogleSheetsDirectService().isSignedIn) {
+      final gProducts = await GoogleSheetsDirectService().fetchProducts();
+      final gUsers = await GoogleSheetsDirectService().fetchUsers();
+      if (mounted) {
+        setState(() {
+          if (gProducts != null && gProducts.isNotEmpty) {
+            _products = gProducts;
+            storage.saveProducts(_products);
+          }
+          if (gUsers != null && gUsers.isNotEmpty) {
+            _users = gUsers;
+            storage.saveUsers(_users);
+          }
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Sinkronisasi Google Drive Berhasil! (${_products.length} Produk • ${_users.length} User Kasir)',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+            ),
+            backgroundColor: AppTheme.successGreen,
+          ),
+        );
+      }
+      return;
+    }
 
     if (appsScript.isConnected) {
       final syncResult = await appsScript.syncAllDataFromSpreadsheet();
