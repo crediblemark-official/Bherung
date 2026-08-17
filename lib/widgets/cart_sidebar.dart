@@ -253,6 +253,10 @@ class _CartSidebarState extends State<CartSidebar> {
 
   @override
   Widget build(BuildContext context) {
+    for (var item in widget.cartItems) {
+      item.transactionType = widget.transactionType;
+    }
+
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -637,7 +641,7 @@ class _CartSidebarState extends State<CartSidebar> {
                                     ),
                                   ),
                                 ),
-                                if (item.product.wholesalePrice != null && !item.isWholesaleApplied) ...[
+                                if (widget.transactionType != TransactionType.grosir && item.product.wholesalePrice != null && !item.isWholesaleApplied) ...[
                                   const SizedBox(width: 8),
                                   InkWell(
                                     onTap: () => widget.onToggleWholesale(item, !item.forceWholesalePrice),

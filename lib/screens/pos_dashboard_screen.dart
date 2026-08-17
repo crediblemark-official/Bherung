@@ -355,8 +355,21 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
         _cartItems.add(CartItem(
           product: product,
           quantity: 1,
+          transactionType: _selectedTransactionType,
           forceWholesalePrice: _selectedTransactionType == TransactionType.grosir,
         ));
+      }
+    });
+  }
+
+  void _onTransactionTypeChanged(TransactionType type) {
+    setState(() {
+      _selectedTransactionType = type;
+      for (var item in _cartItems) {
+        item.transactionType = type;
+        if (type == TransactionType.grosir) {
+          item.forceWholesalePrice = true;
+        }
       }
     });
   }
@@ -1619,7 +1632,7 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
                         onHoldOrder: _holdCurrentOrder,
                         onCheckout: _openCheckoutDialog,
                         transactionType: _selectedTransactionType,
-                        onTransactionTypeChanged: (type) => setState(() => _selectedTransactionType = type),
+                        onTransactionTypeChanged: _onTransactionTypeChanged,
                         customerName: _customerName,
                         onCustomerNameChanged: (val) => setState(() => _customerName = val),
                         discountPercent: _discountPercent,
@@ -1702,7 +1715,7 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
               },
               transactionType: _selectedTransactionType,
               onTransactionTypeChanged: (type) {
-                setState(() => _selectedTransactionType = type);
+                _onTransactionTypeChanged(type);
                 setSheetState(() {});
               },
               customerName: _customerName,
