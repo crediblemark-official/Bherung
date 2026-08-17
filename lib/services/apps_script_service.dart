@@ -97,11 +97,10 @@ class AppsScriptService {
   Future<void> setSpreadsheetInput(String input) async {
     _rawInput = input.trim();
     final extracted = extractSpreadsheetId(_rawInput);
-    if (extracted.startsWith('http')) {
+    if (extracted.startsWith('http') && extracted.contains('script.google.com')) {
       _webAppUrl = extracted;
       _spreadsheetId = '';
     } else {
-      _webAppUrl = masterBackendUrl;
       _spreadsheetId = extracted;
     }
 
@@ -113,6 +112,40 @@ class AppsScriptService {
       await prefs.setString('bherung_web_app_url', _webAppUrl);
     } catch (e) {
       debugPrint('Error saving settings to storage: $e');
+    }
+  }
+
+  Future<void> setSpreadsheetAndWebApp({required String spreadsheetInput, String? webAppUrlInput}) async {
+    _rawInput = spreadsheetInput.trim();
+    _spreadsheetId = extractSpreadsheetId(_rawInput);
+    if (webAppUrlInput != null && webAppUrlInput.trim().isNotEmpty) {
+      _webAppUrl = webAppUrlInput.trim();
+    } else if (_rawInput.startsWith('http') && _rawInput.contains('script.google.com')) {
+      _webAppUrl = _rawInput;
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('bherung_spreadsheet_input', _rawInput);
+      await prefs.setString('bherung_spreadsheet_id', _spreadsheetId);
+      await prefs.setString('bherung_web_app_url', _webAppUrl);
+    } catch (e) {
+      debugPrint('Error saving settings to storage: $e');
+    }
+  }
+
+  Future<void> setCustomWebAppUrl(String url) async {
+    final clean = url.trim();
+    if (clean.isNotEmpty) {
+      _webAppUrl = clean;
+    } else {
+      _webAppUrl = masterBackendUrl;
+    }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('bherung_web_app_url', _webAppUrl);
+    } catch (e) {
+      debugPrint('Error saving web app url: $e');
     }
   }
 
