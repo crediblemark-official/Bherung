@@ -19,9 +19,11 @@ function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('🏪 Bherung POS')
     .addItem('🔑 1. Otorisasi & Aktifkan Database Kasir', 'authorizeAndGetId')
-    .addItem('🔄 2. Rapikan Format Seluruh Tabel', 'formatDatabaseSheets')
+    .addItem('🔄 2. Rapikan & Sinkronkan Kolom Cabang ke Semua Tabel', 'formatDatabaseSheets')
     .addSeparator()
-    .addItem('📊 Cek Rekap Omset Hari Ini', 'calculateTodaySales')
+    .addItem('📊 3. Cek Rekap Omset Hari Ini (Semua)', 'calculateTodaySales')
+    .addItem('🏢 4. Cek Perbandingan Omset (Pusat vs Cabang)', 'calculateBranchBreakdown')
+    .addItem('🚚 5. Cek Transfer Antar Cabang', 'calculateInterBranchTransfers')
     .addToUi();
 }
 
@@ -58,7 +60,7 @@ function authorizeAndGetId() {
 }
 
 /**
- * Fungsi 2: Merapikan Format Seluruh 8 Tabel Resmi Database Toko
+ * Fungsi 2: Merapikan Format & Memastikan Kolom Cabang Ada di Seluruh Tabel
  */
 function formatDatabaseSheets() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -70,10 +72,58 @@ function formatDatabaseSheets() {
   getOrCreateSheet(ss, 'Mutasi_Stok');
   getOrCreateSheet(ss, 'Profil_Toko');
   getOrCreateSheet(ss, 'Daftar_Cabang');
+  getOrCreateSheet(ss, 'Rekap_Cabang');
+
+  // Pastikan kolom Cabang ada di tabel lama yang sudah dibuat sebelumnya (Auto-Migration)
+  ensureBranchHeaders(ss);
 }
 
 /**
- * Fungsi 4: Cek Rekap Omset Hari Ini
+ * Memastikan kolom Cabang / ID_Cabang ada pada tabel lama (Migration Helper)
+ */
+function ensureBranchHeaders(ss) {
+  try {
+    // 1. Transaksi -> Kolom 12: Cabang
+    const sTrx = ss.getSheetByName('Transaksi');
+    if (sTrx && sTrx.getLastColumn() < 12) {
+      sTrx.getRange(1, 12).setValue('Cabang').setBackground('#0F172A').setFontColor('#FFFFFF').setFontWeight('bold');
+    }
+
+    // 2. Buku_Kasbon -> Kolom 9: Cabang
+    const sKasbon = ss.getSheetByName('Buku_Kasbon');
+    if (sKasbon && sKasbon.getLastColumn() < 9) {
+      sKasbon.getRange(1, 9).setValue('Cabang').setBackground('#D97706').setFontColor('#FFFFFF').setFontWeight('bold');
+    }
+
+    // 3. Pengguna_Kasir -> Kolom 7: ID_Cabang, Kolom 8: Nama_Cabang
+    const sUsers = ss.getSheetByName('Pengguna_Kasir');
+    if (sUsers) {
+      if (sUsers.getLastColumn() < 7) {
+        sUsers.getRange(1, 7).setValue('ID_Cabang').setBackground('#F59E0B').setFontColor('#0F172A').setFontWeight('bold');
+      }
+      if (sUsers.getLastColumn() < 8) {
+        sUsers.getRange(1, 8).setValue('Nama_Cabang').setBackground('#F59E0B').setFontColor('#0F172A').setFontWeight('bold');
+      }
+    }
+
+    // 4. Shift_Rekap -> Kolom 10: Cabang
+    const sShift = ss.getSheetByName('Shift_Rekap');
+    if (sShift && sShift.getLastColumn() < 10) {
+      sShift.getRange(1, 10).setValue('Cabang').setBackground('#1E293B').setFontColor('#38BDF8').setFontWeight('bold');
+    }
+
+    // 5. Mutasi_Stok -> Kolom 11: Cabang
+    const sMutasi = ss.getSheetByName('Mutasi_Stok');
+    if (sMutasi && sMutasi.getLastColumn() < 11) {
+      sMutasi.getRange(1, 11).setValue('Cabang').setBackground('#334155').setFontColor('#FDE047').setFontWeight('bold');
+    }
+  } catch (e) {
+    Logger.log('ensureBranchHeaders notice: ' + e);
+  }
+}
+
+/**
+ * Fungsi 3: Cek Rekap Omset Hari Ini
  */
 function calculateTodaySales() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -104,6 +154,91 @@ function calculateTodaySales() {
     '• Total Transaksi : ' + totalTrx + ' transaksi\n' +
     '• Total Omset     : Rp ' + totalOmset.toLocaleString('id-ID')
   );
+}
+
+/**
+ * Fungsi 4: Cek Perbandingan Omset (Pusat vs Cabang)
+ */
+function calculateBranchBreakdown() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheetTrx = ss.getSheetByName('Transaksi');
+  if (!sheetTrx || sheetTrx.getLastRow() <= 1) {
+    SpreadsheetApp.getUi().alert('Belum ada data transaksi tercatat.');
+    return;
+  }
+
+  const todayStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  const data = sheetTrx.getDataRange().getValues();
+  
+  const branchMap = {}; // { 'Bherung (Pusat)': { omsetToday: 0, countToday: 0, omsetTotal: 0, countTotal: 0 } }
+
+  for (let i = 1; i < data.length; i++) {
+    const rowDate = data[i][1] instanceof Date
+      ? Utilities.formatDate(data[i][1], Session.getScriptTimeZone(), 'yyyy-MM-dd')
+      : String(data[i][1]);
+    
+    const amount = Number(data[i][7]) || 0;
+    const branchName = String(data[i][11] || 'Pusat').trim();
+
+    if (!branchMap[branchName]) {
+      branchMap[branchName] = { omsetToday: 0, countToday: 0, omsetTotal: 0, countTotal: 0 };
+    }
+
+    branchMap[branchName].omsetTotal += amount;
+    branchMap[branchName].countTotal++;
+
+    if (rowDate === todayStr) {
+      branchMap[branchName].omsetToday += amount;
+      branchMap[branchName].countToday++;
+    }
+  }
+
+  let report = `🏢 PERBANDINGAN PERFORMA CABANG (${todayStr}):\n\n`;
+  for (const bName in branchMap) {
+    const b = branchMap[bName];
+    report += `📍 ${bName.toUpperCase()}:\n`;
+    report += `   • Hari Ini   : Rp ${b.omsetToday.toLocaleString('id-ID')} (${b.countToday} transaksi)\n`;
+    report += `   • Total Akumulasi: Rp ${b.omsetTotal.toLocaleString('id-ID')} (${b.countTotal} transaksi)\n\n`;
+  }
+
+  SpreadsheetApp.getUi().alert(report);
+}
+
+/**
+ * Fungsi 5: Cek Mutasi & Transfer Antar Cabang
+ */
+function calculateInterBranchTransfers() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sMutasi = ss.getSheetByName('Mutasi_Stok');
+  if (!sMutasi || sMutasi.getLastRow() <= 1) {
+    SpreadsheetApp.getUi().alert('Belum ada mutasi stok atau transfer antar cabang tercatat.');
+    return;
+  }
+
+  const data = sMutasi.getDataRange().getValues();
+  let transferCount = 0;
+  let summary = '🚚 RIWAYAT TRANSFER & MUTASI ANTAR CABANG TERAKHIR:\n\n';
+
+  for (let i = data.length - 1; i >= 1; i--) {
+    const tipe = String(data[i][3] || '').toUpperCase();
+    const prodName = String(data[i][2] || '');
+    const qty = data[i][4];
+    const waktu = data[i][7] instanceof Date ? Utilities.formatDate(data[i][7], Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm') : String(data[i][7]);
+    const ket = String(data[i][8] || '');
+    const cabang = String(data[i][10] || 'Pusat');
+
+    if (tipe.includes('TRANSFER') || tipe.includes('CABANG') || ket.toLowerCase().includes('cabang')) {
+      transferCount++;
+      summary += `• [${waktu}] ${prodName} (${qty} unit) - ${tipe} @ ${cabang}\n   Ket: ${ket}\n\n`;
+      if (transferCount >= 10) break;
+    }
+  }
+
+  if (transferCount === 0) {
+    summary += 'Belum ada data transfer dengan label antar cabang. Catat transfer melalui menu Restok / Mutasi Stok di POS.';
+  }
+
+  SpreadsheetApp.getUi().alert(summary);
 }
 
 function getTargetSpreadsheet(e, body) {
@@ -701,6 +836,9 @@ function getOrCreateSheet(ss, sheetName, clearIfExists = false) {
         // Default Cabang Pusat
         sheet.appendRow(['br-01', 'Bherung (Pusat)', 'CB01', 'Pusat Operasional Toko', '', 'TRUE', 'AKTIF']);
       }
+    } else if (sheetName === 'Rekap_Cabang') {
+      sheet.appendRow(['ID_Cabang', 'Nama_Cabang', 'Status_Pusat', 'Total_Transaksi', 'Total_Omzet_Rp', 'Sisa_Kasbon_Rp', 'Penjaga_Bertugas', 'Status_Aktif']);
+      sheet.getRange('A1:H1').setBackground('#4338CA').setFontColor('#FFFFFF').setFontWeight('bold');
     }
   }
 
