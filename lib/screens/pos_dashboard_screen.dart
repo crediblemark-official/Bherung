@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../models/branch.dart';
 import '../models/product.dart';
 import '../models/store_profile.dart';
 import '../services/apps_script_service.dart';
@@ -44,6 +45,10 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
   bool _isLoadingData = true;
   bool _isLocked = true; // Layar terkunci secara default dengan sambutan Tretan
   AppUser? _scheduledNextUser;
+
+  // Multi-Cabang State
+  bool _isMultiBranchEnabled = false;
+  Branch? _activeBranch;
 
   // Real-Time Persisted Products List
   List<Product> _products = [];
@@ -107,6 +112,8 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
     final loadedKasbon = await storage.loadKasbon();
     final loadedProfile = await storage.loadStoreProfile();
     final loadedScheduled = await storage.loadScheduledNextUser();
+    final loadedMultiBranchEnabled = await storage.loadMultiBranchEnabled();
+    final loadedActiveBranch = await storage.getActiveBranch(storeName: loadedProfile.name);
 
     if (mounted) {
       setState(() {
@@ -119,6 +126,8 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
         _storeName = loadedProfile.name;
         _storeTagline = loadedProfile.tagline;
         _scheduledNextUser = loadedScheduled;
+        _isMultiBranchEnabled = loadedMultiBranchEnabled;
+        _activeBranch = loadedActiveBranch;
         if (_users.isNotEmpty) {
           _currentUser = loadedScheduled ?? _users.firstWhere((u) => !u.isOwner, orElse: () => _users.first);
         }
@@ -881,6 +890,8 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
               note: 'Pendaftaran Cepat Barcode Baru',
               cashierName: _currentUser.name,
               costPrice: newProduct.costPrice,
+              branchId: _isMultiBranchEnabled ? _activeBranch?.id : null,
+              branchName: _isMultiBranchEnabled ? _activeBranch?.name : null,
             );
             _stockMutations.insert(0, mutation);
 
@@ -967,6 +978,8 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
           initialIncomingUser: initialIncomingUser,
           storeName: _storeProfile.name,
           previousShiftSales: prevSales,
+          branchId: _isMultiBranchEnabled ? _activeBranch?.id : null,
+          branchName: _isMultiBranchEnabled ? _activeBranch?.name : null,
           onShiftHandoverCompleted: (shiftRecord, nextUser, updatedProducts) {
             setState(() {
               _shiftRecords.insert(0, shiftRecord);
@@ -998,22 +1011,17 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
           users: _users,
           currentShiftSales: _totalSalesToday,
           currentShiftTransactions: _completedTransactions,
+          onUserSelected: (user) {
+            setState(() => _currentUser = user);
+          },
           onStartShiftHandover: (targetUser) {
             _showShiftHandoverDialog(targetUser);
           },
-          onUserSelected: (user) {
-            setState(() => _currentUser = user);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Beralih ke akun: ${user.name} (${user.isOwner ? "Owner" : "Kasir"})'),
-                backgroundColor: AppTheme.primaryGold,
-              ),
-            );
-          },
           onUserAdded: (newUser) {
-            setState(() => _users.add(newUser));
+            setState(() {
+              _users.add(newUser);
+            });
             InventoryStorageService().saveUsers(_users);
-            AppsScriptService().syncAllUsers(_users);
           },
           onUserUpdated: (updatedUser) {
             setState(() {
@@ -1026,7 +1034,6 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
               }
             });
             InventoryStorageService().saveUsers(_users);
-            AppsScriptService().syncAllUsers(_users);
           },
           onUserDeleted: (deletedUser) {
             setState(() {
@@ -1036,7 +1043,6 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
               }
             });
             InventoryStorageService().saveUsers(_users);
-            AppsScriptService().syncAllUsers(_users);
           },
           onUsersSynced: (syncedUsers) {
             setState(() {
@@ -1141,8 +1147,8 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
   }
 
   // Pengaturan & Cloud Sync Screen (Full Screen)
-  void _showSettingsDialog() {
-    Navigator.push(
+  void _showSettingsDialog() async {
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (ctx) => SettingsScreen(
@@ -1160,7 +1166,184 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
               _storeTagline = newProfile.tagline;
             });
           },
-          onDataChanged: () => setState(() {}),
+          onDataChanged: () async {
+            final storage = InventoryStorageService();
+            final enabled = await storage.loadMultiBranchEnabled();
+            final active = await storage.getActiveBranch(storeName: _storeName);
+            if (mounted) {
+              setState(() {
+                _isMultiBranchEnabled = enabled;
+                _activeBranch = active;
+              });
+            }
+          },
+        ),
+      ),
+    );
+
+    final storage = InventoryStorageService();
+    final enabled = await storage.loadMultiBranchEnabled();
+    final active = await storage.getActiveBranch(storeName: _storeName);
+    if (mounted) {
+      setState(() {
+        _isMultiBranchEnabled = enabled;
+        _activeBranch = active;
+      });
+    }
+  }
+
+  // Dialog / Sheet Ganti Cabang Aktif Cepat (Khusus Pemilik Toko)
+  void _showBranchSwitchDialog() async {
+    if (!_currentUser.isOwner) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Cabang terkunci pada "${_activeBranch?.name ?? "Cabang"}". Hanya Pemilik Toko (Owner) yang berhak mengganti cabang aktif perangkat.'),
+          backgroundColor: AppTheme.primaryDark,
+        ),
+      );
+      return;
+    }
+
+    final storage = InventoryStorageService();
+    final branches = await storage.loadBranches(storeName: _storeName);
+    final activeId = await storage.loadActiveBranchId();
+
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.storefront_rounded, color: AppTheme.primaryGold, size: 22),
+                      SizedBox(width: 8),
+                      Text(
+                        'Ganti Cabang Aktif di HP Ini',
+                        style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w900, color: AppTheme.textDark),
+                      ),
+                    ],
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, size: 20, color: AppTheme.textMuted),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const Text(
+                'Pilih cabang tempat HP kasir ini sedang dipakai berjaga:',
+                style: TextStyle(fontSize: 11.5, color: AppTheme.textMuted),
+              ),
+              const SizedBox(height: 12),
+              ...branches.map((b) {
+                final isSelected = b.id == activeId;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  decoration: BoxDecoration(
+                    color: isSelected ? const Color(0xFFF0FDFA) : Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isSelected ? AppTheme.primaryTeal : AppTheme.borderColor,
+                      width: isSelected ? 2.0 : 1.0,
+                    ),
+                    boxShadow: isSelected ? AppTheme.softShadow : null,
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                      leading: CircleAvatar(
+                        radius: 20,
+                        backgroundColor: b.isMain ? AppTheme.primaryGold.withValues(alpha: 0.2) : AppTheme.primaryTeal.withValues(alpha: 0.15),
+                        child: Icon(
+                          b.isMain ? Icons.store_rounded : Icons.storefront_rounded,
+                          color: b.isMain ? const Color(0xFFB45309) : AppTheme.primaryTeal,
+                          size: 20,
+                        ),
+                      ),
+                      title: Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              b.name,
+                              style: TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.bold,
+                                color: isSelected ? AppTheme.primaryTeal : AppTheme.textDark,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (b.isMain) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFEF3C7),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: const Color(0xFFFDE68A)),
+                              ),
+                              child: const Text('PUSAT', style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.w900, color: Color(0xFF92400E))),
+                            ),
+                          ],
+                        ],
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (b.address.isNotEmpty)
+                            Text(b.address, style: const TextStyle(fontSize: 11, color: AppTheme.textMuted), overflow: TextOverflow.ellipsis),
+                          const SizedBox(height: 2),
+                          Text(
+                            isSelected ? '📍 Sedang aktif digunakan di HP ini' : '👆 Ketuk untuk gunakan cabang ini',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              color: isSelected ? const Color(0xFF0F766E) : AppTheme.primaryTeal,
+                            ),
+                          ),
+                        ],
+                      ),
+                      trailing: isSelected
+                          ? const Icon(Icons.check_circle_rounded, color: AppTheme.primaryTeal, size: 24)
+                          : const Icon(Icons.chevron_right_rounded, color: AppTheme.textMuted, size: 22),
+                      onTap: () async {
+                        await storage.saveActiveBranchId(b.id);
+                        final updatedActive = await storage.getActiveBranch(storeName: _storeName);
+                        if (mounted) {
+                          setState(() {
+                            _activeBranch = updatedActive;
+                          });
+                        }
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('HP kasir ini sekarang bertugas di: ${b.name}'),
+                              backgroundColor: AppTheme.primaryTeal,
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
         ),
       ),
     );
@@ -1227,6 +1410,8 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
                     timestamp: DateTime.now(),
                     note: 'Transaksi Kasir $trxId ($finalCustName)',
                     cashierName: _currentUser.name,
+                    branchId: _isMultiBranchEnabled ? _activeBranch?.id : null,
+                    branchName: _isMultiBranchEnabled ? _activeBranch?.name : null,
                   ),
                 );
               }
@@ -1247,6 +1432,8 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
                 paymentMethod: 'Tunai / QRIS',
                 cashierName: _currentUser.name,
                 items: itemsCopy,
+                branchId: _isMultiBranchEnabled ? _activeBranch?.id : null,
+                branchName: _isMultiBranchEnabled ? _activeBranch?.name : null,
               );
             } else {
               final kasbonId = 'KSB-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
@@ -1261,6 +1448,8 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
                   createdAt: DateTime.now(),
                   dueDate: dueDate,
                   isPaid: false,
+                  branchId: _isMultiBranchEnabled ? _activeBranch?.id : null,
+                  branchName: _isMultiBranchEnabled ? _activeBranch?.name : null,
                 ),
               );
 
@@ -1272,6 +1461,8 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
                 amount: total,
                 dueDate: dueDate,
                 items: itemsCopy,
+                branchId: _isMultiBranchEnabled ? _activeBranch?.id : null,
+                branchName: _isMultiBranchEnabled ? _activeBranch?.name : null,
               );
             }
 
@@ -1318,6 +1509,8 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
           activeKasbonCount: _kasbonRecords.where((k) => !k.isPaid).length,
           heldOrdersCount: _heldOrders.length,
           currentUser: _currentUser,
+          isMultiBranchEnabled: _isMultiBranchEnabled,
+          activeBranch: _activeBranch,
           onOpenKasbon: _showBukuKasbonDialog,
           onOpenHeldOrders: _showHeldOrdersDialog,
           onOpenSettings: _showSettingsDialog,
@@ -1339,6 +1532,9 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
         users: _users,
         scheduledUser: _scheduledNextUser,
         storeName: _storeName,
+        isMultiBranchEnabled: _isMultiBranchEnabled,
+        activeBranchId: _activeBranch?.id,
+        activeBranchName: _activeBranch?.name,
         onAuthenticated: (authUser) {
           setState(() {
             _currentUser = authUser;
@@ -1380,6 +1576,9 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
               activeKasbonCount: _kasbonRecords.where((k) => !k.isPaid).length,
               heldOrdersCount: _heldOrders.length,
               currentUser: _currentUser,
+              isMultiBranchEnabled: _isMultiBranchEnabled,
+              activeBranch: _activeBranch,
+              onSwitchBranch: (_isMultiBranchEnabled && _currentUser.isOwner) ? _showBranchSwitchDialog : null,
               onOpenKasbon: _showBukuKasbonDialog,
               onOpenHeldOrders: _showHeldOrdersDialog,
               onOpenSettings: _showSettingsDialog,

@@ -271,6 +271,8 @@ class AppsScriptService {
     required String paymentMethod,
     required String cashierName,
     required List<CartItem> items,
+    String? branchId,
+    String? branchName,
   }) async {
     final payload = {
       'action': 'addTransaction',
@@ -285,6 +287,8 @@ class AppsScriptService {
         'totalAmount': totalAmount,
         'paymentMethod': paymentMethod,
         'cashierName': cashierName,
+        'branchId': branchId,
+        'branchName': branchName,
         'items': items.map((i) => {
           'id': i.product.id,
           'code': i.product.code,
@@ -332,6 +336,8 @@ class AppsScriptService {
     required double amount,
     required DateTime? dueDate,
     required List<CartItem> items,
+    String? branchId,
+    String? branchName,
   }) async {
     final payload = {
       'action': 'addKasbon',
@@ -342,6 +348,8 @@ class AppsScriptService {
         'customerPhone': customerPhone,
         'amount': amount,
         'dueDate': dueDate?.toIso8601String(),
+        'branchId': branchId,
+        'branchName': branchName,
         'items': items.map((i) => {
           'id': i.product.id,
           'name': i.product.name,

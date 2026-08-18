@@ -17,6 +17,8 @@ class StockMutation {
   final String? note;
   final String cashierName;
   final double? costPrice;
+  final String? branchId;
+  final String? branchName;
 
   const StockMutation({
     required this.id,
@@ -30,6 +32,8 @@ class StockMutation {
     this.note,
     required this.cashierName,
     this.costPrice,
+    this.branchId,
+    this.branchName,
   });
 
   String get typeLabel {
@@ -58,6 +62,8 @@ class StockMutation {
       'note': note,
       'cashierName': cashierName,
       'costPrice': costPrice,
+      'branchId': branchId,
+      'branchName': branchName,
     };
   }
 
@@ -87,6 +93,8 @@ class StockMutation {
       note: json['note']?.toString(),
       cashierName: json['cashierName']?.toString() ?? 'Kasir',
       costPrice: (json['costPrice'] as num?)?.toDouble(),
+      branchId: json['branchId']?.toString(),
+      branchName: json['branchName']?.toString(),
     );
   }
 }

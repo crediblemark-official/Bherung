@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/branch.dart';
 import '../models/product.dart';
 import '../services/apps_script_service.dart';
 import '../theme/app_theme.dart';
@@ -12,6 +13,8 @@ class AppMenuScreen extends StatelessWidget {
   final int activeKasbonCount;
   final int heldOrdersCount;
   final AppUser currentUser;
+  final bool isMultiBranchEnabled;
+  final Branch? activeBranch;
   final VoidCallback onOpenKasbon;
   final VoidCallback onOpenHeldOrders;
   final VoidCallback onOpenSettings;
@@ -32,6 +35,8 @@ class AppMenuScreen extends StatelessWidget {
     required this.activeKasbonCount,
     required this.heldOrdersCount,
     required this.currentUser,
+    this.isMultiBranchEnabled = false,
+    this.activeBranch,
     required this.onOpenKasbon,
     required this.onOpenHeldOrders,
     required this.onOpenSettings,
@@ -112,6 +117,42 @@ class AppMenuScreen extends StatelessWidget {
                             fontWeight: FontWeight.w900,
                             letterSpacing: 0.4,
                           ),
+                        ),
+                      ),
+                    ],
+                    if (isMultiBranchEnabled && activeBranch != null) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                        decoration: BoxDecoration(
+                          color: activeBranch!.isMain
+                              ? AppTheme.primaryGold.withValues(alpha: 0.2)
+                              : AppTheme.primaryTeal.withValues(alpha: 0.25),
+                          borderRadius: BorderRadius.circular(5),
+                          border: Border.all(
+                            color: activeBranch!.isMain
+                                ? AppTheme.primaryGold.withValues(alpha: 0.5)
+                                : AppTheme.primaryTeal.withValues(alpha: 0.5),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.storefront_rounded,
+                              size: 10,
+                              color: activeBranch!.isMain ? AppTheme.goldAccent : const Color(0xFF5EEAD4),
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              activeBranch!.name,
+                              style: TextStyle(
+                                color: activeBranch!.isMain ? AppTheme.goldAccent : const Color(0xFF5EEAD4),
+                                fontSize: 8.5,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],

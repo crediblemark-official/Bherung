@@ -68,6 +68,7 @@ function formatDatabaseSheets() {
   getOrCreateSheet(ss, 'Shift_Rekap');
   getOrCreateSheet(ss, 'Mutasi_Stok');
   getOrCreateSheet(ss, 'Profil_Toko');
+  getOrCreateSheet(ss, 'Daftar_Cabang');
 }
 
 /**
@@ -195,7 +196,9 @@ function doGet(e) {
         phone: String(r[2] || ''),
         role: String(r[3]).toLowerCase() === 'owner' ? 'owner' : 'staff',
         pin: String(r[4] || '1234'),
-        isActive: String(r[5]).toLowerCase() !== 'false'
+        isActive: String(r[5]).toLowerCase() !== 'false',
+        branchId: r[6] ? String(r[6]) : null,
+        branchName: r[7] ? String(r[7]) : null
       }));
 
       return jsonResponse({ status: 'success', users: users, data: users });
@@ -270,6 +273,25 @@ function doGet(e) {
         });
       }
       return jsonResponse({ status: 'success', profile: null });
+    }
+
+    // 6b. GET Daftar Cabang Toko
+    if (action === 'getBranches') {
+      const sheet = getOrCreateSheet(ss, 'Daftar_Cabang');
+      const data = sheet.getDataRange().getValues();
+      const rows = data.slice(1);
+
+      const branches = rows.map(r => ({
+        id: String(r[0]),
+        name: String(r[1]),
+        code: String(r[2] || ''),
+        address: String(r[3] || ''),
+        phone: String(r[4] || ''),
+        isMain: String(r[5]).toLowerCase() === 'true' || String(r[5]) === '1',
+        isActive: String(r[6]).toLowerCase() !== 'false'
+      }));
+
+      return jsonResponse({ status: 'success', branches: branches, data: branches });
     }
 
     // 7. GET Transaksi Hari Ini & Riwayat Penjualan
@@ -365,7 +387,8 @@ function doPost(e) {
         Number(trx.totalAmount) || 0,
         trx.paymentMethod || 'Tunai',
         trx.cashierName || 'Kasir',
-        itemsSummary
+        itemsSummary,
+        trx.branchName || trx.branchId || 'Pusat'
       ]);
 
       updateStockFromTransaction(ss, trx.items || []);
@@ -394,7 +417,8 @@ function doPost(e) {
         Utilities.formatDate(dateNow, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm'),
         kasbon.dueDate ? String(kasbon.dueDate).substring(0, 10) : '-',
         'BELUM LUNAS',
-        itemsSummary
+        itemsSummary,
+        kasbon.branchName || kasbon.branchId || 'Pusat'
       ]);
 
       updateStockFromTransaction(ss, kasbon.items || []);
@@ -471,7 +495,9 @@ function doPost(e) {
           u.phone || '',
           u.role || 'staff',
           u.pin || '1234',
-          u.isActive !== false ? 'AKTIF' : 'NONAKTIF'
+          u.isActive !== false ? 'AKTIF' : 'NONAKTIF',
+          u.branchId || '',
+          u.branchName || ''
         ]);
       });
 
@@ -501,7 +527,8 @@ function doPost(e) {
         Number(shift.currentShiftTransactions) || 0,
         stockAuditSummary,
         shift.handoverNotes || '',
-        shift.nextCashierName || shift.cashierName || 'Penjaga Tetap'
+        shift.nextCashierName || shift.cashierName || 'Penjaga Tetap',
+        shift.branchName || shift.branchId || 'Pusat'
       ]);
 
       return jsonResponse({
@@ -525,7 +552,8 @@ function doPost(e) {
         Number(mut.newStock) || 0,
         mut.timestamp || new Date().toISOString(),
         mut.note || '',
-        mut.cashierName || ''
+        mut.cashierName || '',
+        mut.branchName || mut.branchId || 'Pusat'
       ]);
 
       return jsonResponse({
@@ -551,6 +579,29 @@ function doPost(e) {
       return jsonResponse({
         status: 'success',
         message: 'Profil toko berhasil disinkronkan ke Spreadsheet!'
+      });
+    }
+
+    // 9. Sync Daftar Cabang ke Spreadsheet
+    if (action === 'syncBranches') {
+      const branches = body.branches || [];
+      const sheetBranches = getOrCreateSheet(ss, 'Daftar_Cabang', true);
+
+      branches.forEach(b => {
+        sheetBranches.appendRow([
+          b.id,
+          b.name,
+          b.code || '',
+          b.address || '',
+          b.phone || '',
+          b.isMain ? 'TRUE' : 'FALSE',
+          b.isActive !== false ? 'AKTIF' : 'NONAKTIF'
+        ]);
+      });
+
+      return jsonResponse({
+        status: 'success',
+        message: `Berhasil menyinkronkan ${branches.length} cabang toko ke Spreadsheet!`
       });
     }
 
@@ -597,28 +648,34 @@ function getOrCreateSheet(ss, sheetName, clearIfExists = false) {
 
       defaultProducts.forEach(p => sheet.appendRow(p));
     } else if (sheetName === 'Transaksi') {
-      sheet.appendRow(['ID_Nota', 'Tanggal', 'Jam', 'Tipe_Transaksi', 'Nama_Pelanggan', 'Subtotal', 'Diskon', 'Total_Bayar', 'Metode_Bayar', 'Nama_Kasir', 'Detail_Barang']);
-      sheet.getRange('A1:K1').setBackground('#0F172A').setFontColor('#FFFFFF').setFontWeight('bold');
+      sheet.appendRow(['ID_Nota', 'Tanggal', 'Jam', 'Tipe_Transaksi', 'Nama_Pelanggan', 'Subtotal', 'Diskon', 'Total_Bayar', 'Metode_Bayar', 'Nama_Kasir', 'Detail_Barang', 'Cabang']);
+      sheet.getRange('A1:L1').setBackground('#0F172A').setFontColor('#FFFFFF').setFontWeight('bold');
     } else if (sheetName === 'Buku_Kasbon') {
-      sheet.appendRow(['ID_Kasbon', 'Nama_Pelanggan', 'No_HP', 'Total_Utang', 'Tanggal_Catat', 'Jatuh_Tempo', 'Status', 'Detail_Barang']);
-      sheet.getRange('A1:H1').setBackground('#D97706').setFontColor('#FFFFFF').setFontWeight('bold');
+      sheet.appendRow(['ID_Kasbon', 'Nama_Pelanggan', 'No_HP', 'Total_Utang', 'Tanggal_Catat', 'Jatuh_Tempo', 'Status', 'Detail_Barang', 'Cabang']);
+      sheet.getRange('A1:I1').setBackground('#D97706').setFontColor('#FFFFFF').setFontWeight('bold');
     } else if (sheetName === 'Pengguna_Kasir') {
-      sheet.appendRow(['ID_User', 'Nama_Kasir', 'No_HP', 'Peran_Role', 'PIN_Akses', 'Status_Aktif']);
-      sheet.getRange('A1:F1').setBackground('#F59E0B').setFontColor('#0F172A').setFontWeight('bold');
+      sheet.appendRow(['ID_User', 'Nama_Kasir', 'No_HP', 'Peran_Role', 'PIN_Akses', 'Status_Aktif', 'ID_Cabang', 'Nama_Cabang']);
+      sheet.getRange('A1:H1').setBackground('#F59E0B').setFontColor('#0F172A').setFontWeight('bold');
       
       // Default Akun Kasir & Owner Toko di Google Spreadsheet
-      sheet.appendRow(['usr-owner', 'Pemilik Toko (Owner)', '0812-9988-7766', 'owner', '1234', 'AKTIF']);
-      sheet.appendRow(['usr-01', 'Ahmad (Kasir)', '0857-1122-3344', 'staff', '1111', 'AKTIF']);
-      sheet.appendRow(['usr-02', 'Hasan (Shift Malam)', '0878-5566-7788', 'staff', '2222', 'AKTIF']);
+      sheet.appendRow(['usr-owner', 'Pemilik Toko (Owner)', '0812-9988-7766', 'owner', '1234', 'AKTIF', '', '']);
+      sheet.appendRow(['usr-01', 'Ahmad (Kasir)', '0857-1122-3344', 'staff', '1111', 'AKTIF', '', '']);
+      sheet.appendRow(['usr-02', 'Hasan (Shift Malam)', '0878-5566-7788', 'staff', '2222', 'AKTIF', '', '']);
     } else if (sheetName === 'Shift_Rekap') {
-      sheet.appendRow(['ID_Serah_Terima', 'Penjaga_Lama', 'Tanggal', 'Jam', 'Total_Omzet', 'Jumlah_Transaksi', 'Cekan_Stok_Lama_vs_Fisik', 'Catatan', 'Penjaga_Penerima']);
-      sheet.getRange('A1:I1').setBackground('#1E293B').setFontColor('#38BDF8').setFontWeight('bold');
+      sheet.appendRow(['ID_Serah_Terima', 'Penjaga_Lama', 'Tanggal', 'Jam', 'Total_Omzet', 'Jumlah_Transaksi', 'Cekan_Stok_Lama_vs_Fisik', 'Catatan', 'Penjaga_Penerima', 'Cabang']);
+      sheet.getRange('A1:J1').setBackground('#1E293B').setFontColor('#38BDF8').setFontWeight('bold');
     } else if (sheetName === 'Mutasi_Stok') {
-      sheet.appendRow(['ID_Mutasi', 'ID_Produk', 'Nama_Produk', 'Tipe_Mutasi', 'Jumlah', 'Stok_Awal', 'Stok_Akhir', 'Waktu', 'Keterangan', 'Nama_Kasir']);
-      sheet.getRange('A1:J1').setBackground('#334155').setFontColor('#FDE047').setFontWeight('bold');
+      sheet.appendRow(['ID_Mutasi', 'ID_Produk', 'Nama_Produk', 'Tipe_Mutasi', 'Jumlah', 'Stok_Awal', 'Stok_Akhir', 'Waktu', 'Keterangan', 'Nama_Kasir', 'Cabang']);
+      sheet.getRange('A1:K1').setBackground('#334155').setFontColor('#FDE047').setFontWeight('bold');
     } else if (sheetName === 'Profil_Toko') {
       sheet.appendRow(['Nama_Toko', 'Tagline', 'Modal_Kas_Awal', 'QRIS_Merchant', 'QRIS_NMID', 'Rekening_Bank_JSON']);
       sheet.getRange('A1:F1').setBackground('#047857').setFontColor('#FFFFFF').setFontWeight('bold');
+    } else if (sheetName === 'Daftar_Cabang') {
+      sheet.appendRow(['ID_Cabang', 'Nama_Cabang', 'Kode_Cabang', 'Alamat', 'No_Telepon', 'Cabang_Utama', 'Status_Aktif']);
+      sheet.getRange('A1:G1').setBackground('#0284C7').setFontColor('#FFFFFF').setFontWeight('bold');
+
+      // Default Cabang Pusat
+      sheet.appendRow(['br-01', 'Bherung (Pusat)', 'CB01', 'Pusat Operasional Toko', '', 'TRUE', 'AKTIF']);
     }
   }
 

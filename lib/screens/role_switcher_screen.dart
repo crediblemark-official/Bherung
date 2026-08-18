@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import '../models/branch.dart';
 import '../models/product.dart';
 import '../services/apps_script_service.dart';
 import '../services/google_sheets_direct_service.dart';
+import '../services/inventory_storage_service.dart';
 import '../theme/app_theme.dart';
 
 class RoleSwitcherScreen extends StatefulWidget {
@@ -42,7 +44,24 @@ class _RoleSwitcherScreenState extends State<RoleSwitcherScreen> {
   final TextEditingController _pinController = TextEditingController(text: '1234');
   final TextEditingController _verifyPinController = TextEditingController();
   UserRoleType _role = UserRoleType.staff;
+  String? _selectedBranchId;
+  List<Branch> _branches = [];
   bool _isSyncing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBranches();
+  }
+
+  Future<void> _loadBranches() async {
+    final loaded = await InventoryStorageService().loadBranches();
+    if (mounted) {
+      setState(() {
+        _branches = loaded;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -64,6 +83,7 @@ class _RoleSwitcherScreenState extends State<RoleSwitcherScreen> {
           _phoneController.clear();
           _pinController.text = '5678';
           _role = UserRoleType.staff;
+          _selectedBranchId = _branches.isNotEmpty ? _branches.first.id : null;
           _showForm = true;
         });
       },
@@ -81,6 +101,7 @@ class _RoleSwitcherScreenState extends State<RoleSwitcherScreen> {
           _phoneController.text = user.phone;
           _pinController.text = user.pin;
           _role = user.role;
+          _selectedBranchId = user.branchId ?? (_branches.isNotEmpty ? _branches.first.id : null);
           _showForm = true;
         });
       },
@@ -237,8 +258,8 @@ class _RoleSwitcherScreenState extends State<RoleSwitcherScreen> {
             onPressed: () {
               if (_verifyPinController.text.trim() == requiredPin) {
                 Navigator.pop(ctx);
-                widget.onUserSelected(user);
                 Navigator.pop(context);
+                widget.onUserSelected(user);
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -279,6 +300,11 @@ class _RoleSwitcherScreenState extends State<RoleSwitcherScreen> {
       return;
     }
 
+    Branch? assignedBranch;
+    if (_role == UserRoleType.staff && _selectedBranchId != null && _branches.isNotEmpty) {
+      assignedBranch = _branches.where((b) => b.id == _selectedBranchId).firstOrNull ?? _branches.first;
+    }
+
     if (_editingUser == null) {
       // Tambah User Baru
       final newUser = AppUser(
@@ -287,6 +313,8 @@ class _RoleSwitcherScreenState extends State<RoleSwitcherScreen> {
         phone: _phoneController.text.trim(),
         role: _role,
         pin: _pinController.text.trim().isEmpty ? '1234' : _pinController.text.trim(),
+        branchId: _role == UserRoleType.staff ? assignedBranch?.id : null,
+        branchName: _role == UserRoleType.staff ? assignedBranch?.name : null,
       );
       widget.onUserAdded(newUser);
     } else {
@@ -296,6 +324,8 @@ class _RoleSwitcherScreenState extends State<RoleSwitcherScreen> {
         phone: _phoneController.text.trim(),
         role: _role,
         pin: _pinController.text.trim().isEmpty ? '1234' : _pinController.text.trim(),
+        branchId: _role == UserRoleType.staff ? assignedBranch?.id : null,
+        branchName: _role == UserRoleType.staff ? assignedBranch?.name : null,
       );
       widget.onUserUpdated(updatedUser);
     }
@@ -735,6 +765,35 @@ class _RoleSwitcherScreenState extends State<RoleSwitcherScreen> {
                                       ),
                                       overflow: TextOverflow.ellipsis,
                                     ),
+                                    if (u.isOwner)
+                                      const Padding(
+                                        padding: EdgeInsets.only(top: 3),
+                                        child: Text(
+                                          '👑 Akses Semua Cabang',
+                                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFFB45309)),
+                                        ),
+                                      )
+                                    else if (u.branchName != null)
+                                      Container(
+                                        margin: const EdgeInsets.only(top: 3),
+                                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFF0FDFA),
+                                          borderRadius: BorderRadius.circular(4),
+                                          border: Border.all(color: const Color(0xFF99F6E4)),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(Icons.storefront_rounded, size: 10, color: Color(0xFF0F766E)),
+                                            const SizedBox(width: 3),
+                                            Text(
+                                              'Cabang: ${u.branchName}',
+                                              style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF0F766E)),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                                   ],
                                 ),
                               ),
@@ -926,6 +985,62 @@ class _RoleSwitcherScreenState extends State<RoleSwitcherScreen> {
                             ],
                           ),
                           const SizedBox(height: 12),
+
+                          // Dropdown Cabang Penugasan (1 Cabang 1 Penjaga)
+                          if (_role == UserRoleType.staff && _branches.isNotEmpty) ...[
+                            const Row(
+                              children: [
+                                Icon(Icons.store_mall_directory_rounded, size: 15, color: AppTheme.primaryTeal),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Penugasan Cabang Toko (1 Cabang 1 Penjaga) *',
+                                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 5),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: AppTheme.primaryTeal.withValues(alpha: 0.5)),
+                              ),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: _branches.any((b) => b.id == _selectedBranchId) ? _selectedBranchId : _branches.first.id,
+                                  isExpanded: true,
+                                  icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppTheme.primaryTeal),
+                                  items: _branches.map((b) {
+                                    return DropdownMenuItem<String>(
+                                      value: b.id,
+                                      child: Row(
+                                        children: [
+                                          Text(
+                                            b.name,
+                                            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
+                                          ),
+                                          if (b.isMain)
+                                            const Text(' (Pusat)', style: TextStyle(fontSize: 10.5, color: AppTheme.primaryGold, fontWeight: FontWeight.bold)),
+                                        ],
+                                      ),
+                                    );
+                                  }).toList(),
+                                  onChanged: (newId) {
+                                    if (newId != null) {
+                                      setState(() => _selectedBranchId = newId);
+                                    }
+                                  },
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              '💡 Penjaga toko ini hanya berhak membuka kasir & bertugas di cabang yang dipilih.',
+                              style: TextStyle(fontSize: 10.5, color: AppTheme.textMuted),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
 
                           const Text('PIN Akses Kasir (4 Digit) *', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 5),

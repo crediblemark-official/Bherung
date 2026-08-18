@@ -10,6 +10,8 @@ class AppUser {
   final UserRoleType role;
   final String pin; // 4-digit PIN for quick cashier auth
   final bool isActive;
+  final String? branchId; // ID cabang tempat penjaga toko ditugaskan
+  final String? branchName; // Nama cabang penugasan
 
   const AppUser({
     required this.id,
@@ -18,6 +20,8 @@ class AppUser {
     required this.role,
     required this.pin,
     this.isActive = true,
+    this.branchId,
+    this.branchName,
   });
 
   bool get isOwner => role == UserRoleType.owner;
@@ -29,6 +33,8 @@ class AppUser {
     UserRoleType? role,
     String? pin,
     bool? isActive,
+    String? branchId,
+    String? branchName,
   }) {
     return AppUser(
       id: id ?? this.id,
@@ -37,6 +43,8 @@ class AppUser {
       role: role ?? this.role,
       pin: pin ?? this.pin,
       isActive: isActive ?? this.isActive,
+      branchId: branchId ?? this.branchId,
+      branchName: branchName ?? this.branchName,
     );
   }
 
@@ -48,6 +56,8 @@ class AppUser {
       'role': role.name,
       'pin': pin,
       'isActive': isActive,
+      'branchId': branchId,
+      'branchName': branchName,
     };
   }
 
@@ -64,6 +74,8 @@ class AppUser {
       role: r,
       pin: json['pin']?.toString() ?? '1234',
       isActive: json['isActive'] != false,
+      branchId: json['branchId']?.toString(),
+      branchName: json['branchName']?.toString(),
     );
   }
 }

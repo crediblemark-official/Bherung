@@ -8,6 +8,9 @@ class PinLoginLockScreen extends StatefulWidget {
   final List<AppUser> users;
   final AppUser? scheduledUser;
   final String storeName;
+  final bool isMultiBranchEnabled;
+  final String? activeBranchId;
+  final String? activeBranchName;
   final Function(AppUser authenticatedUser) onAuthenticated;
 
   const PinLoginLockScreen({
@@ -15,6 +18,9 @@ class PinLoginLockScreen extends StatefulWidget {
     required this.users,
     this.scheduledUser,
     this.storeName = 'Bherung POS',
+    this.isMultiBranchEnabled = false,
+    this.activeBranchId,
+    this.activeBranchName,
     required this.onAuthenticated,
   });
 
@@ -32,6 +38,13 @@ class _PinLoginLockScreenState extends State<PinLoginLockScreen> with SingleTick
   void initState() {
     super.initState();
     _currentScheduledUser = widget.scheduledUser ??
+        widget.users.where((u) {
+          if (!u.isActive || u.isOwner) return false;
+          if (widget.isMultiBranchEnabled && widget.activeBranchId != null && u.branchId != null) {
+            return u.branchId == widget.activeBranchId;
+          }
+          return true;
+        }).firstOrNull ??
         widget.users.where((u) => !u.isOwner && u.isActive).firstOrNull ??
         widget.users.firstOrNull;
 
@@ -91,6 +104,21 @@ class _PinLoginLockScreenState extends State<PinLoginLockScreen> with SingleTick
     }
 
     if (matchedUser != null) {
+      // 1 Cabang 1 Penjaga Enforcement
+      if (widget.isMultiBranchEnabled && !matchedUser.isOwner) {
+        if (matchedUser.branchId != null &&
+            widget.activeBranchId != null &&
+            matchedUser.branchId != widget.activeBranchId) {
+          HapticFeedback.vibrate();
+          _shakeController.forward(from: 0.0);
+          setState(() {
+            _errorMessage = 'Akses Ditolak: ${matchedUser!.name} hanya ditugaskan di ${matchedUser.branchName ?? "cabang lain"}.\nHP ini khusus bertugas untuk ${widget.activeBranchName ?? "cabang ini"}.';
+            _pin = '';
+          });
+          return;
+        }
+      }
+
       HapticFeedback.heavyImpact();
       // Simpan user aktif sebagai user yang baru saja login
       await InventoryStorageService().saveScheduledNextUser(matchedUser);
@@ -143,25 +171,65 @@ class _PinLoginLockScreenState extends State<PinLoginLockScreen> with SingleTick
               itemBuilder: (c, i) {
                 final u = widget.users[i];
                 final isSelected = _currentScheduledUser?.id == u.id;
+                final isCurrentBranch = !widget.isMultiBranchEnabled || u.isOwner || (widget.activeBranchId != null && u.branchId == widget.activeBranchId);
+
                 return Material(
                   color: Colors.transparent,
                   child: ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: CircleAvatar(
-                      backgroundColor: u.isOwner ? AppTheme.primaryGold : AppTheme.primaryTeal,
+                      backgroundColor: u.isOwner ? AppTheme.primaryGold : (isCurrentBranch ? AppTheme.primaryTeal : const Color(0xFF64748B)),
                       child: Icon(
                         u.isOwner ? Icons.workspace_premium_rounded : Icons.person_rounded,
                         color: AppTheme.primaryDark,
                         size: 20,
                       ),
                     ),
-                    title: Text(
-                      u.name,
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                    title: Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            u.name,
+                            style: TextStyle(
+                              color: isCurrentBranch ? Colors.white : Colors.white60,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (widget.isMultiBranchEnabled && u.branchName != null && !u.isOwner) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: isCurrentBranch ? const Color(0xFF0F766E) : const Color(0xFF334155),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              u.branchName!,
+                              style: TextStyle(
+                                color: isCurrentBranch ? const Color(0xFF5EEAD4) : Colors.white60,
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     subtitle: Text(
-                      u.isOwner ? '👑 Pemilik Toko (Akses Penuh)' : '💼 Penjaga Toko (Kasir)',
-                      style: TextStyle(color: u.isOwner ? AppTheme.primaryGold : Colors.white60, fontSize: 11),
+                      u.isOwner
+                          ? '👑 Pemilik Toko (Akses Semua Cabang)'
+                          : (isCurrentBranch
+                              ? '💼 Penjaga Cabang Ini'
+                              : '⚠️ Ditugaskan di ${u.branchName ?? "cabang lain"}'),
+                      style: TextStyle(
+                        color: u.isOwner
+                            ? AppTheme.primaryGold
+                            : (isCurrentBranch ? Colors.white70 : const Color(0xFFF87171)),
+                        fontSize: 11,
+                      ),
                     ),
                     trailing: isSelected ? const Icon(Icons.check_circle_rounded, color: AppTheme.primaryGold) : null,
                     onTap: () {
@@ -239,6 +307,32 @@ class _PinLoginLockScreenState extends State<PinLoginLockScreen> with SingleTick
                       letterSpacing: 1.5,
                     ),
                   ),
+                  if (widget.isMultiBranchEnabled && widget.activeBranchName != null) ...[
+                    const SizedBox(height: 5),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2.5),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryTeal.withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: AppTheme.primaryTeal.withValues(alpha: 0.6)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.storefront_rounded, size: 12, color: Color(0xFF5EEAD4)),
+                          const SizedBox(width: 4),
+                          Text(
+                            widget.activeBranchName!,
+                            style: const TextStyle(
+                              color: Color(0xFF5EEAD4),
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 12),
 
                   // Welcoming Madura Card

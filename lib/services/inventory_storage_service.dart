@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/branch.dart';
 import '../models/product.dart';
 import '../models/store_profile.dart';
 
@@ -17,6 +18,9 @@ class InventoryStorageService {
   static const String _keyStoreProfile = 'bherung_store_profile_json_v1';
   static const String _keyUnits = 'bherung_custom_units_v1';
   static const String _keyContractBaselineStocks = 'bherung_contract_baseline_stocks_v1';
+  static const String _keyMultiBranchEnabled = 'bherung_multi_branch_enabled_v1';
+  static const String _keyBranches = 'bherung_branches_v1';
+  static const String _keyActiveBranchId = 'bherung_active_branch_id_v1';
 
   static const List<String> defaultUnits = [
     'pcs', 'bks', 'botol', 'renceng', 'kg', 'sak', 'dus', 'tabung', 'galon', 'sachet', 'pak', 'butir', 'liter', 'ikat', 'toples', 'kaleng', 'lusin', 'bal', 'roll'
@@ -304,6 +308,89 @@ class InventoryStorageService {
     } catch (e) {
       debugPrint('Error saving baseline stocks: $e');
     }
+  }
+
+  // 8. Multi-Cabang / Multi-Branch Management
+  Future<bool> loadMultiBranchEnabled() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getBool(_keyMultiBranchEnabled) ?? false;
+    } catch (e) {
+      debugPrint('Error loading multi branch enabled: $e');
+      return false;
+    }
+  }
+
+  Future<void> saveMultiBranchEnabled(bool enabled) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_keyMultiBranchEnabled, enabled);
+    } catch (e) {
+      debugPrint('Error saving multi branch enabled: $e');
+    }
+  }
+
+  Future<List<Branch>> loadBranches({String storeName = 'Bherung'}) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? jsonStr = prefs.getString(_keyBranches);
+
+      if (jsonStr != null && jsonStr.trim().isNotEmpty) {
+        final List<dynamic> decoded = jsonDecode(jsonStr);
+        final list = decoded.map((item) => Branch.fromJson(item as Map<String, dynamic>)).toList();
+        if (list.isNotEmpty) return list;
+      }
+    } catch (e) {
+      debugPrint('Error loading branches: $e');
+    }
+
+    // Default: Cabang Utama (Pusat)
+    final defaultBranches = [
+      Branch.defaultMainBranch(storeName: storeName),
+    ];
+    await saveBranches(defaultBranches);
+    return defaultBranches;
+  }
+
+  Future<void> saveBranches(List<Branch> branches) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final jsonList = branches.map((b) => b.toJson()).toList();
+      await prefs.setString(_keyBranches, jsonEncode(jsonList));
+    } catch (e) {
+      debugPrint('Error saving branches: $e');
+    }
+  }
+
+  Future<String> loadActiveBranchId() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString(_keyActiveBranchId) ?? 'br-main';
+    } catch (e) {
+      debugPrint('Error loading active branch ID: $e');
+      return 'br-main';
+    }
+  }
+
+  Future<void> saveActiveBranchId(String branchId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_keyActiveBranchId, branchId);
+    } catch (e) {
+      debugPrint('Error saving active branch ID: $e');
+    }
+  }
+
+  Future<Branch> getActiveBranch({String storeName = 'Bherung'}) async {
+    final branches = await loadBranches(storeName: storeName);
+    final activeId = await loadActiveBranchId();
+    return branches.firstWhere(
+      (b) => b.id == activeId,
+      orElse: () => branches.firstWhere(
+        (b) => b.isMain,
+        orElse: () => branches.isNotEmpty ? branches.first : Branch.defaultMainBranch(storeName: storeName),
+      ),
+    );
   }
 
   // Muat data produk demo / uji coba secara eksplisit

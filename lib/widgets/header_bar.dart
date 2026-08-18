@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/branch.dart';
 import '../models/product.dart';
 import '../services/apps_script_service.dart';
 import '../theme/app_theme.dart';
@@ -12,6 +13,9 @@ class PosHeaderBar extends StatelessWidget {
   final int activeKasbonCount;
   final int heldOrdersCount;
   final AppUser currentUser;
+  final bool isMultiBranchEnabled;
+  final Branch? activeBranch;
+  final VoidCallback? onSwitchBranch;
   final VoidCallback onOpenKasbon;
   final VoidCallback onOpenHeldOrders;
   final VoidCallback onOpenSettings;
@@ -34,6 +38,9 @@ class PosHeaderBar extends StatelessWidget {
     required this.activeKasbonCount,
     required this.heldOrdersCount,
     required this.currentUser,
+    this.isMultiBranchEnabled = false,
+    this.activeBranch,
+    this.onSwitchBranch,
     required this.onOpenKasbon,
     required this.onOpenHeldOrders,
     required this.onOpenSettings,
@@ -121,6 +128,62 @@ class PosHeaderBar extends StatelessWidget {
                         child: Text(
                           storeTagline.toUpperCase(),
                           style: const TextStyle(color: AppTheme.goldAccent, fontSize: 8.5, fontWeight: FontWeight.w900, letterSpacing: 0.4),
+                        ),
+                      ),
+                    ],
+                    if (isMultiBranchEnabled && activeBranch != null) ...[
+                      const SizedBox(width: 6),
+                      Tooltip(
+                        message: 'Cabang aktif: ${activeBranch!.name} (Sentuh untuk ganti cabang)',
+                        child: InkWell(
+                          onTap: onSwitchBranch,
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                            decoration: BoxDecoration(
+                              color: activeBranch!.isMain
+                                  ? AppTheme.primaryGold.withValues(alpha: 0.2)
+                                  : AppTheme.primaryTeal.withValues(alpha: 0.25),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: activeBranch!.isMain
+                                    ? AppTheme.primaryGold.withValues(alpha: 0.6)
+                                    : AppTheme.primaryTeal.withValues(alpha: 0.6),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.storefront_rounded,
+                                  size: 12,
+                                  color: activeBranch!.isMain ? AppTheme.goldAccent : const Color(0xFF5EEAD4),
+                                ),
+                                const SizedBox(width: 4),
+                                ConstrainedBox(
+                                  constraints: BoxConstraints(maxWidth: constraints.maxWidth < 600 ? 95 : 145),
+                                  child: Text(
+                                    activeBranch!.name,
+                                    style: TextStyle(
+                                      color: activeBranch!.isMain ? AppTheme.goldAccent : const Color(0xFF5EEAD4),
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                  ),
+                                ),
+                                if (onSwitchBranch != null) ...[
+                                  const SizedBox(width: 2),
+                                  Icon(
+                                    Icons.keyboard_arrow_down_rounded,
+                                    size: 13,
+                                    color: activeBranch!.isMain ? AppTheme.goldAccent : const Color(0xFF5EEAD4),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ],

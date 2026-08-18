@@ -84,6 +84,8 @@ class ShiftRecord {
   final String nextCashierName;
   final bool isVerifiedByOwner;
   final int transactionCount; // Jumlah transaksi periode ini
+  final String? branchId;
+  final String? branchName;
 
   const ShiftRecord({
     required this.id,
@@ -103,6 +105,8 @@ class ShiftRecord {
     required this.nextCashierName,
     this.isVerifiedByOwner = false,
     this.transactionCount = 0,
+    this.branchId,
+    this.branchName,
   });
 
   int get differenceCount => stockAudits.where((a) => a.hasDifference).length;
@@ -127,6 +131,8 @@ class ShiftRecord {
       'stockAudits': stockAudits.map((a) => a.toJson()).toList(),
       'handoverNotes': handoverNotes,
       'nextCashierName': nextCashierName,
+      'branchId': branchId,
+      'branchName': branchName,
     };
   }
 
@@ -161,6 +167,8 @@ class ShiftRecord {
       nextCashierName: json['nextCashierName']?.toString() ?? 'Penjaga',
       isVerifiedByOwner: false,
       transactionCount: (json['currentShiftTransactions'] as num?)?.toInt() ?? 0,
+      branchId: json['branchId']?.toString(),
+      branchName: json['branchName']?.toString(),
     );
   }
 }

@@ -10,6 +10,8 @@ class KasbonRecord {
   final DateTime createdAt;
   final DateTime? dueDate;
   bool isPaid;
+  final String? branchId;
+  final String? branchName;
 
   KasbonRecord({
     required this.id,
@@ -20,6 +22,8 @@ class KasbonRecord {
     required this.createdAt,
     this.dueDate,
     this.isPaid = false,
+    this.branchId,
+    this.branchName,
   });
 
   Map<String, dynamic> toJson() {
@@ -31,6 +35,8 @@ class KasbonRecord {
       'createdAt': createdAt.toIso8601String(),
       'dueDate': dueDate?.toIso8601String(),
       'isPaid': isPaid,
+      'branchId': branchId,
+      'branchName': branchName,
       'items': items.map((i) => {
         'product': i.product.toJson(),
         'quantity': i.quantity,
@@ -80,6 +86,8 @@ class KasbonRecord {
           : DateTime.now(),
       dueDate: json['dueDate'] != null ? DateTime.tryParse(json['dueDate'].toString()) : null,
       isPaid: json['isPaid'] == true,
+      branchId: json['branchId']?.toString(),
+      branchName: json['branchName']?.toString(),
     );
   }
 }

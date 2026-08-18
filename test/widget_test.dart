@@ -17,8 +17,19 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
 
     await tester.pumpWidget(const MyApp());
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pumpAndSettle();
+
+    // Verify Lock screen is present and unlock with PIN 1234
+    if (find.text('1').evaluate().isNotEmpty) {
+      await tester.tap(find.text('1'));
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.tap(find.text('2'));
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.tap(find.text('3'));
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.tap(find.text('4'));
+      await tester.pumpAndSettle();
+    }
 
     // Verify brand header & Toko Madura 24 Jam indicators
     expect(find.text('Bherung'), findsOneWidget);
@@ -33,7 +44,7 @@ void main() {
 
     // Tap on a product to add to cart
     await tester.tap(find.text('Beras Ramos Setra Pulen 5kg'));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     // Reset view
     addTearDown(() {

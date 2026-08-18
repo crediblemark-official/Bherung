@@ -388,7 +388,7 @@ class GoogleSheetsDirectService {
     if (headers == null || ssId == null) return null;
 
     final url = Uri.parse(
-      'https://sheets.googleapis.com/v4/spreadsheets/$ssId/values/Pengguna_Kasir!A2:E?valueRenderOption=UNFORMATTED_VALUE',
+      'https://sheets.googleapis.com/v4/spreadsheets/$ssId/values/Pengguna_Kasir!A2:H?valueRenderOption=UNFORMATTED_VALUE',
     );
 
     try {
@@ -402,9 +402,30 @@ class GoogleSheetsDirectService {
           if (row is List && row.length >= 4) {
             final id = row[0].toString();
             final name = row[1].toString();
-            final roleStr = row[2].toString().toLowerCase();
-            final pin = row[3].toString();
-            final status = row.length > 4 ? row[4].toString() : 'Aktif';
+            // Handle if phone column exists at index 2
+            String phone = '';
+            String roleStr = '';
+            String pin = '1234';
+            String status = 'Aktif';
+            String? branchId;
+            String? branchName;
+
+            if (row.length >= 6) {
+              phone = row[2].toString();
+              roleStr = row[3].toString().toLowerCase();
+              pin = row[4].toString();
+              status = row[5].toString();
+              if (row.length >= 7 && row[6].toString().trim().isNotEmpty) {
+                branchId = row[6].toString().trim();
+              }
+              if (row.length >= 8 && row[7].toString().trim().isNotEmpty) {
+                branchName = row[7].toString().trim();
+              }
+            } else {
+              roleStr = row[2].toString().toLowerCase();
+              pin = row[3].toString();
+              status = row.length > 4 ? row[4].toString() : 'Aktif';
+            }
 
             final role = (roleStr == 'owner' || roleStr.contains('pemilik'))
                 ? UserRoleType.owner
@@ -414,10 +435,12 @@ class GoogleSheetsDirectService {
               AppUser(
                 id: id,
                 name: name,
-                phone: '',
+                phone: phone,
                 role: role,
                 pin: pin,
                 isActive: !status.toLowerCase().contains('nonaktif'),
+                branchId: role == UserRoleType.staff ? branchId : null,
+                branchName: role == UserRoleType.staff ? branchName : null,
               ),
             );
           }

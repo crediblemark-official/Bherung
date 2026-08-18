@@ -16,6 +16,8 @@ class ShiftHandoverScreen extends StatefulWidget {
   final double defaultStartingCash;
   final String storeName;
   final double previousShiftSales;
+  final String? branchId;
+  final String? branchName;
   final Function(ShiftRecord shiftRecord, AppUser? nextUser, List<Product> updatedProducts) onShiftHandoverCompleted;
 
   const ShiftHandoverScreen({
@@ -29,6 +31,8 @@ class ShiftHandoverScreen extends StatefulWidget {
     this.defaultStartingCash = 200000,
     this.storeName = 'Bherung',
     this.previousShiftSales = 0,
+    this.branchId,
+    this.branchName,
     required this.onShiftHandoverCompleted,
   });
 
@@ -193,6 +197,8 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
           cashierName: widget.currentCashier,
           note: 'Koreksi Serah Terima Jaga (${diff > 0 ? "Surplus +$diff" : "Minus $diff"})',
           costPrice: p.costPrice,
+          branchId: widget.branchId,
+          branchName: widget.branchName,
         ));
       }
 
@@ -221,6 +227,8 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
       handoverNotes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
       nextCashierName: recipientName,
       transactionCount: widget.currentShiftTransactions,
+      branchId: widget.branchId,
+      branchName: widget.branchName,
     );
 
     // 1. Simpan Baseline Stok Lama Terkunci Baru HANYA jika serah terima pergantian penjaga resmi
@@ -620,7 +628,10 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                                       children: [
                                         Text(prod.name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
                                         const SizedBox(height: 2),
-                                        Row(
+                                        Wrap(
+                                          spacing: 6,
+                                          runSpacing: 3,
+                                          crossAxisAlignment: WrapCrossAlignment.center,
                                           children: [
                                             Container(
                                               padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1.5),
@@ -633,7 +644,6 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                                                 style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: Color(0xFF334155)),
                                               ),
                                             ),
-                                            const SizedBox(width: 6),
                                             Text(
                                               'Sistem: ${prod.stock} ${prod.unit}',
                                               style: const TextStyle(fontSize: 10.5, color: AppTheme.textMuted, fontWeight: FontWeight.w600),
@@ -797,55 +807,67 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                           const SizedBox(height: 10),
                           const Text('Pilih penjaga penerima toko:', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
                           const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: widget.users.map((user) {
-                              final isSelected = _selectedNextUser?.id == user.id;
-                              final isCurrent = user.name == widget.currentCashier;
+                          Builder(
+                            builder: (context) {
+                              final eligibleUsers = widget.users.where((u) {
+                                if (u.isOwner) return true;
+                                if (widget.branchId != null && u.branchId != null) {
+                                  return u.branchId == widget.branchId;
+                                }
+                                return true;
+                              }).toList();
 
-                              return InkWell(
-                                onTap: () => _selectNextUser(user),
-                                borderRadius: BorderRadius.circular(8),
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 150),
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                                  decoration: BoxDecoration(
-                                    gradient: isSelected ? AppTheme.goldGradient : null,
-                                    color: isSelected ? null : (isCurrent ? AppTheme.bgSubtle : Colors.white),
+                              return Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: eligibleUsers.map((user) {
+                                  final isSelected = _selectedNextUser?.id == user.id;
+                                  final isCurrent = user.name == widget.currentCashier;
+
+                                  return InkWell(
+                                    onTap: () => _selectNextUser(user),
                                     borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: isSelected ? AppTheme.primaryGold : AppTheme.borderColor,
-                                      width: isSelected ? 1.5 : 1,
-                                    ),
-                                    boxShadow: isSelected ? AppTheme.softShadow : null,
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        user.isOwner ? Icons.admin_panel_settings_rounded : Icons.person_rounded,
-                                        size: 15,
-                                        color: isSelected ? AppTheme.primaryDark : (user.isOwner ? const Color(0xFFD97706) : AppTheme.primaryTeal),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        user.name,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
-                                          color: isSelected ? AppTheme.primaryDark : AppTheme.textDark,
+                                    child: AnimatedContainer(
+                                      duration: const Duration(milliseconds: 150),
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                                      decoration: BoxDecoration(
+                                        gradient: isSelected ? AppTheme.goldGradient : null,
+                                        color: isSelected ? null : (isCurrent ? AppTheme.bgSubtle : Colors.white),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: isSelected ? AppTheme.primaryGold : AppTheme.borderColor,
+                                          width: isSelected ? 1.5 : 1,
                                         ),
+                                        boxShadow: isSelected ? AppTheme.softShadow : null,
                                       ),
-                                      if (isCurrent) ...[
-                                        const SizedBox(width: 4),
-                                        const Text('(Saat ini)', style: TextStyle(fontSize: 10, color: AppTheme.textMuted)),
-                                      ],
-                                    ],
-                                  ),
-                                ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            user.isOwner ? Icons.admin_panel_settings_rounded : Icons.person_rounded,
+                                            size: 15,
+                                            color: isSelected ? AppTheme.primaryDark : (user.isOwner ? const Color(0xFFD97706) : AppTheme.primaryTeal),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            user.name,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
+                                              color: isSelected ? AppTheme.primaryDark : AppTheme.textDark,
+                                            ),
+                                          ),
+                                          if (isCurrent) ...[
+                                            const SizedBox(width: 4),
+                                            const Text('(Saat ini)', style: TextStyle(fontSize: 10, color: AppTheme.textMuted)),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
                               );
-                            }).toList(),
+                            },
                           ),
                         ],
                       ],
