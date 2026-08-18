@@ -601,7 +601,7 @@ class _StockControlScreenState extends State<StockControlScreen> with SingleTick
                     Text(m.productName, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 2),
                     Text(
-                      '${m.typeLabel} • ${m.timestamp.hour.toString().padLeft(2, "0")}:${m.timestamp.minute.toString().padLeft(2, "0")} oleh ${m.cashierName}',
+                      '${m.typeLabel} • ${m.timestamp.hour.toString().padLeft(2, "0")}:${m.timestamp.minute.toString().padLeft(2, "0")} oleh ${m.cashierName}${m.branchName != null && m.branchName!.isNotEmpty ? " • 📍 ${m.branchName}" : ""}',
                       style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
                     ),
                   ],

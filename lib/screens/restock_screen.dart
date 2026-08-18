@@ -6,11 +6,17 @@ import '../widgets/camera_barcode_scanner.dart';
 
 class RestockScreen extends StatefulWidget {
   final List<Product> products;
+  final String cashierName;
+  final String? branchId;
+  final String? branchName;
   final Function(Product updatedProduct, StockMutation mutation) onRestockCompleted;
 
   const RestockScreen({
     super.key,
     required this.products,
+    this.cashierName = 'Kasir',
+    this.branchId,
+    this.branchName,
     required this.onRestockCompleted,
   });
 
@@ -184,8 +190,10 @@ class _RestockScreenState extends State<RestockScreen> {
       newStock: updatedProduct.stock,
       timestamp: DateTime.now(),
       note: '${_noteController.text.trim()} (+$addedUnits ${_selectedProduct!.unit})',
-      cashierName: 'Kasir',
+      cashierName: widget.cashierName,
       costPrice: parsedCost,
+      branchId: widget.branchId,
+      branchName: widget.branchName,
     );
 
     widget.onRestockCompleted(updatedProduct, mutation);

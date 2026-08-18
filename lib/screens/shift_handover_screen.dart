@@ -338,7 +338,7 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                     style: TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w900),
                   ),
                   Text(
-                    'Penjaga: ${widget.currentCashier} • $matchedCount Cocok / $diffCount Selisih',
+                    'Penjaga: ${widget.currentCashier}${widget.branchName != null && widget.branchName!.isNotEmpty ? " (📍 ${widget.branchName})" : ""} • $matchedCount Cocok / $diffCount Selisih',
                     style: const TextStyle(color: AppTheme.textSubtle, fontSize: 10.5, fontWeight: FontWeight.w500),
                   ),
                 ],

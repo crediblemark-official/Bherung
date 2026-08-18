@@ -374,5 +374,18 @@ void main() {
       final joko = loadedUsers.firstWhere((u) => u.name == 'Joko');
       expect(joko.branchId, 'br-pusat');
     });
+
+    test('1 Device = 1 Branch active binding and persistence', () async {
+      final storage = InventoryStorageService();
+      // Device initialized to branch 1
+      await storage.saveActiveBranchId('br-pusat');
+      var active = await storage.getActiveBranch();
+      expect(active.id, 'br-pusat');
+
+      // Admin configures this device to branch 2
+      await storage.saveActiveBranchId('br-timur');
+      active = await storage.getActiveBranch();
+      expect(active.id, 'br-timur');
+    });
   });
 }

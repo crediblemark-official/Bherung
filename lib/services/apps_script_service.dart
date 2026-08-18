@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/branch.dart';
 import '../models/product.dart';
 import '../models/store_profile.dart';
 import '../theme/app_theme.dart';
@@ -16,6 +17,7 @@ class SyncAllResult {
   final List<ShiftRecord>? shifts;
   final List<StockMutation>? mutations;
   final StoreProfile? storeProfile;
+  final List<Branch>? branches;
   final int syncedOfflineCount;
   final double? todaySales;
   final int? todayTrxCount;
@@ -29,6 +31,7 @@ class SyncAllResult {
     this.shifts,
     this.mutations,
     this.storeProfile,
+    this.branches,
     this.syncedOfflineCount = 0,
     this.todaySales,
     this.todayTrxCount,
@@ -901,6 +904,81 @@ class AppsScriptService {
     }
   }
 
+  // 14b. Sinkronisasi Seluruh Cabang Toko ke Spreadsheet
+  Future<Map<String, dynamic>> syncBranchesToSpreadsheet(List<Branch> branches) async {
+    try {
+      if (_webAppUrl.isEmpty) {
+        return {'success': true, 'message': 'Data cabang tersimpan di database lokal.'};
+      }
+      final uri = Uri.parse(_webAppUrl);
+      final payload = {
+        'action': 'syncBranches',
+        'spreadsheetId': _spreadsheetId,
+        'branches': branches.map((b) => b.toJson()).toList(),
+      };
+
+      final response = await _sendWithRedirect(
+        uri,
+        method: 'POST',
+        body: jsonEncode(payload),
+      );
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': data['status'] == 'success',
+          'message': data['message'] ?? 'Berhasil sinkronisasi cabang ke Spreadsheet!'
+        };
+      }
+      return {'success': false, 'message': 'Gagal sync cabang (${response.statusCode})'};
+    } catch (e) {
+      return {'success': false, 'message': 'Error sync cabang: $e'};
+    }
+  }
+
+  // 14c. Ambil Seluruh Data Cabang Toko dari Google Spreadsheet
+  Future<List<Branch>?> fetchBranchesFromSpreadsheet() async {
+    if (!isConnected) return null;
+    try {
+      if (_webAppUrl.isNotEmpty) {
+        final response = await _sendAction('getBranches');
+
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          final data = jsonDecode(response.body);
+          final List? rawList = (data['branches'] is List) ? data['branches'] : (data['data'] is List ? data['data'] : null);
+          if (data['status'] == 'success' && rawList != null) {
+            final List<Branch> fetchedBranches = [];
+            for (final item in rawList) {
+              if (item is Map) {
+                fetchedBranches.add(Branch.fromJson(Map<String, dynamic>.from(item)));
+              }
+            }
+            if (fetchedBranches.isNotEmpty) {
+              return fetchedBranches;
+            }
+          }
+        }
+      }
+
+      if (_spreadsheetId.isNotEmpty) {
+        final saBranches = await ServiceAccountSheetsService().fetchBranches(_spreadsheetId);
+        if (saBranches != null && saBranches.isNotEmpty) {
+          return saBranches;
+        }
+      }
+
+      return null;
+    } catch (e) {
+      if (_spreadsheetId.isNotEmpty) {
+        final saBranches = await ServiceAccountSheetsService().fetchBranches(_spreadsheetId);
+        if (saBranches != null && saBranches.isNotEmpty) {
+          return saBranches;
+        }
+      }
+      return null;
+    }
+  }
+
   // 15. SINKRONISASI SELURUH DATA SISTEM (ALL DATA FULL SYNC)
   Future<SyncAllResult> syncAllDataFromSpreadsheet() async {
     if (!isConnected) {
@@ -919,6 +997,7 @@ class AppsScriptService {
         fetchShiftsFromSpreadsheet(),
         fetchMutationsFromSpreadsheet(),
         fetchStoreProfileFromSpreadsheet(),
+        fetchBranchesFromSpreadsheet(),
         fetchTodaySalesFromSpreadsheet(),
         flushOfflineQueue(),
       ]);
@@ -929,8 +1008,9 @@ class AppsScriptService {
       final shifts = results[3] as List<ShiftRecord>?;
       final mutations = results[4] as List<StockMutation>?;
       final profile = results[5] as StoreProfile?;
-      final salesData = results[6] as Map<String, dynamic>?;
-      final offlineCount = results[7] as int;
+      final branches = results[6] as List<Branch>?;
+      final salesData = results[7] as Map<String, dynamic>?;
+      final offlineCount = results[8] as int;
 
       return SyncAllResult(
         success: true,
@@ -941,6 +1021,7 @@ class AppsScriptService {
         shifts: shifts,
         mutations: mutations,
         storeProfile: profile,
+        branches: branches,
         syncedOfflineCount: offlineCount,
         todaySales: salesData?['todaySales'] as double?,
         todayTrxCount: salesData?['todayTrxCount'] as int?,

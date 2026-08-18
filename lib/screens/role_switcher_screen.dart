@@ -202,7 +202,7 @@ class _RoleSwitcherScreenState extends State<RoleSwitcherScreen> {
     }
 
     _verifyPinController.clear();
-    final requiredPin = user.pin.trim().isEmpty ? (user.isOwner ? '1234' : '5678') : user.pin.trim();
+    final requiredPin = user.isOwner ? (user.pin.trim().isEmpty ? '1234' : user.pin.trim()) : user.pin.trim();
 
     showDialog(
       context: context,
@@ -708,174 +708,191 @@ class _RoleSwitcherScreenState extends State<RoleSwitcherScreen> {
                             ),
                             boxShadow: AppTheme.softShadow,
                           ),
-                          child: Row(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              CircleAvatar(
-                                radius: 18,
-                                backgroundColor: u.isOwner ? const Color(0xFFF59E0B) : AppTheme.primaryDark,
-                                child: Icon(
-                                  u.isOwner ? Icons.admin_panel_settings_rounded : Icons.person_rounded,
-                                  color: u.isOwner ? Colors.white : AppTheme.goldAccent,
-                                  size: 18,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
+                              // Baris 1: Info Pengguna + Tombol Edit / Hapus
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  CircleAvatar(
+                                    radius: 18,
+                                    backgroundColor: u.isOwner ? const Color(0xFFF59E0B) : AppTheme.primaryDark,
+                                    child: Icon(
+                                      u.isOwner ? Icons.admin_panel_settings_rounded : Icons.person_rounded,
+                                      color: u.isOwner ? Colors.white : AppTheme.goldAccent,
+                                      size: 18,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Flexible(
-                                          child: Text(
-                                            u.name,
-                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                        if (isCurrent) ...[
-                                          const SizedBox(width: 6),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                                            decoration: BoxDecoration(
-                                              color: AppTheme.primaryGold,
-                                              borderRadius: BorderRadius.circular(4),
-                                            ),
-                                            child: const Text(
-                                              'Sedang Aktif',
-                                              style: TextStyle(
-                                                color: AppTheme.primaryDark,
-                                                fontSize: 9,
-                                                fontWeight: FontWeight.w900,
+                                        Row(
+                                          children: [
+                                            Flexible(
+                                              child: Text(
+                                                u.name,
+                                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: AppTheme.textDark),
                                               ),
                                             ),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      u.isOwner
-                                          ? 'Pemilik Toko (Full Akses) • PIN: ${u.pin}'
-                                          : 'Penjaga Toko • ${u.phone.isNotEmpty ? u.phone : "PIN: ${u.pin}"}',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: u.isOwner ? const Color(0xFFD97706) : AppTheme.textMuted,
-                                        fontWeight: u.isOwner ? FontWeight.bold : FontWeight.normal,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    if (u.isOwner)
-                                      const Padding(
-                                        padding: EdgeInsets.only(top: 3),
-                                        child: Text(
-                                          '👑 Akses Semua Cabang',
-                                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFFB45309)),
-                                        ),
-                                      )
-                                    else if (u.branchName != null)
-                                      Container(
-                                        margin: const EdgeInsets.only(top: 3),
-                                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFF0FDFA),
-                                          borderRadius: BorderRadius.circular(4),
-                                          border: Border.all(color: const Color(0xFF99F6E4)),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            const Icon(Icons.storefront_rounded, size: 10, color: Color(0xFF0F766E)),
-                                            const SizedBox(width: 3),
-                                            Text(
-                                              'Cabang: ${u.branchName}',
-                                              style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF0F766E)),
-                                            ),
+                                            if (isCurrent) ...[
+                                              const SizedBox(width: 6),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                                decoration: BoxDecoration(
+                                                  color: AppTheme.primaryGold,
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                                child: const Text(
+                                                  'Sedang Aktif',
+                                                  style: TextStyle(
+                                                    color: AppTheme.primaryDark,
+                                                    fontSize: 9,
+                                                    fontWeight: FontWeight.w900,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
                                           ],
                                         ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          u.isOwner
+                                              ? 'Pemilik Toko (Full Akses) • PIN: ${u.pin}'
+                                              : 'Penjaga Toko • ${u.phone.isNotEmpty ? u.phone : "PIN: ${u.pin}"}',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: u.isOwner ? const Color(0xFFD97706) : AppTheme.textMuted,
+                                            fontWeight: u.isOwner ? FontWeight.bold : FontWeight.normal,
+                                          ),
+                                        ),
+                                        if (u.isOwner)
+                                          const Padding(
+                                            padding: EdgeInsets.only(top: 3),
+                                            child: Text(
+                                              '👑 Akses Semua Cabang',
+                                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFFB45309)),
+                                            ),
+                                          )
+                                        else if (u.branchName != null && u.branchName!.isNotEmpty)
+                                          Container(
+                                            margin: const EdgeInsets.only(top: 3),
+                                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFF0FDFA),
+                                              borderRadius: BorderRadius.circular(4),
+                                              border: Border.all(color: const Color(0xFF99F6E4)),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Icon(Icons.storefront_rounded, size: 10, color: Color(0xFF0F766E)),
+                                                const SizedBox(width: 3),
+                                                Text(
+                                                  'Cabang: ${u.branchName}',
+                                                  style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF0F766E)),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+
+                                  // Edit & Delete Menu (Hanya Pemilik yang boleh mengelola)
+                                  if (widget.currentUser.isOwner) ...[
+                                    IconButton(
+                                      icon: const Icon(Icons.edit_outlined, size: 18, color: AppTheme.goldMuted),
+                                      tooltip: 'Edit Akun',
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                      onPressed: () => _openEditUserForm(u),
+                                    ),
+                                    if (!isCurrent) ...[
+                                      const SizedBox(width: 8),
+                                      IconButton(
+                                        icon: const Icon(Icons.delete_outline_rounded, size: 18, color: AppTheme.dangerRed),
+                                        tooltip: 'Hapus Akun',
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        onPressed: () => _confirmDeleteUser(u),
                                       ),
+                                    ],
                                   ],
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-
-                              // Edit & Delete Menu (Hanya Pemilik yang boleh mengelola)
-                              if (widget.currentUser.isOwner) ...[
-                                IconButton(
-                                  icon: const Icon(Icons.edit_outlined, size: 18, color: AppTheme.goldMuted),
-                                  tooltip: 'Edit Akun',
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(),
-                                  onPressed: () => _openEditUserForm(u),
-                                ),
-                                const SizedBox(width: 6),
-                                if (!isCurrent)
-                                  IconButton(
-                                    icon: const Icon(Icons.delete_outline_rounded, size: 18, color: AppTheme.dangerRed),
-                                    tooltip: 'Hapus Akun',
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                    onPressed: () => _confirmDeleteUser(u),
-                                  ),
-                                const SizedBox(width: 6),
-                              ],
-
-                              // Action buttons
-                              if (!isCurrent) ...[
-                                // 1. Oper Jaga button (Khusus Pemilik Toko)
-                                if (widget.currentUser.isOwner) ...[
-                                  InkWell(
-                                    onTap: () => _handleShiftHandover(u),
-                                    borderRadius: BorderRadius.circular(6),
-                                    child: Container(
-                                      height: 30,
-                                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                                      decoration: BoxDecoration(
-                                        gradient: AppTheme.goldGradient,
-                                        borderRadius: BorderRadius.circular(6),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: AppTheme.primaryGold.withValues(alpha: 0.25),
-                                            blurRadius: 3,
-                                            offset: const Offset(0, 1),
-                                          ),
-                                        ],
-                                      ),
-                                      child: const Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.sync_alt_rounded, size: 13, color: AppTheme.primaryDark),
-                                          SizedBox(width: 4),
-                                          Text(
-                                            'Oper Jaga',
-                                            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900, color: AppTheme.primaryDark),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 5),
                                 ],
+                              ),
 
-                                // 2. Fast switch button
-                                InkWell(
-                                  onTap: () => _verifyAndSwitch(u),
-                                  borderRadius: BorderRadius.circular(6),
-                                  child: Container(
-                                    height: 30,
-                                    padding: const EdgeInsets.symmetric(horizontal: 7),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.bgSubtle,
-                                      borderRadius: BorderRadius.circular(6),
-                                      border: Border.all(color: AppTheme.borderColor),
-                                    ),
-                                    child: const Center(
-                                      child: Text(
-                                        'Ganti Cepat',
-                                        style: TextStyle(fontSize: 10, color: AppTheme.textDark, fontWeight: FontWeight.w700),
+                              // Baris 2: Tombol Aksi Oper Jaga & Ganti Cepat (Hanya jika bukan akun aktif & dibuka oleh Owner)
+                              if (!isCurrent && widget.currentUser.isOwner) ...[
+                                const SizedBox(height: 8),
+                                const Divider(height: 1, color: AppTheme.borderColor),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    // 1. Oper Jaga Button
+                                    Expanded(
+                                      child: InkWell(
+                                        onTap: () => _handleShiftHandover(u),
+                                        borderRadius: BorderRadius.circular(6),
+                                        child: Container(
+                                          height: 32,
+                                          decoration: BoxDecoration(
+                                            gradient: AppTheme.goldGradient,
+                                            borderRadius: BorderRadius.circular(6),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: AppTheme.primaryGold.withValues(alpha: 0.25),
+                                                blurRadius: 3,
+                                                offset: const Offset(0, 1),
+                                              ),
+                                            ],
+                                          ),
+                                          child: const Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Icon(Icons.sync_alt_rounded, size: 13, color: AppTheme.primaryDark),
+                                              SizedBox(width: 5),
+                                              Text(
+                                                'Oper Jaga',
+                                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: AppTheme.primaryDark),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
+                                    const SizedBox(width: 8),
+
+                                    // 2. Ganti Cepat Button
+                                    Expanded(
+                                      child: InkWell(
+                                        onTap: () => _verifyAndSwitch(u),
+                                        borderRadius: BorderRadius.circular(6),
+                                        child: Container(
+                                          height: 32,
+                                          decoration: BoxDecoration(
+                                            color: AppTheme.bgSubtle,
+                                            borderRadius: BorderRadius.circular(6),
+                                            border: Border.all(color: AppTheme.borderColor),
+                                          ),
+                                          child: const Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Icon(Icons.login_rounded, size: 13, color: AppTheme.textDark),
+                                              SizedBox(width: 5),
+                                              Text(
+                                                'Ganti Cepat',
+                                                style: TextStyle(fontSize: 11, color: AppTheme.textDark, fontWeight: FontWeight.w700),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ],

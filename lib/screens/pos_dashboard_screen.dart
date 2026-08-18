@@ -191,6 +191,9 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
             _storeTagline = _storeProfile.tagline;
             storage.saveStoreProfile(_storeProfile);
           }
+          if (syncResult.branches != null && syncResult.branches!.isNotEmpty) {
+            storage.saveBranches(syncResult.branches!);
+          }
           if (syncResult.todaySales != null && syncResult.todaySales! > 0) {
             _totalSalesToday = syncResult.todaySales!;
             _completedTransactions = syncResult.todayTrxCount ?? _completedTransactions;
@@ -266,6 +269,9 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
               _storeName = _storeProfile.name;
               _storeTagline = _storeProfile.tagline;
               storage.saveStoreProfile(_storeProfile);
+            }
+            if (syncResult.branches != null && syncResult.branches!.isNotEmpty) {
+              storage.saveBranches(syncResult.branches!);
             }
             if (syncResult.todaySales != null && syncResult.todaySales! > 0) {
               _totalSalesToday = syncResult.todaySales!;
@@ -903,6 +909,8 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
               baselineMap[newProduct.id] = newProduct.stock;
               storage.saveBaselineStocks(baselineMap);
             });
+            AppsScriptService().syncAllProducts(_products);
+            AppsScriptService().sendStockMutation(mutation);
 
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -923,6 +931,9 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
       MaterialPageRoute(
         builder: (ctx) => RestockScreen(
           products: _products,
+          cashierName: _currentUser.name,
+          branchId: _isMultiBranchEnabled ? _activeBranch?.id : null,
+          branchName: _isMultiBranchEnabled ? _activeBranch?.name : null,
           onRestockCompleted: (updatedProduct, mutation) {
             setState(() {
               final idx = _products.indexWhere((p) => p.id == updatedProduct.id);
@@ -935,6 +946,7 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
             // Simpan ke storage lokal permanen
             InventoryStorageService().saveProducts(_products);
             InventoryStorageService().saveMutations(_stockMutations);
+            AppsScriptService().sendStockMutation(mutation);
 
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -1070,6 +1082,8 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
       items: List<CartItem>.from(_cartItems.map((e) => e.copyWith())),
       deliveryFee: _selectedTransactionType == TransactionType.antar ? _deliveryFee : 0,
       createdAt: DateTime.now(),
+      branchId: _isMultiBranchEnabled ? _activeBranch?.id : null,
+      branchName: _isMultiBranchEnabled ? _activeBranch?.name : null,
     );
 
     setState(() {
@@ -1194,159 +1208,262 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
 
   // Dialog / Sheet Ganti Cabang Aktif Cepat (Khusus Pemilik Toko)
   void _showBranchSwitchDialog() async {
-    if (!_currentUser.isOwner) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Cabang terkunci pada "${_activeBranch?.name ?? "Cabang"}". Hanya Pemilik Toko (Owner) yang berhak mengganti cabang aktif perangkat.'),
-          backgroundColor: AppTheme.primaryDark,
-        ),
-      );
-      return;
-    }
-
     final storage = InventoryStorageService();
     final branches = await storage.loadBranches(storeName: _storeName);
     final activeId = await storage.loadActiveBranchId();
 
     if (!mounted) return;
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Column(
+    void openSheet() {
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.white,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        builder: (ctx) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.storefront_rounded, color: AppTheme.primaryGold, size: 22),
+                        SizedBox(width: 8),
+                        Text(
+                          'Ganti Cabang Aktif di Perangkat Ini',
+                          style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w900, color: AppTheme.textDark),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, size: 20, color: AppTheme.textMuted),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+                const Text(
+                  '1 Perangkat = 1 Cabang. Pilih cabang tempat perangkat kasir ini sedang bertugas:',
+                  style: TextStyle(fontSize: 11.5, color: AppTheme.textMuted),
+                ),
+                const SizedBox(height: 12),
+                ...branches.map((b) {
+                  final isSelected = b.id == activeId;
+                  final branchStaff = _users.where((u) => !u.isOwner && u.branchId == b.id).toList();
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    decoration: BoxDecoration(
+                      color: isSelected ? const Color(0xFFF0FDFA) : Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isSelected ? AppTheme.primaryTeal : AppTheme.borderColor,
+                        width: isSelected ? 2.0 : 1.0,
+                      ),
+                      boxShadow: isSelected ? AppTheme.softShadow : null,
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                        leading: CircleAvatar(
+                          radius: 20,
+                          backgroundColor: b.isMain ? AppTheme.primaryGold.withValues(alpha: 0.2) : AppTheme.primaryTeal.withValues(alpha: 0.15),
+                          child: Icon(
+                            b.isMain ? Icons.store_rounded : Icons.storefront_rounded,
+                            color: b.isMain ? const Color(0xFFB45309) : AppTheme.primaryTeal,
+                            size: 20,
+                          ),
+                        ),
+                        title: Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                b.name,
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: isSelected ? AppTheme.primaryTeal : AppTheme.textDark,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (b.isMain) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFEF3C7),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(color: const Color(0xFFFDE68A)),
+                                ),
+                                child: const Text('PUSAT', style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.w900, color: Color(0xFF92400E))),
+                              ),
+                            ],
+                          ],
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (b.address.isNotEmpty)
+                              Text(b.address, style: const TextStyle(fontSize: 11, color: AppTheme.textMuted), overflow: TextOverflow.ellipsis),
+                            const SizedBox(height: 3),
+                            Row(
+                              children: [
+                                Icon(
+                                  branchStaff.isNotEmpty ? Icons.badge_rounded : Icons.person_outline_rounded,
+                                  size: 11,
+                                  color: branchStaff.isNotEmpty ? const Color(0xFF166534) : AppTheme.textMuted,
+                                ),
+                                const SizedBox(width: 3),
+                                Expanded(
+                                  child: Text(
+                                    branchStaff.isNotEmpty
+                                        ? 'Penjaga: ${branchStaff.map((u) => u.name).join(", ")}'
+                                        : 'Belum ada penjaga ditugaskan',
+                                    style: TextStyle(
+                                      fontSize: 10.5,
+                                      fontWeight: branchStaff.isNotEmpty ? FontWeight.bold : FontWeight.normal,
+                                      color: branchStaff.isNotEmpty ? const Color(0xFF166534) : AppTheme.textMuted,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              isSelected ? '📱 Terikat & aktif di HP ini' : '👆 Ketuk untuk gunakan di HP ini',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                color: isSelected ? const Color(0xFF0F766E) : AppTheme.primaryTeal,
+                              ),
+                            ),
+                          ],
+                        ),
+                        trailing: isSelected
+                            ? const Icon(Icons.check_circle_rounded, color: AppTheme.primaryTeal, size: 24)
+                            : const Icon(Icons.chevron_right_rounded, color: AppTheme.textMuted, size: 22),
+                        onTap: () async {
+                          await storage.saveActiveBranchId(b.id);
+                          final updatedActive = await storage.getActiveBranch(storeName: _storeName);
+                          if (mounted) {
+                            setState(() {
+                              _activeBranch = updatedActive;
+                              // Jika kasir saat ini tidak ditugaskan di cabang baru ini dan bukan Owner, sesuaikan penjaga aktif
+                              if (!_currentUser.isOwner && _currentUser.branchId != null && _currentUser.branchId != b.id) {
+                                final matchingStaff = _users.where((u) => !u.isOwner && u.isActive && u.branchId == b.id).firstOrNull ??
+                                    _users.where((u) => !u.isOwner && u.isActive).firstOrNull ??
+                                    _currentUser;
+                                _currentUser = matchingStaff;
+                              }
+                            });
+                          }
+                          if (ctx.mounted) Navigator.pop(ctx);
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Perangkat ini sekarang terikat di: ${b.name}'),
+                                backgroundColor: AppTheme.primaryTeal,
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (_currentUser.isOwner) {
+      openSheet();
+    } else {
+      final ownerUser = _users.where((u) => u.isOwner).firstOrNull;
+      final ownerPin = ownerUser?.pin.trim().isNotEmpty == true ? ownerUser!.pin.trim() : '1234';
+      final pinCtrl = TextEditingController();
+
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.admin_panel_settings_rounded, color: AppTheme.primaryGold, size: 22),
+              SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'Otorisasi Admin Cabang',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.storefront_rounded, color: AppTheme.primaryGold, size: 22),
-                      SizedBox(width: 8),
-                      Text(
-                        'Ganti Cabang Aktif di HP Ini',
-                        style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w900, color: AppTheme.textDark),
-                      ),
-                    ],
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded, size: 20, color: AppTheme.textMuted),
-                    onPressed: () => Navigator.pop(ctx),
-                  ),
-                ],
+              Text(
+                'Perangkat ini saat ini bertugas untuk "${_activeBranch?.name ?? "Cabang"}". Hanya Pemilik Toko (Admin) yang dapat memindahkan cabang perangkat ini.',
+                style: const TextStyle(fontSize: 12, color: AppTheme.textMuted, height: 1.35),
               ),
-              const Text(
-                'Pilih cabang tempat HP kasir ini sedang dipakai berjaga:',
-                style: TextStyle(fontSize: 11.5, color: AppTheme.textMuted),
+              const SizedBox(height: 14),
+              TextField(
+                controller: pinCtrl,
+                obscureText: true,
+                keyboardType: TextInputType.number,
+                maxLength: 4,
+                autofocus: true,
+                style: const TextStyle(fontSize: 18, letterSpacing: 6, fontWeight: FontWeight.bold),
+                decoration: InputDecoration(
+                  hintText: 'PIN Admin (1234)',
+                  counterText: '',
+                  prefixIcon: const Icon(Icons.password_rounded, color: AppTheme.primaryGold),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                ),
               ),
-              const SizedBox(height: 12),
-              ...branches.map((b) {
-                final isSelected = b.id == activeId;
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFFF0FDFA) : Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isSelected ? AppTheme.primaryTeal : AppTheme.borderColor,
-                      width: isSelected ? 2.0 : 1.0,
-                    ),
-                    boxShadow: isSelected ? AppTheme.softShadow : null,
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                      leading: CircleAvatar(
-                        radius: 20,
-                        backgroundColor: b.isMain ? AppTheme.primaryGold.withValues(alpha: 0.2) : AppTheme.primaryTeal.withValues(alpha: 0.15),
-                        child: Icon(
-                          b.isMain ? Icons.store_rounded : Icons.storefront_rounded,
-                          color: b.isMain ? const Color(0xFFB45309) : AppTheme.primaryTeal,
-                          size: 20,
-                        ),
-                      ),
-                      title: Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              b.name,
-                              style: TextStyle(
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.bold,
-                                color: isSelected ? AppTheme.primaryTeal : AppTheme.textDark,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (b.isMain) ...[
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFEF3C7),
-                                borderRadius: BorderRadius.circular(4),
-                                border: Border.all(color: const Color(0xFFFDE68A)),
-                              ),
-                              child: const Text('PUSAT', style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.w900, color: Color(0xFF92400E))),
-                            ),
-                          ],
-                        ],
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (b.address.isNotEmpty)
-                            Text(b.address, style: const TextStyle(fontSize: 11, color: AppTheme.textMuted), overflow: TextOverflow.ellipsis),
-                          const SizedBox(height: 2),
-                          Text(
-                            isSelected ? '📍 Sedang aktif digunakan di HP ini' : '👆 Ketuk untuk gunakan cabang ini',
-                            style: TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                              color: isSelected ? const Color(0xFF0F766E) : AppTheme.primaryTeal,
-                            ),
-                          ),
-                        ],
-                      ),
-                      trailing: isSelected
-                          ? const Icon(Icons.check_circle_rounded, color: AppTheme.primaryTeal, size: 24)
-                          : const Icon(Icons.chevron_right_rounded, color: AppTheme.textMuted, size: 22),
-                      onTap: () async {
-                        await storage.saveActiveBranchId(b.id);
-                        final updatedActive = await storage.getActiveBranch(storeName: _storeName);
-                        if (mounted) {
-                          setState(() {
-                            _activeBranch = updatedActive;
-                          });
-                        }
-                        if (ctx.mounted) Navigator.pop(ctx);
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('HP kasir ini sekarang bertugas di: ${b.name}'),
-                              backgroundColor: AppTheme.primaryTeal,
-                              duration: const Duration(seconds: 2),
-                            ),
-                          );
-                        }
-                      },
-                    ),
-                  ),
-                );
-              }),
             ],
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Batal', style: TextStyle(color: AppTheme.textMuted)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (pinCtrl.text.trim() == ownerPin) {
+                  Navigator.pop(ctx);
+                  openSheet();
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('PIN Admin salah! Akses pemindahan cabang ditolak.'),
+                      backgroundColor: AppTheme.dangerRed,
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryGold,
+                foregroundColor: AppTheme.primaryDark,
+              ),
+              child: const Text('Buka Kunci', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
         ),
-      ),
-    );
+      );
+    }
   }
 
   // Buku Panduan Kasir & Toko (Full Screen)
@@ -1379,6 +1496,7 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
           transactionType: _selectedTransactionType,
           customerName: _customerName,
           storeProfile: _storeProfile,
+          branchName: _isMultiBranchEnabled ? _activeBranch?.name : null,
           onSuccess: ({required bool isKasbon, String? customerName, String? customerPhone, DateTime? dueDate}) {
             final itemsCopy = List<CartItem>.from(_cartItems.map((e) => e.copyWith()));
           final finalCustName = customerName ?? (_customerName.isNotEmpty ? _customerName : 'Umum');
@@ -1520,6 +1638,7 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
           onOpenRestock: _showRestockDialog,
           onOpenRoleSwitcher: _showRoleSwitcherDialog,
           onLogoutOwner: _logoutOwner,
+          onSwitchBranch: (_isMultiBranchEnabled && _currentUser.isOwner) ? _showBranchSwitchDialog : null,
         ),
       ),
     );

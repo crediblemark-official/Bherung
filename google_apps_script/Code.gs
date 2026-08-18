@@ -11,6 +11,7 @@
  * 5. Sheet "Shift_Rekap"    : Catatan rekonsiliasi kas operan shift kasir 24 jam.
  * 6. Sheet "Mutasi_Stok"    : Log kartu mutasi keluar-masuk barang & kulakan.
  * 7. Sheet "Profil_Toko"    : Identitas toko, kas awal default, QRIS, & rekening bank.
+ * 8. Sheet "Daftar_Cabang"  : Master data cabang toko multi-cabang.
  */
 
 // Custom Menu di Bilah Atas Spreadsheet saat dibuka oleh Pemilik Toko
@@ -57,7 +58,7 @@ function authorizeAndGetId() {
 }
 
 /**
- * Fungsi 2: Merapikan Format Seluruh 7 Tabel Resmi Database Toko
+ * Fungsi 2: Merapikan Format Seluruh 8 Tabel Resmi Database Toko
  */
 function formatDatabaseSheets() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -151,11 +152,11 @@ function doGet(e) {
       const products = rows.map(r => ({
         id: String(r[0]),
         name: String(r[1]),
-        code: String(r[2]),
-        categoryId: String(r[3]),
+        code: String(r[2] || ''),
+        categoryId: String(r[3] || 'sembako'),
         price: Number(r[4]) || 0,
-        wholesalePrice: r[5] ? Number(r[5]) : null,
-        wholesaleMinQty: r[6] ? Number(r[6]) : null,
+        wholesalePrice: r[5] !== '' && r[5] != null ? Number(r[5]) : null,
+        wholesaleMinQty: r[6] !== '' && r[6] != null ? Number(r[6]) : null,
         unit: String(r[7] || 'pcs'),
         stock: Number(r[8]) || 0,
         description: String(r[9] || '')
@@ -178,10 +179,11 @@ function doGet(e) {
         createdAt: r[4] instanceof Date ? r[4].toISOString() : String(r[4]),
         dueDate: r[5] instanceof Date ? r[5].toISOString() : String(r[5]),
         isPaid: String(r[6]).toUpperCase() === 'LUNAS',
-        detailItems: String(r[7] || '')
+        detailItems: String(r[7] || ''),
+        branchName: String(r[8] || 'Pusat')
       }));
 
-      return jsonResponse({ status: 'success', data: kasbonList });
+      return jsonResponse({ status: 'success', kasbon: kasbonList, data: kasbonList });
     }
 
     // 3. GET Pengguna Kasir
@@ -190,16 +192,21 @@ function doGet(e) {
       const data = sheet.getDataRange().getValues();
       const rows = data.slice(1);
 
-      const users = rows.map(r => ({
-        id: String(r[0]),
-        name: String(r[1]),
-        phone: String(r[2] || ''),
-        role: String(r[3]).toLowerCase() === 'owner' ? 'owner' : 'staff',
-        pin: String(r[4] || '1234'),
-        isActive: String(r[5]).toLowerCase() !== 'false',
-        branchId: r[6] ? String(r[6]) : null,
-        branchName: r[7] ? String(r[7]) : null
-      }));
+      const users = rows.map(r => {
+        const statusStr = String(r[5] || '').trim().toLowerCase();
+        const isActive = statusStr === 'aktif' || statusStr === 'true' || statusStr === '1' || (statusStr !== 'nonaktif' && statusStr !== 'false' && statusStr !== '0' && statusStr !== '');
+
+        return {
+          id: String(r[0]),
+          name: String(r[1]),
+          phone: String(r[2] || ''),
+          role: String(r[3]).toLowerCase() === 'owner' ? 'owner' : 'staff',
+          pin: String(r[4] || '1234'),
+          isActive: isActive,
+          branchId: r[6] ? String(r[6]) : null,
+          branchName: r[7] ? String(r[7]) : null
+        };
+      });
 
       return jsonResponse({ status: 'success', users: users, data: users });
     }
@@ -210,19 +217,28 @@ function doGet(e) {
       const data = sheet.getDataRange().getValues();
       const rows = data.slice(1);
 
-      const shifts = rows.map(r => ({
-        id: String(r[0]),
-        cashierName: String(r[1]),
-        shiftName: String(r[2] || 'Laporan Jaga'),
-        startTime: r[3] instanceof Date ? r[3].toISOString() : String(r[3]),
-        endTime: r[4] instanceof Date ? r[4].toISOString() : String(r[4]),
-        startingCashDrawer: 0,
-        totalSystemSales: Number(r[5]) || 0,
-        physicalCashCounted: 0,
-        cashDifference: 0,
-        handoverNotes: String(r[7] || ''),
-        nextCashierName: String(r[8] || '')
-      }));
+      const shifts = rows.map(r => {
+        const dateStr = r[2] instanceof Date ? Utilities.formatDate(r[2], Session.getScriptTimeZone(), 'yyyy-MM-dd') : String(r[2] || '');
+        const timeStr = r[3] instanceof Date ? Utilities.formatDate(r[3], Session.getScriptTimeZone(), 'HH:mm:ss') : String(r[3] || '');
+        const isoTimestamp = dateStr && timeStr ? `${dateStr}T${timeStr}` : new Date().toISOString();
+
+        return {
+          id: String(r[0]),
+          cashierName: String(r[1] || 'Penjaga'),
+          shiftName: 'Laporan Jaga',
+          startTime: isoTimestamp,
+          endTime: isoTimestamp,
+          startingCashDrawer: 0,
+          totalSystemSales: Number(r[4]) || 0,
+          currentShiftTransactions: Number(r[5]) || 0,
+          physicalCashCounted: 0,
+          cashDifference: 0,
+          stockAuditsSummary: String(r[6] || ''),
+          handoverNotes: String(r[7] || ''),
+          nextCashierName: String(r[8] || ''),
+          branchName: String(r[9] || 'Pusat')
+        };
+      });
 
       return jsonResponse({ status: 'success', shifts: shifts, data: shifts });
     }
@@ -243,7 +259,8 @@ function doGet(e) {
         newStock: Number(r[6]) || 0,
         timestamp: r[7] instanceof Date ? r[7].toISOString() : String(r[7]),
         note: String(r[8] || ''),
-        cashierName: String(r[9] || '')
+        cashierName: String(r[9] || ''),
+        branchName: String(r[10] || 'Pusat')
       }));
 
       return jsonResponse({ status: 'success', mutations: mutations, data: mutations });
@@ -288,7 +305,7 @@ function doGet(e) {
         address: String(r[3] || ''),
         phone: String(r[4] || ''),
         isMain: String(r[5]).toLowerCase() === 'true' || String(r[5]) === '1',
-        isActive: String(r[6]).toLowerCase() !== 'false'
+        isActive: String(r[6]).toLowerCase() !== 'false' && String(r[6]).toLowerCase() !== 'nonaktif'
       }));
 
       return jsonResponse({ status: 'success', branches: branches, data: branches });
@@ -323,7 +340,8 @@ function doGet(e) {
           totalAmount: totalAmount,
           paymentMethod: String(r[8]),
           cashierName: String(r[9]),
-          itemsSummary: String(r[10] || '')
+          itemsSummary: String(r[10] || ''),
+          branchName: String(r[11] || 'Pusat')
         };
       });
 
@@ -356,7 +374,7 @@ function doPost(e) {
     const action = body.action || (e && e.parameter && e.parameter.action);
 
     // Delegasikan action pembacaan (GET actions) ke doGet untuk kompatibilitas Web & Android
-    const readActions = ['ping', 'getProducts', 'getKasbon', 'getUsers', 'getShifts', 'getMutations', 'getStoreProfile', 'getTransactions'];
+    const readActions = ['ping', 'getProducts', 'getKasbon', 'getUsers', 'getShifts', 'getMutations', 'getStoreProfile', 'getTransactions', 'getBranches'];
     if (readActions.includes(action)) {
       if (!e) e = {};
       e.parameter = Object.assign({}, e.parameter || {}, body);
@@ -524,7 +542,7 @@ function doPost(e) {
         Utilities.formatDate(dateNow, Session.getScriptTimeZone(), 'yyyy-MM-dd'),
         Utilities.formatDate(dateNow, Session.getScriptTimeZone(), 'HH:mm:ss'),
         Number(shift.totalSystemSales) || 0,
-        Number(shift.currentShiftTransactions) || 0,
+        Number(shift.currentShiftTransactions) || Number(shift.transactionCount) || 0,
         stockAuditSummary,
         shift.handoverNotes || '',
         shift.nextCashierName || shift.cashierName || 'Penjaga Tetap',
@@ -614,6 +632,7 @@ function doPost(e) {
 
 function getOrCreateSheet(ss, sheetName, clearIfExists = false) {
   let sheet = ss.getSheetByName(sheetName);
+  const isNew = !sheet;
   if (!sheet) {
     sheet = ss.insertSheet(sheetName);
   } else if (clearIfExists) {
@@ -625,28 +644,30 @@ function getOrCreateSheet(ss, sheetName, clearIfExists = false) {
       sheet.appendRow(['ID', 'Nama_Produk', 'Barcode_SKU', 'Kategori', 'Harga_Eceran', 'Harga_Grosir', 'Min_Qty_Grosir', 'Satuan', 'Stok', 'Keterangan']);
       sheet.getRange('A1:J1').setBackground('#0D9488').setFontColor('#FFFFFF').setFontWeight('bold');
 
-      // Isi 17 Produk Sembako & Rokok Madura Standar Awal
-      const defaultProducts = [
-        ['prd-01', 'Beras Ramos Setra Pulen 5kg', '8999999195001', 'Sembako', 72000, 68000, 5, 'sak', 30, 'Beras Ramos Super'],
-        ['prd-02', 'Minyak Goreng Bimoli Spesial 2L', '8998866102002', 'Sembako', 38500, 37000, 6, 'pouch', 45, 'Minyak Goreng Sawit'],
-        ['prd-03', 'Gula Pasir Gulaku Tebu Murni 1kg', '8991002103003', 'Sembako', 18000, 17200, 10, 'bks', 50, 'Gula Pasir Tebu'],
-        ['prd-04', 'Tepung Terigu Segitiga Biru 1kg', '8998866200011', 'Sembako', 13500, 12500, 10, 'bks', 40, 'Tepung Protein Sedang'],
-        ['prd-05', 'Telur Ayam Ras Fresh Negeri (1kg)', '8998866200022', 'Sembako', 29000, 27500, 10, 'kg', 25, 'Telur Negeri Segar'],
-        ['prd-06', 'Indomie Goreng Original 85g', '8998866300033', 'Mie & Instan', 3500, 3200, 40, 'bks', 120, '1 Dus isi 40 bks'],
-        ['prd-07', 'Indomie Kuah Ayam Bawang 75g', '8998866300044', 'Mie & Instan', 3500, 3200, 40, 'bks', 80, '1 Dus isi 40 bks'],
-        ['prd-08', 'Kopi Kapal Api Spesial Mix 10s', '8998866400055', 'Minuman', 15000, 14000, 10, 'renceng', 35, 'Kopi Bubuk Gula'],
-        ['prd-09', 'Susu Kental Manis Frisian Flag 370g', '8998866400066', 'Minuman', 12500, 11800, 12, 'kaleng', 30, 'Susu Bendera'],
-        ['prd-10', 'Teh Pucuk Harum Melati 350ml', '8998866400077', 'Minuman', 4000, 3500, 24, 'botol', 60, '1 Dus isi 24 botol'],
-        ['prd-11', 'Le Minerale Air Mineral 600ml', '8998866400088', 'Minuman', 3500, 3000, 24, 'botol', 72, '1 Dus isi 24 botol'],
-        ['prd-12', 'Rokok Sampoerna A Mild 16', '8998866500099', 'Rokok', 36000, 34500, 10, 'bks', 50, '1 Slop isi 10 bks'],
-        ['prd-13', 'Rokok Djarum Super 12', '8998866500100', 'Rokok', 25000, 24000, 10, 'bks', 40, '1 Slop isi 10 bks'],
-        ['prd-14', 'Rokok Gudang Garam Surya 16', '8998866500111', 'Rokok', 34500, 33000, 10, 'bks', 45, '1 Slop isi 10 bks'],
-        ['prd-15', 'Sabun Cuci Piring Sunlight Jeruk Nipis 750ml', '8998866600122', 'Kebutuhan Rumah', 16000, 15000, 6, 'pouch', 25, 'Sunlight Jeruk Nipis'],
-        ['prd-16', 'Deterjen Bubuk Rinso Anti Noda 770g', '8998866600133', 'Kebutuhan Rumah', 22000, 20500, 6, 'bks', 20, 'Deterjen Rinso'],
-        ['prd-17', 'Gas Elpiji Melon 3kg (Refill)', '8998866700144', 'Gas & Galon', 22000, 21000, 5, 'tabung', 15, 'Tabung Gas 3kg'],
-      ];
+      if (isNew && !clearIfExists) {
+        // Isi 17 Produk Sembako & Rokok Madura Standar Awal
+        const defaultProducts = [
+          ['prd-01', 'Beras Ramos Setra Pulen 5kg', '8999999195001', 'Sembako', 72000, 68000, 5, 'sak', 30, 'Beras Ramos Super'],
+          ['prd-02', 'Minyak Goreng Bimoli Spesial 2L', '8998866102002', 'Sembako', 38500, 37000, 6, 'pouch', 45, 'Minyak Goreng Sawit'],
+          ['prd-03', 'Gula Pasir Gulaku Tebu Murni 1kg', '8991002103003', 'Sembako', 18000, 17200, 10, 'bks', 50, 'Gula Pasir Tebu'],
+          ['prd-04', 'Tepung Terigu Segitiga Biru 1kg', '8998866200011', 'Sembako', 13500, 12500, 10, 'bks', 40, 'Tepung Protein Sedang'],
+          ['prd-05', 'Telur Ayam Ras Fresh Negeri (1kg)', '8998866200022', 'Sembako', 29000, 27500, 10, 'kg', 25, 'Telur Negeri Segar'],
+          ['prd-06', 'Indomie Goreng Original 85g', '8998866300033', 'Mie & Instan', 3500, 3200, 40, 'bks', 120, '1 Dus isi 40 bks'],
+          ['prd-07', 'Indomie Kuah Ayam Bawang 75g', '8998866300044', 'Mie & Instan', 3500, 3200, 40, 'bks', 80, '1 Dus isi 40 bks'],
+          ['prd-08', 'Kopi Kapal Api Spesial Mix 10s', '8998866400055', 'Minuman', 15000, 14000, 10, 'renceng', 35, 'Kopi Bubuk Gula'],
+          ['prd-09', 'Susu Kental Manis Frisian Flag 370g', '8998866400066', 'Minuman', 12500, 11800, 12, 'kaleng', 30, 'Susu Bendera'],
+          ['prd-10', 'Teh Pucuk Harum Melati 350ml', '8998866400077', 'Minuman', 4000, 3500, 24, 'botol', 60, '1 Dus isi 24 botol'],
+          ['prd-11', 'Le Minerale Air Mineral 600ml', '8998866400088', 'Minuman', 3500, 3000, 24, 'botol', 72, '1 Dus isi 24 botol'],
+          ['prd-12', 'Rokok Sampoerna A Mild 16', '8998866500099', 'Rokok', 36000, 34500, 10, 'bks', 50, '1 Slop isi 10 bks'],
+          ['prd-13', 'Rokok Djarum Super 12', '8998866500100', 'Rokok', 25000, 24000, 10, 'bks', 40, '1 Slop isi 10 bks'],
+          ['prd-14', 'Rokok Gudang Garam Surya 16', '8998866500111', 'Rokok', 34500, 33000, 10, 'bks', 45, '1 Slop isi 10 bks'],
+          ['prd-15', 'Sabun Cuci Piring Sunlight Jeruk Nipis 750ml', '8998866600122', 'Kebutuhan Rumah', 16000, 15000, 6, 'pouch', 25, 'Sunlight Jeruk Nipis'],
+          ['prd-16', 'Deterjen Bubuk Rinso Anti Noda 770g', '8998866600133', 'Kebutuhan Rumah', 22000, 20500, 6, 'bks', 20, 'Deterjen Rinso'],
+          ['prd-17', 'Gas Elpiji Melon 3kg (Refill)', '8998866700144', 'Gas & Galon', 22000, 21000, 5, 'tabung', 15, 'Tabung Gas 3kg'],
+        ];
 
-      defaultProducts.forEach(p => sheet.appendRow(p));
+        defaultProducts.forEach(p => sheet.appendRow(p));
+      }
     } else if (sheetName === 'Transaksi') {
       sheet.appendRow(['ID_Nota', 'Tanggal', 'Jam', 'Tipe_Transaksi', 'Nama_Pelanggan', 'Subtotal', 'Diskon', 'Total_Bayar', 'Metode_Bayar', 'Nama_Kasir', 'Detail_Barang', 'Cabang']);
       sheet.getRange('A1:L1').setBackground('#0F172A').setFontColor('#FFFFFF').setFontWeight('bold');
@@ -657,10 +678,12 @@ function getOrCreateSheet(ss, sheetName, clearIfExists = false) {
       sheet.appendRow(['ID_User', 'Nama_Kasir', 'No_HP', 'Peran_Role', 'PIN_Akses', 'Status_Aktif', 'ID_Cabang', 'Nama_Cabang']);
       sheet.getRange('A1:H1').setBackground('#F59E0B').setFontColor('#0F172A').setFontWeight('bold');
       
-      // Default Akun Kasir & Owner Toko di Google Spreadsheet
-      sheet.appendRow(['usr-owner', 'Pemilik Toko (Owner)', '0812-9988-7766', 'owner', '1234', 'AKTIF', '', '']);
-      sheet.appendRow(['usr-01', 'Ahmad (Kasir)', '0857-1122-3344', 'staff', '1111', 'AKTIF', '', '']);
-      sheet.appendRow(['usr-02', 'Hasan (Shift Malam)', '0878-5566-7788', 'staff', '2222', 'AKTIF', '', '']);
+      if (isNew && !clearIfExists) {
+        // Default Akun Kasir & Owner Toko di Google Spreadsheet
+        sheet.appendRow(['usr-owner', 'Pemilik Toko (Owner)', '0812-9988-7766', 'owner', '1234', 'AKTIF', '', '']);
+        sheet.appendRow(['usr-01', 'Ahmad (Kasir)', '0857-1122-3344', 'staff', '1111', 'AKTIF', '', '']);
+        sheet.appendRow(['usr-02', 'Hasan (Shift Malam)', '0878-5566-7788', 'staff', '2222', 'AKTIF', '', '']);
+      }
     } else if (sheetName === 'Shift_Rekap') {
       sheet.appendRow(['ID_Serah_Terima', 'Penjaga_Lama', 'Tanggal', 'Jam', 'Total_Omzet', 'Jumlah_Transaksi', 'Cekan_Stok_Lama_vs_Fisik', 'Catatan', 'Penjaga_Penerima', 'Cabang']);
       sheet.getRange('A1:J1').setBackground('#1E293B').setFontColor('#38BDF8').setFontWeight('bold');
@@ -674,8 +697,10 @@ function getOrCreateSheet(ss, sheetName, clearIfExists = false) {
       sheet.appendRow(['ID_Cabang', 'Nama_Cabang', 'Kode_Cabang', 'Alamat', 'No_Telepon', 'Cabang_Utama', 'Status_Aktif']);
       sheet.getRange('A1:G1').setBackground('#0284C7').setFontColor('#FFFFFF').setFontWeight('bold');
 
-      // Default Cabang Pusat
-      sheet.appendRow(['br-01', 'Bherung (Pusat)', 'CB01', 'Pusat Operasional Toko', '', 'TRUE', 'AKTIF']);
+      if (isNew && !clearIfExists) {
+        // Default Cabang Pusat
+        sheet.appendRow(['br-01', 'Bherung (Pusat)', 'CB01', 'Pusat Operasional Toko', '', 'TRUE', 'AKTIF']);
+      }
     }
   }
 
@@ -689,8 +714,17 @@ function updateStockFromTransaction(ss, items) {
 
     const data = sheetProd.getDataRange().getValues();
     items.forEach(item => {
+      const itemId = item.id ? String(item.id).trim() : '';
+      const itemCode = item.code ? String(item.code).trim() : '';
+
       for (let r = 1; r < data.length; r++) {
-        if (String(data[r][0]) === String(item.id) || String(data[r][2]) === String(item.code)) {
+        const rowId = String(data[r][0] || '').trim();
+        const rowCode = String(data[r][2] || '').trim();
+
+        const matchById = itemId.length > 0 && rowId === itemId;
+        const matchByCode = itemCode.length > 0 && rowCode === itemCode;
+
+        if (matchById || matchByCode) {
           const currentStock = Number(data[r][8]) || 0;
           const newStock = Math.max(0, currentStock - (Number(item.qty) || 1));
           sheetProd.getRange(r + 1, 9).setValue(newStock);

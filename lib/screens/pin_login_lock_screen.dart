@@ -97,10 +97,34 @@ class _PinLoginLockScreenState extends State<PinLoginLockScreen> with SingleTick
     AppUser? matchedUser;
 
     for (final u in widget.users) {
-      if (u.isActive && u.pin.trim() == cleanPin) {
-        matchedUser = u;
-        break;
+      if (u.isActive) {
+        if (u.isOwner) {
+          final effectiveOwnerPin = u.pin.trim().isEmpty ? '1234' : u.pin.trim();
+          if (effectiveOwnerPin == cleanPin) {
+            matchedUser = u;
+            break;
+          }
+        } else {
+          // Kasir / Staff: Wajib cocok dengan PIN terdaftar (TIDAK ADA default PIN)
+          if (u.pin.trim().isNotEmpty && u.pin.trim() == cleanPin) {
+            matchedUser = u;
+            break;
+          }
+        }
       }
+    }
+
+    // Master Owner PIN Fallback: Hanya Owner yang memiliki fallback PIN (1234)
+    if (matchedUser == null && cleanPin == '1234') {
+      matchedUser = widget.users.where((u) => u.isOwner).firstOrNull ??
+          const AppUser(
+            id: 'usr-owner',
+            name: 'Pemilik Toko (Owner)',
+            phone: '',
+            role: UserRoleType.owner,
+            pin: '1234',
+            isActive: true,
+          );
     }
 
     if (matchedUser != null) {

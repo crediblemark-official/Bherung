@@ -23,6 +23,7 @@ class AppDrawerMenu extends StatelessWidget {
   final VoidCallback onOpenStockControl;
   final VoidCallback onOpenRestock;
   final VoidCallback onOpenRoleSwitcher;
+  final VoidCallback? onSwitchBranch;
 
   const AppDrawerMenu({
     super.key,
@@ -44,6 +45,7 @@ class AppDrawerMenu extends StatelessWidget {
     required this.onOpenStockControl,
     required this.onOpenRestock,
     required this.onOpenRoleSwitcher,
+    this.onSwitchBranch,
   });
 
   @override
@@ -123,41 +125,58 @@ class AppDrawerMenu extends StatelessWidget {
                               ),
                             ),
                           if (isMultiBranchEnabled && activeBranch != null)
-                            Container(
-                              margin: const EdgeInsets.only(top: 4),
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: activeBranch!.isMain
-                                    ? AppTheme.primaryGold.withValues(alpha: 0.2)
-                                    : AppTheme.primaryTeal.withValues(alpha: 0.25),
+                            Tooltip(
+                              message: currentUser.isOwner
+                                  ? 'Cabang aktif perangkat: ${activeBranch!.name} (Sentuh untuk ganti cabang)'
+                                  : 'Cabang aktif perangkat: ${activeBranch!.name} (Terkunci oleh Pemilik Toko)',
+                              child: InkWell(
+                                onTap: currentUser.isOwner ? onSwitchBranch : null,
                                 borderRadius: BorderRadius.circular(4),
-                                border: Border.all(
-                                  color: activeBranch!.isMain
-                                      ? AppTheme.primaryGold.withValues(alpha: 0.5)
-                                      : AppTheme.primaryTeal.withValues(alpha: 0.5),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.storefront_rounded,
-                                    size: 11,
-                                    color: activeBranch!.isMain ? AppTheme.goldAccent : const Color(0xFF5EEAD4),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Flexible(
-                                    child: Text(
-                                      activeBranch!.name,
-                                      style: TextStyle(
-                                        color: activeBranch!.isMain ? AppTheme.goldAccent : const Color(0xFF5EEAD4),
-                                        fontSize: 9.5,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
+                                child: Container(
+                                  margin: const EdgeInsets.only(top: 4),
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: activeBranch!.isMain
+                                        ? AppTheme.primaryGold.withValues(alpha: 0.2)
+                                        : AppTheme.primaryTeal.withValues(alpha: 0.25),
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(
+                                      color: activeBranch!.isMain
+                                          ? AppTheme.primaryGold.withValues(alpha: 0.5)
+                                          : AppTheme.primaryTeal.withValues(alpha: 0.5),
                                     ),
                                   ),
-                                ],
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.storefront_rounded,
+                                        size: 11,
+                                        color: activeBranch!.isMain ? AppTheme.goldAccent : const Color(0xFF5EEAD4),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Flexible(
+                                        child: Text(
+                                          activeBranch!.name,
+                                          style: TextStyle(
+                                            color: activeBranch!.isMain ? AppTheme.goldAccent : const Color(0xFF5EEAD4),
+                                            fontSize: 9.5,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      if (currentUser.isOwner && onSwitchBranch != null) ...[
+                                        const SizedBox(width: 3),
+                                        Icon(
+                                          Icons.swap_horiz_rounded,
+                                          size: 10,
+                                          color: activeBranch!.isMain ? AppTheme.goldAccent : const Color(0xFF5EEAD4),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
                               ),
                             ),
                         ],

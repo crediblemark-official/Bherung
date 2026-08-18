@@ -153,6 +153,10 @@ class _KasbonScreenState extends State<KasbonScreen> {
                       const SizedBox(height: 4),
                       _receiptRow('No. HP / WA', kasbon.customerPhone),
                     ],
+                    if (kasbon.branchName != null && kasbon.branchName!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      _receiptRow('Cabang Toko', kasbon.branchName!),
+                    ],
                     if (kasbon.dueDate != null) ...[
 
                       const SizedBox(height: 4),
@@ -266,9 +270,11 @@ class _KasbonScreenState extends State<KasbonScreen> {
   @override
   Widget build(BuildContext context) {
     final filtered = widget.kasbonRecords.where((k) {
+      final query = _searchQuery.toLowerCase();
       final matchesSearch = _searchQuery.isEmpty ||
-          k.customerName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          k.customerPhone.contains(_searchQuery);
+          k.customerName.toLowerCase().contains(query) ||
+          k.customerPhone.contains(_searchQuery) ||
+          (k.branchName != null && k.branchName!.toLowerCase().contains(query));
       final matchesTab = _activeTab == 0 ? !k.isPaid : k.isPaid;
       return matchesSearch && matchesTab;
     }).toList();
@@ -511,6 +517,20 @@ class _KasbonScreenState extends State<KasbonScreen> {
                                                         child: Text(
                                                           'Jatuh Tempo: ${kasbon.dueDate!.day}/${kasbon.dueDate!.month}/${kasbon.dueDate!.year}',
                                                           style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFFB45309)),
+                                                        ),
+                                                      ),
+                                                      const SizedBox(width: 6),
+                                                    ],
+                                                    if (kasbon.branchName != null && kasbon.branchName!.isNotEmpty) ...[
+                                                      Container(
+                                                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                                        decoration: BoxDecoration(
+                                                          color: const Color(0xFFE0F2FE),
+                                                          borderRadius: BorderRadius.circular(4),
+                                                        ),
+                                                        child: Text(
+                                                          '📍 ${kasbon.branchName}',
+                                                          style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF0369A1)),
                                                         ),
                                                       ),
                                                       const SizedBox(width: 6),

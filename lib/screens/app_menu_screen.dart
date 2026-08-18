@@ -24,6 +24,7 @@ class AppMenuScreen extends StatelessWidget {
   final VoidCallback onOpenRestock;
   final VoidCallback onOpenRoleSwitcher;
   final VoidCallback? onLogoutOwner;
+  final VoidCallback? onSwitchBranch;
 
   const AppMenuScreen({
     super.key,
@@ -46,6 +47,7 @@ class AppMenuScreen extends StatelessWidget {
     required this.onOpenRestock,
     required this.onOpenRoleSwitcher,
     this.onLogoutOwner,
+    this.onSwitchBranch,
   });
 
   @override
@@ -122,37 +124,54 @@ class AppMenuScreen extends StatelessWidget {
                     ],
                     if (isMultiBranchEnabled && activeBranch != null) ...[
                       const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                        decoration: BoxDecoration(
-                          color: activeBranch!.isMain
-                              ? AppTheme.primaryGold.withValues(alpha: 0.2)
-                              : AppTheme.primaryTeal.withValues(alpha: 0.25),
+                      Tooltip(
+                        message: currentUser.isOwner
+                            ? 'Cabang aktif perangkat: ${activeBranch!.name} (Sentuh untuk ganti)'
+                            : 'Cabang aktif perangkat: ${activeBranch!.name} (Terkunci oleh Pemilik Toko)',
+                        child: InkWell(
+                          onTap: currentUser.isOwner ? onSwitchBranch : null,
                           borderRadius: BorderRadius.circular(5),
-                          border: Border.all(
-                            color: activeBranch!.isMain
-                                ? AppTheme.primaryGold.withValues(alpha: 0.5)
-                                : AppTheme.primaryTeal.withValues(alpha: 0.5),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.storefront_rounded,
-                              size: 10,
-                              color: activeBranch!.isMain ? AppTheme.goldAccent : const Color(0xFF5EEAD4),
-                            ),
-                            const SizedBox(width: 3),
-                            Text(
-                              activeBranch!.name,
-                              style: TextStyle(
-                                color: activeBranch!.isMain ? AppTheme.goldAccent : const Color(0xFF5EEAD4),
-                                fontSize: 8.5,
-                                fontWeight: FontWeight.w900,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                            decoration: BoxDecoration(
+                              color: activeBranch!.isMain
+                                  ? AppTheme.primaryGold.withValues(alpha: 0.2)
+                                  : AppTheme.primaryTeal.withValues(alpha: 0.25),
+                              borderRadius: BorderRadius.circular(5),
+                              border: Border.all(
+                                color: activeBranch!.isMain
+                                    ? AppTheme.primaryGold.withValues(alpha: 0.5)
+                                    : AppTheme.primaryTeal.withValues(alpha: 0.5),
                               ),
                             ),
-                          ],
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.storefront_rounded,
+                                  size: 10,
+                                  color: activeBranch!.isMain ? AppTheme.goldAccent : const Color(0xFF5EEAD4),
+                                ),
+                                const SizedBox(width: 3),
+                                Text(
+                                  activeBranch!.name,
+                                  style: TextStyle(
+                                    color: activeBranch!.isMain ? AppTheme.goldAccent : const Color(0xFF5EEAD4),
+                                    fontSize: 8.5,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                                if (currentUser.isOwner && onSwitchBranch != null) ...[
+                                  const SizedBox(width: 2),
+                                  Icon(
+                                    Icons.swap_horiz_rounded,
+                                    size: 9,
+                                    color: activeBranch!.isMain ? AppTheme.goldAccent : const Color(0xFF5EEAD4),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ],

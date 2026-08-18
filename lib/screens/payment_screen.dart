@@ -12,6 +12,7 @@ class PaymentScreen extends StatefulWidget {
   final TransactionType transactionType;
   final String customerName;
   final StoreProfile? storeProfile;
+  final String? branchName;
   final Function({required bool isKasbon, String? customerName, String? customerPhone, DateTime? dueDate}) onSuccess;
 
   const PaymentScreen({
@@ -24,6 +25,7 @@ class PaymentScreen extends StatefulWidget {
     required this.transactionType,
     required this.customerName,
     this.storeProfile,
+    this.branchName,
     required this.onSuccess,
   });
 
@@ -778,7 +780,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppTheme.textDark),
             ),
             Text(
-              'No. Struk: $_receiptNo',
+              'No. Struk: $_receiptNo${widget.branchName != null && widget.branchName!.isNotEmpty ? " • 📍 ${widget.branchName}" : ""}',
               style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
             ),
             const SizedBox(height: 16),

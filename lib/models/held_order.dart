@@ -8,6 +8,8 @@ class HeldOrder {
   final List<CartItem> items;
   final double deliveryFee;
   final DateTime createdAt;
+  final String? branchId;
+  final String? branchName;
 
   HeldOrder({
     required this.id,
@@ -16,6 +18,8 @@ class HeldOrder {
     required this.items,
     this.deliveryFee = 0.0,
     required this.createdAt,
+    this.branchId,
+    this.branchName,
   });
 
   int get totalItemCount => items.fold(0, (sum, item) => sum + item.quantity);

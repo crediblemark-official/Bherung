@@ -1534,15 +1534,17 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
           // 4. List Cabang
           ..._branches.map((b) {
             final isCurrentActive = b.id == _activeBranchId;
+            final assignedStaff = _users.where((u) => !u.isOwner && u.branchId == b.id).toList();
+
             return Container(
-              margin: const EdgeInsets.only(bottom: 10),
+              margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: isCurrentActive ? AppTheme.primaryTeal : AppTheme.borderColor,
-                  width: isCurrentActive ? 1.5 : 1.0,
+                  width: isCurrentActive ? 1.6 : 1.0,
                 ),
                 boxShadow: AppTheme.softShadow,
               ),
@@ -1553,14 +1555,14 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       CircleAvatar(
-                        radius: 18,
+                        radius: 20,
                         backgroundColor: b.isMain
-                            ? AppTheme.primaryGold.withValues(alpha: 0.15)
-                            : AppTheme.primaryTeal.withValues(alpha: 0.12),
+                            ? AppTheme.primaryGold.withValues(alpha: 0.18)
+                            : AppTheme.primaryTeal.withValues(alpha: 0.15),
                         child: Icon(
                           b.isMain ? Icons.store_rounded : Icons.storefront_rounded,
                           color: b.isMain ? const Color(0xFFB45309) : AppTheme.primaryTeal,
-                          size: 18,
+                          size: 20,
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -1573,7 +1575,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                                 Flexible(
                                   child: Text(
                                     b.name,
-                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                                    style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: AppTheme.textDark),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
@@ -1612,59 +1614,32 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                                       style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF92400E)),
                                     ),
                                   ),
-                                if (isCurrentActive)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFCCFBF1),
-                                      borderRadius: BorderRadius.circular(4),
-                                      border: Border.all(color: const Color(0xFF99F6E4)),
-                                    ),
-                                    child: const Text(
-                                      '📱 AKTIF DI HP INI',
-                                      style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF0F766E)),
-                                    ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: isCurrentActive ? const Color(0xFFCCFBF1) : const Color(0xFFF1F5F9),
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(color: isCurrentActive ? const Color(0xFF99F6E4) : const Color(0xFFCBD5E1)),
                                   ),
-                                Builder(
-                                  builder: (context) {
-                                    final assignedStaff = _users.where((u) => !u.isOwner && u.branchId == b.id).toList();
-                                    return InkWell(
-                                      onTap: () => _showAssignStaffToBranchDialog(b),
-                                      borderRadius: BorderRadius.circular(4),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: assignedStaff.isNotEmpty ? const Color(0xFFF0FDF4) : const Color(0xFFFEF3C7),
-                                          borderRadius: BorderRadius.circular(4),
-                                          border: Border.all(color: assignedStaff.isNotEmpty ? const Color(0xFFBBF7D0) : const Color(0xFFFDE68A)),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Flexible(
-                                              child: Text(
-                                                assignedStaff.isNotEmpty
-                                                    ? '👤 Penjaga: ${assignedStaff.map((u) => u.name).join(", ")}'
-                                                    : '👤 Belum ada penjaga',
-                                                style: TextStyle(
-                                                  fontSize: 9,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: assignedStaff.isNotEmpty ? const Color(0xFF166534) : const Color(0xFF92400E),
-                                                ),
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 3),
-                                            Icon(
-                                              Icons.edit_rounded,
-                                              size: 10,
-                                              color: assignedStaff.isNotEmpty ? const Color(0xFF166534) : const Color(0xFF92400E),
-                                            ),
-                                          ],
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.phone_android_rounded,
+                                        size: 10,
+                                        color: isCurrentActive ? const Color(0xFF0F766E) : const Color(0xFF64748B),
+                                      ),
+                                      const SizedBox(width: 3),
+                                      Text(
+                                        isCurrentActive ? '📱 Perangkat Ini (Aktif)' : '📱 Perangkat Cabang Terpisah',
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w900,
+                                          color: isCurrentActive ? const Color(0xFF0F766E) : const Color(0xFF64748B),
                                         ),
                                       ),
-                                    );
-                                  },
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
@@ -1693,6 +1668,47 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         ],
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 8),
+                  // Dedicated Penjaga & Perangkat Status Box
+                  InkWell(
+                    onTap: () => _showAssignStaffToBranchDialog(b),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: assignedStaff.isNotEmpty ? const Color(0xFFF0FDF4) : const Color(0xFFFFFBEB),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: assignedStaff.isNotEmpty ? const Color(0xFFBBF7D0) : const Color(0xFFFDE68A),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            assignedStaff.isNotEmpty ? Icons.badge_rounded : Icons.person_off_rounded,
+                            size: 14,
+                            color: assignedStaff.isNotEmpty ? const Color(0xFF166534) : const Color(0xFF92400E),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              assignedStaff.isNotEmpty
+                                  ? 'Penjaga Bertugas: ${assignedStaff.map((u) => "${u.name}${u.phone.isNotEmpty ? " (${u.phone})" : ""}").join(", ")}'
+                                  : 'Belum ada penjaga ditugaskan (Ketuk untuk atur penjaga)',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.bold,
+                                color: assignedStaff.isNotEmpty ? const Color(0xFF166534) : const Color(0xFF92400E),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right_rounded, size: 14, color: AppTheme.textMuted),
+                        ],
+                      ),
+                    ),
                   ),
                   if (b.address.isNotEmpty || b.phone.isNotEmpty) ...[
                     const SizedBox(height: 8),
@@ -1958,6 +1974,9 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                 final nav = Navigator.of(ctx);
 
                 await InventoryStorageService().saveBranches(updatedList);
+                if (_appsScriptService.isConnected) {
+                  _appsScriptService.syncBranchesToSpreadsheet(updatedList);
+                }
                 setState(() {
                   _branches = updatedList;
                 });
@@ -2018,6 +2037,9 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
         await InventoryStorageService().saveActiveBranchId(_activeBranchId);
       }
       await InventoryStorageService().saveBranches(updatedList);
+      if (_appsScriptService.isConnected) {
+        _appsScriptService.syncBranchesToSpreadsheet(updatedList);
+      }
       setState(() {
         _branches = updatedList;
       });

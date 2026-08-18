@@ -134,9 +134,11 @@ class PosHeaderBar extends StatelessWidget {
                     if (isMultiBranchEnabled && activeBranch != null) ...[
                       const SizedBox(width: 6),
                       Tooltip(
-                        message: 'Cabang aktif: ${activeBranch!.name} (Sentuh untuk ganti cabang)',
+                        message: currentUser.isOwner
+                            ? 'Cabang aktif: ${activeBranch!.name} (Sentuh untuk ganti cabang)'
+                            : 'Cabang aktif: ${activeBranch!.name} (Terkunci oleh Pemilik Toko)',
                         child: InkWell(
-                          onTap: onSwitchBranch,
+                          onTap: currentUser.isOwner ? onSwitchBranch : null,
                           borderRadius: BorderRadius.circular(6),
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
@@ -173,7 +175,7 @@ class PosHeaderBar extends StatelessWidget {
                                     maxLines: 1,
                                   ),
                                 ),
-                                if (onSwitchBranch != null) ...[
+                                if (currentUser.isOwner && onSwitchBranch != null) ...[
                                   const SizedBox(width: 2),
                                   Icon(
                                     Icons.keyboard_arrow_down_rounded,

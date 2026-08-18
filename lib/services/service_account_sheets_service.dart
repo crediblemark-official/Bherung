@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import '../models/branch.dart';
 import '../models/product.dart';
 import '../models/store_profile.dart';
 import '../theme/app_theme.dart';
@@ -77,11 +78,19 @@ class ServiceAccountSheetsService {
         final name = (row.length > 1 ? row[1]?.toString() : null) ?? 'Produk';
         final code = (row.length > 2 ? row[2]?.toString() : null) ?? '';
         final category = (row.length > 3 ? row[3]?.toString() : null) ?? 'sembako';
-        final price = (row.length > 4 && row[4] is num) ? (row[4] as num).toDouble() : (double.tryParse(row.length > 4 ? row[4]?.toString() ?? '0' : '0') ?? 0.0);
-        final costPrice = (row.length > 5 && row[5] is num) ? (row[5] as num).toDouble() : (double.tryParse(row.length > 5 ? row[5]?.toString() ?? '0' : '0') ?? 0.0);
-        final wholesaleMinQty = (row.length > 6 && row[6] is num) ? (row[6] as num).toInt() : int.tryParse(row.length > 6 ? row[6]?.toString() ?? '' : '');
+        final price = (row.length > 4 && row[4] is num)
+            ? (row[4] as num).toDouble()
+            : (double.tryParse(row.length > 4 ? row[4]?.toString() ?? '0' : '0') ?? 0.0);
+        final wholesalePrice = (row.length > 5 && row[5] is num)
+            ? (row[5] as num).toDouble()
+            : double.tryParse(row.length > 5 ? row[5]?.toString() ?? '' : '');
+        final wholesaleMinQty = (row.length > 6 && row[6] is num)
+            ? (row[6] as num).toInt()
+            : int.tryParse(row.length > 6 ? row[6]?.toString() ?? '' : '');
         final unit = (row.length > 7 ? row[7]?.toString() : null) ?? 'pcs';
-        final stock = (row.length > 8 && row[8] is num) ? (row[8] as num).toInt() : (int.tryParse(row.length > 8 ? row[8]?.toString() ?? '0' : '0') ?? 0);
+        final stock = (row.length > 8 && row[8] is num)
+            ? (row[8] as num).toInt()
+            : (int.tryParse(row.length > 8 ? row[8]?.toString() ?? '0' : '0') ?? 0);
         final description = row.length > 9 ? row[9]?.toString() : null;
 
         final catId = category.toLowerCase().replaceAll(' ', '_');
@@ -90,7 +99,7 @@ class ServiceAccountSheetsService {
             id: id,
             name: name,
             price: price,
-            costPrice: costPrice,
+            wholesalePrice: wholesalePrice,
             wholesaleMinQty: wholesaleMinQty,
             unit: unit,
             categoryId: catId,
@@ -114,14 +123,23 @@ class ServiceAccountSheetsService {
 
     final List<AppUser> users = [];
     for (final row in rows) {
-      if (row.length >= 4 && row[0] != null) {
+      if (row.isNotEmpty && row[0] != null) {
         final id = row[0].toString();
-        final name = row[1]?.toString() ?? 'Kasir';
-        final roleStr = (row[2]?.toString() ?? 'staff').toLowerCase();
-        final pin = row[3]?.toString() ?? '1234';
-        final status = row.length > 4 ? (row[4]?.toString() ?? 'Aktif') : 'Aktif';
+        final name = (row.length > 1 ? row[1]?.toString() : null) ?? 'Kasir';
+        final phone = (row.length > 2 ? row[2]?.toString() : null) ?? '';
+        final roleStr = (row.length > 3 ? row[3]?.toString() : 'staff') ?? 'staff';
+        final pin = (row.length > 4 ? row[4]?.toString() : '1234') ?? '1234';
+        final status = (row.length > 5 ? row[5]?.toString() : 'AKTIF') ?? 'AKTIF';
+        final branchId = row.length > 6 ? row[6]?.toString() : null;
+        final branchName = row.length > 7 ? row[7]?.toString() : null;
 
-        final role = (roleStr == 'owner' || roleStr.contains('pemilik'))
+        final cleanStatus = status.trim().toLowerCase();
+        final isActive = cleanStatus == 'aktif' ||
+            cleanStatus == 'true' ||
+            cleanStatus == '1' ||
+            (cleanStatus != 'nonaktif' && cleanStatus != 'false' && cleanStatus != '0' && cleanStatus.isNotEmpty);
+
+        final role = (roleStr.toLowerCase() == 'owner' || roleStr.toLowerCase().contains('pemilik'))
             ? UserRoleType.owner
             : UserRoleType.staff;
 
@@ -129,10 +147,12 @@ class ServiceAccountSheetsService {
           AppUser(
             id: id,
             name: name,
-            phone: '',
+            phone: phone,
             role: role,
             pin: pin,
-            isActive: !status.toLowerCase().contains('nonaktif'),
+            isActive: isActive,
+            branchId: role == UserRoleType.staff ? (branchId?.isNotEmpty == true ? branchId : null) : null,
+            branchName: role == UserRoleType.staff ? (branchName?.isNotEmpty == true ? branchName : null) : null,
           ),
         );
       }
@@ -149,18 +169,21 @@ class ServiceAccountSheetsService {
     for (final row in rows) {
       if (row.isNotEmpty && row[0] != null) {
         final id = row[0].toString();
+        final customerName = (row.length > 1 ? row[1]?.toString() : null) ?? 'Pelanggan';
+        final customerPhone = (row.length > 2 ? row[2]?.toString() : null) ?? '';
+        final amount = (row.length > 3 && row[3] is num)
+            ? (row[3] as num).toDouble()
+            : (double.tryParse(row.length > 3 ? row[3]?.toString() ?? '0' : '0') ?? 0.0);
         DateTime createdAt = DateTime.now();
-        if (row.length > 1 && row[1] != null) {
-          createdAt = DateTime.tryParse(row[1].toString()) ?? DateTime.now();
+        if (row.length > 4 && row[4] != null) {
+          createdAt = DateTime.tryParse(row[4].toString()) ?? DateTime.now();
         }
-        final customerName = (row.length > 2 ? row[2]?.toString() : null) ?? 'Pelanggan';
-        final customerPhone = (row.length > 3 ? row[3]?.toString() : null) ?? '';
-        final amount = (row.length > 4 && row[4] is num) ? (row[4] as num).toDouble() : (double.tryParse(row.length > 4 ? row[4]?.toString() ?? '0' : '0') ?? 0.0);
         DateTime? dueDate;
-        if (row.length > 5 && row[5] != null && row[5].toString() != '-') {
+        if (row.length > 5 && row[5] != null && row[5].toString() != '-' && row[5].toString().isNotEmpty) {
           dueDate = DateTime.tryParse(row[5].toString());
         }
         final status = (row.length > 6 ? row[6]?.toString() : '') ?? '';
+        final branch = row.length > 8 ? row[8]?.toString() : null;
 
         kasbonList.add(
           KasbonRecord(
@@ -172,6 +195,7 @@ class ServiceAccountSheetsService {
             dueDate: dueDate,
             isPaid: status.toLowerCase().contains('lunas'),
             items: [],
+            branchName: branch,
           ),
         );
       }
@@ -189,39 +213,43 @@ class ServiceAccountSheetsService {
       if (row.isNotEmpty && row[0] != null) {
         final id = row[0].toString();
         final cashierName = (row.length > 1 ? row[1]?.toString() : null) ?? 'Kasir';
-        final shiftName = (row.length > 2 ? row[2]?.toString() : null) ?? 'Shift';
-        DateTime startTime = DateTime.now();
-        if (row.length > 3 && row[3] != null) {
-          startTime = DateTime.tryParse(row[3].toString()) ?? DateTime.now();
+        final dateStr = (row.length > 2 ? row[2]?.toString() : '') ?? '';
+        final timeStr = (row.length > 3 ? row[3]?.toString() : '') ?? '';
+        final totalSales = (row.length > 4 && row[4] is num)
+            ? (row[4] as num).toDouble()
+            : (double.tryParse(row.length > 4 ? row[4]?.toString() ?? '0' : '0') ?? 0.0);
+        final txCount = (row.length > 5 && row[5] is num)
+            ? (row[5] as num).toInt()
+            : (int.tryParse(row.length > 5 ? row[5]?.toString() ?? '0' : '0') ?? 0);
+        final notes = row.length > 7 ? row[7]?.toString() : null;
+        final nextCashier = (row.length > 8 ? row[8]?.toString() : null) ?? '';
+        final branchName = row.length > 9 ? row[9]?.toString() : null;
+
+        DateTime recordTime = DateTime.now();
+        if (dateStr.isNotEmpty) {
+          final isoStr = timeStr.isNotEmpty ? '${dateStr}T$timeStr' : dateStr;
+          recordTime = DateTime.tryParse(isoStr) ?? DateTime.now();
         }
-        DateTime? endTime;
-        if (row.length > 4 && row[4] != null) {
-          endTime = DateTime.tryParse(row[4].toString());
-        }
-        final startingCash = (row.length > 5 && row[5] is num) ? (row[5] as num).toDouble() : 0.0;
-        final totalSales = (row.length > 6 && row[6] is num) ? (row[6] as num).toDouble() : 0.0;
-        final physicalCash = (row.length > 7 && row[7] is num) ? (row[7] as num).toDouble() : 0.0;
-        final cashDiff = (row.length > 8 && row[8] is num) ? (row[8] as num).toDouble() : 0.0;
-        final notes = row.length > 9 ? row[9]?.toString() : null;
-        final nextCashier = (row.length > 10 ? row[10]?.toString() : null) ?? '';
 
         shifts.add(
           ShiftRecord(
             id: id,
             cashierName: cashierName,
-            shiftName: shiftName,
-            startTime: startTime,
-            endTime: endTime ?? DateTime.now(),
-            startingCashDrawer: startingCash,
+            shiftName: 'Laporan Jaga',
+            startTime: recordTime,
+            endTime: recordTime,
+            startingCashDrawer: 0.0,
             systemCashSales: totalSales,
             systemQrisSales: 0.0,
             systemKasbonSales: 0.0,
             totalSystemSales: totalSales,
-            physicalCashCounted: physicalCash,
-            cashDifference: cashDiff,
+            physicalCashCounted: 0.0,
+            cashDifference: 0.0,
             stockAudits: [],
             handoverNotes: notes,
             nextCashierName: nextCashier,
+            transactionCount: txCount,
+            branchName: branchName,
           ),
         );
       }
@@ -238,18 +266,24 @@ class ServiceAccountSheetsService {
     for (final row in rows) {
       if (row.isNotEmpty && row[0] != null) {
         final id = row[0].toString();
+        final productId = (row.length > 1 ? row[1]?.toString() : null) ?? '';
+        final productName = (row.length > 2 ? row[2]?.toString() : null) ?? 'Produk';
+        final typeStr = (row.length > 3 ? row[3]?.toString() : 'restock') ?? 'restock';
+        final qty = (row.length > 4 && row[4] is num)
+            ? (row[4] as num).toInt()
+            : (int.tryParse(row.length > 4 ? row[4]?.toString() ?? '0' : '0') ?? 0);
+        final prevStock = (row.length > 5 && row[5] is num)
+            ? (row[5] as num).toInt()
+            : (int.tryParse(row.length > 5 ? row[5]?.toString() ?? '0' : '0') ?? 0);
+        final newStock = (row.length > 6 && row[6] is num)
+            ? (row[6] as num).toInt()
+            : (int.tryParse(row.length > 6 ? row[6]?.toString() ?? '0' : '0') ?? 0);
         DateTime timestamp = DateTime.now();
-        if (row.length > 1 && row[1] != null) {
-          timestamp = DateTime.tryParse(row[1].toString()) ?? DateTime.now();
+        if (row.length > 7 && row[7] != null) {
+          timestamp = DateTime.tryParse(row[7].toString()) ?? DateTime.now();
         }
-        final productId = (row.length > 3 ? row[3]?.toString() : null) ?? '';
-        final productName = (row.length > 4 ? row[4]?.toString() : null) ?? 'Produk';
-        final typeStr = (row.length > 5 ? row[5]?.toString() : 'restock') ?? 'restock';
-        final qty = (row.length > 6 && row[6] is num) ? (row[6] as num).toInt() : (int.tryParse(row.length > 6 ? row[6]?.toString() ?? '0' : '0') ?? 0);
-        final prevStock = (row.length > 7 && row[7] is num) ? (row[7] as num).toInt() : 0;
-        final newStock = (row.length > 8 && row[8] is num) ? (row[8] as num).toInt() : 0;
-        final notes = row.length > 9 ? row[9]?.toString() : null;
-        final cashier = (row.length > 10 ? row[10]?.toString() : null) ?? 'Admin';
+        final notes = row.length > 8 ? row[8]?.toString() : null;
+        final cashier = (row.length > 9 ? row[9]?.toString() : null) ?? 'Admin';
 
         StockMutationType type = StockMutationType.restock;
         if (typeStr.toLowerCase().contains('out') || typeStr.toLowerCase().contains('jual')) {
@@ -287,29 +321,71 @@ class ServiceAccountSheetsService {
     final row = rows.first;
     if (row.isNotEmpty) {
       final name = row[0]?.toString() ?? 'Bherung';
-      final defaultCash = (row.length > 3 && row[3] is num) ? (row[3] as num).toDouble() : (double.tryParse(row.length > 3 ? row[3]?.toString() ?? '200000' : '200000') ?? 200000.0);
-      final bankName = (row.length > 5 ? row[5]?.toString() : null) ?? '';
-      final bankAccount = (row.length > 6 ? row[6]?.toString() : null) ?? '';
-      final bankAccountHolder = (row.length > 7 ? row[7]?.toString() : null) ?? '';
+      final tagline = (row.length > 1 ? row[1]?.toString() : null) ?? '24 JAM';
+      final defaultCash = (row.length > 2 && row[2] is num)
+          ? (row[2] as num).toDouble()
+          : (double.tryParse(row.length > 2 ? row[2]?.toString() ?? '200000' : '200000') ?? 200000.0);
+      final qrisName = row.length > 3 ? row[3]?.toString() : null;
+      final qrisNmid = row.length > 4 ? row[4]?.toString() : null;
 
       final List<BankAccount> banks = [];
-      if (bankName.isNotEmpty && bankAccount.isNotEmpty) {
-        banks.add(
-          BankAccount(
-            bankName: bankName,
-            accountNumber: bankAccount,
-            accountHolder: bankAccountHolder,
-          ),
-        );
+      if (row.length > 5 && row[5] != null) {
+        try {
+          final decoded = jsonDecode(row[5].toString());
+          if (decoded is List) {
+            for (final b in decoded) {
+              if (b is Map<String, dynamic>) {
+                banks.add(BankAccount.fromJson(b));
+              }
+            }
+          }
+        } catch (_) {}
       }
 
       return StoreProfile(
         name: name,
-        tagline: '24 JAM',
+        tagline: tagline,
         defaultStartingCash: defaultCash,
+        qrisName: qrisName ?? '',
+        qrisNmid: qrisNmid ?? '',
         bankAccounts: banks,
       );
     }
     return null;
+  }
+
+  /// 8. Muat Daftar Cabang Toko dari Google Spreadsheet
+  Future<List<Branch>?> fetchBranches(String spreadsheetId) async {
+    final rows = await _fetchSheetRowsGviz(spreadsheetId, 'Daftar_Cabang');
+    if (rows == null || rows.isEmpty) return null;
+
+    final List<Branch> branches = [];
+    for (final row in rows) {
+      if (row.isNotEmpty && row[0] != null) {
+        final id = row[0].toString();
+        final name = (row.length > 1 ? row[1]?.toString() : null) ?? 'Cabang';
+        final code = (row.length > 2 ? row[2]?.toString() : null) ?? '';
+        final address = (row.length > 3 ? row[3]?.toString() : null) ?? '';
+        final phone = (row.length > 4 ? row[4]?.toString() : null) ?? '';
+        final isMainStr = (row.length > 5 ? row[5]?.toString() : '') ?? '';
+        final statusStr = (row.length > 6 ? row[6]?.toString() : '') ?? '';
+
+        final isMain = isMainStr.toLowerCase() == 'true' || isMainStr == '1';
+        final isActive = !statusStr.toLowerCase().contains('nonaktif') && statusStr.toLowerCase() != 'false';
+
+        branches.add(
+          Branch(
+            id: id,
+            name: name,
+            code: code,
+            address: address,
+            phone: phone,
+            isMain: isMain,
+            isActive: isActive,
+          ),
+        );
+      }
+    }
+    return branches.isNotEmpty ? branches : null;
   }
 }
