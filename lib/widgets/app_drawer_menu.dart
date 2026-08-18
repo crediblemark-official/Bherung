@@ -272,7 +272,17 @@ class AppDrawerMenu extends StatelessWidget {
                 ),
                 const Divider(height: 16),
 
-                // 1. Kontrol Stok & Expired
+                // 1. Serah Terima Jaga & Cekan Toko
+                _buildDrawerItem(
+                  context: context,
+                  icon: Icons.fact_check_rounded,
+                  iconColor: const Color(0xFF3B82F6),
+                  title: 'Serah Terima Jaga & Cekan Toko',
+                  subtitle: 'Pencocokan stok fisik vs stok lama, omzet & estafet jaga',
+                  onTap: onOpenShiftHandover,
+                ),
+
+                // 2. Kontrol Stok & Expired
                 _buildDrawerItem(
                   context: context,
                   icon: Icons.inventory_2_rounded,
@@ -282,7 +292,7 @@ class AppDrawerMenu extends StatelessWidget {
                   onTap: onOpenStockControl,
                 ),
 
-                // 2. Kulakan / Restock
+                // 3. Kulakan / Restock
                 _buildDrawerItem(
                   context: context,
                   icon: Icons.add_box_rounded,
@@ -290,16 +300,6 @@ class AppDrawerMenu extends StatelessWidget {
                   title: 'Kulakan / Tambah Stok',
                   subtitle: 'Restock barang masuk dari agen sembako',
                   onTap: onOpenRestock,
-                ),
-
-                // 3. Serah Terima Shift
-                _buildDrawerItem(
-                  context: context,
-                  icon: Icons.sync_alt_rounded,
-                  iconColor: const Color(0xFF3B82F6),
-                  title: 'Serah Terima Jaga & Kas',
-                  subtitle: 'Tutup jaga, rekonsiliasi kas laci & rokok',
-                  onTap: onOpenShiftHandover,
                 ),
 
                 // 4. Buku Kasbon

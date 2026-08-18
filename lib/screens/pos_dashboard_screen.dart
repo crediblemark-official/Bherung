@@ -885,8 +885,13 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
             _stockMutations.insert(0, mutation);
 
             // Simpan ke local storage secara permanen
-            InventoryStorageService().saveProducts(_products);
-            InventoryStorageService().saveMutations(_stockMutations);
+            final storage = InventoryStorageService();
+            storage.saveProducts(_products);
+            storage.saveMutations(_stockMutations);
+            storage.loadBaselineStocks().then((baselineMap) {
+              baselineMap[newProduct.id] = newProduct.stock;
+              storage.saveBaselineStocks(baselineMap);
+            });
 
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -946,9 +951,8 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
     );
   }
 
-  // Laporan & Tutup Kas — Penjaga bisa kirim langsung, Owner pantau via Google Sheets
+  // Serah Terima Jaga & Cekan Toko (Pencocokan Stok Fisik, Hitung Selisih Stok Lama vs Baru & Estafet Penjaga)
   void _showShiftHandoverDialog([AppUser? initialIncomingUser]) {
-    // Ambil omzet periode sebelumnya dari rekap terakhir
     final double prevSales = _shiftRecords.isNotEmpty ? _shiftRecords.first.totalSystemSales : 0;
 
     Navigator.push(
@@ -963,32 +967,21 @@ class _PosDashboardScreenState extends State<PosDashboardScreen> {
           initialIncomingUser: initialIncomingUser,
           storeName: _storeProfile.name,
           previousShiftSales: prevSales,
-          onShiftHandoverCompleted: (shiftRecord, nextUser) {
+          onShiftHandoverCompleted: (shiftRecord, nextUser, updatedProducts) {
             setState(() {
               _shiftRecords.insert(0, shiftRecord);
-              // Reset counter setelah laporan dikirim
+              _products.clear();
+              _products.addAll(updatedProducts);
               _completedTransactions = 0;
               _totalSalesToday = 0;
               if (nextUser != null) {
                 _scheduledNextUser = nextUser;
                 _currentUser = nextUser;
-                _isLocked = true; // Kunci hanya jika ganti orang jaga
+                _isLocked = true; // Kunci layar agar penjaga baru login dengan PIN resminya
               }
             });
 
-            // Simpan rekap ke storage lokal
             InventoryStorageService().saveShifts(_shiftRecords);
-
-            // Kirim ke Google Sheets agar Owner bisa pantau dari rumah
-            AppsScriptService().sendShiftRecord(shiftRecord);
-
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Laporan berhasil dikirim ke Pemilik Toko!'),
-                backgroundColor: AppTheme.successGreen,
-                duration: Duration(seconds: 3),
-              ),
-            );
           },
         ),
       ),

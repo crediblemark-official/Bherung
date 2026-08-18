@@ -16,6 +16,7 @@ class InventoryStorageService {
   static const String _keyKasbon = 'bherung_kasbon_json_v1';
   static const String _keyStoreProfile = 'bherung_store_profile_json_v1';
   static const String _keyUnits = 'bherung_custom_units_v1';
+  static const String _keyContractBaselineStocks = 'bherung_contract_baseline_stocks_v1';
 
   static const List<String> defaultUnits = [
     'pcs', 'bks', 'botol', 'renceng', 'kg', 'sak', 'dus', 'tabung', 'galon', 'sachet', 'pak', 'butir', 'liter', 'ikat', 'toples', 'kaleng', 'lusin', 'bal', 'roll'
@@ -276,6 +277,32 @@ class InventoryStorageService {
       await prefs.setString(_keyStoreProfile, jsonEncode(profile.toJson()));
     } catch (e) {
       debugPrint('Error saving store profile: $e');
+    }
+  }
+
+  // 7. Load & Save Baseline Stok Lama (Terkunci Permanen per Periode Kontrak)
+  Future<Map<String, int>> loadBaselineStocks() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? jsonStr = prefs.getString(_keyContractBaselineStocks);
+      if (jsonStr != null && jsonStr.trim().isNotEmpty) {
+        final dynamic decoded = jsonDecode(jsonStr);
+        if (decoded is Map<String, dynamic>) {
+          return decoded.map((k, v) => MapEntry(k, (v as num).toInt()));
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading baseline stocks: $e');
+    }
+    return {};
+  }
+
+  Future<void> saveBaselineStocks(Map<String, int> baselineMap) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_keyContractBaselineStocks, jsonEncode(baselineMap));
+    } catch (e) {
+      debugPrint('Error saving baseline stocks: $e');
     }
   }
 

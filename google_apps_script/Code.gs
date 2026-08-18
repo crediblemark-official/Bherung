@@ -487,9 +487,9 @@ function doPost(e) {
       const sheetShifts = getOrCreateSheet(ss, 'Shift_Rekap');
       const dateNow = new Date();
 
-      // Ringkasan audit stok (jika ada)
+      // Ringkasan audit stok (Stok Lama -> Sistem -> Fisik Riil)
       const stockAuditSummary = (shift.stockAudits || []).map(a =>
-        `${a.productName}: sistem=${a.systemStock}, fisik=${a.physicalStock}${a.difference !== 0 ? ' [SELISIH:'+a.difference+']' : ''}`
+        `${a.productName} (Lama: ${a.initialStock != null ? a.initialStock : a.systemStock}, Sistem: ${a.systemStock}, Fisik: ${a.physicalStock}${a.difference !== 0 ? ', Selisih: ' + (a.difference > 0 ? '+' : '') + a.difference : ''})`
       ).join('; ');
 
       sheetShifts.appendRow([
@@ -506,7 +506,7 @@ function doPost(e) {
 
       return jsonResponse({
         status: 'success',
-        message: 'Laporan jaga berhasil dikirim ke Spreadsheet!'
+        message: 'Laporan serah terima jaga berhasil dikirim ke Spreadsheet!'
       });
     }
 
@@ -611,8 +611,8 @@ function getOrCreateSheet(ss, sheetName, clearIfExists = false) {
       sheet.appendRow(['usr-01', 'Ahmad (Kasir)', '0857-1122-3344', 'staff', '1111', 'AKTIF']);
       sheet.appendRow(['usr-02', 'Hasan (Shift Malam)', '0878-5566-7788', 'staff', '2222', 'AKTIF']);
     } else if (sheetName === 'Shift_Rekap') {
-      sheet.appendRow(['ID_Shift', 'Nama_Kasir', 'Nama_Shift', 'Waktu_Mulai', 'Waktu_Selesai', 'Kas_Awal', 'Total_Penjualan', 'Kas_Fisik', 'Selisih', 'Catatan', 'Kasir_Penerima']);
-      sheet.getRange('A1:K1').setBackground('#1E293B').setFontColor('#38BDF8').setFontWeight('bold');
+      sheet.appendRow(['ID_Serah_Terima', 'Penjaga_Lama', 'Tanggal', 'Jam', 'Total_Omzet', 'Jumlah_Transaksi', 'Cekan_Stok_Lama_vs_Fisik', 'Catatan', 'Penjaga_Penerima']);
+      sheet.getRange('A1:I1').setBackground('#1E293B').setFontColor('#38BDF8').setFontWeight('bold');
     } else if (sheetName === 'Mutasi_Stok') {
       sheet.appendRow(['ID_Mutasi', 'ID_Produk', 'Nama_Produk', 'Tipe_Mutasi', 'Jumlah', 'Stok_Awal', 'Stok_Akhir', 'Waktu', 'Keterangan', 'Nama_Kasir']);
       sheet.getRange('A1:J1').setBackground('#334155').setFontColor('#FDE047').setFontWeight('bold');

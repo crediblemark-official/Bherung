@@ -1,40 +1,66 @@
 class SensitiveProductAudit {
   final String productId;
   final String productName;
-  final int systemStock;
-  final int physicalStock;
+  final int initialStock; // Stok Lama (disahkan pada serah terima sebelumnya)
+  final int systemStock; // Stok Sistem Saat Ini (setelah penjualan & restock)
+  final int physicalStock; // Stok Fisik Riil Hasil Hitung Hari Ini (menjadi Stok Lama serah terima berikutnya)
   final int difference; // physicalStock - systemStock
+  final String unit;
+  final double? costPrice; // HPP Modal (Opsional)
+  final double retailPrice; // Harga Jual
   final String? note;
 
   const SensitiveProductAudit({
     required this.productId,
     required this.productName,
+    this.initialStock = 0,
     required this.systemStock,
     required this.physicalStock,
     required this.difference,
+    this.unit = 'pcs',
+    this.costPrice,
+    this.retailPrice = 0.0,
     this.note,
   });
 
   bool get hasDifference => difference != 0;
+  bool get hasCostPrice => costPrice != null && costPrice! > 0;
+
+  double? get lossValueByCost {
+    if (costPrice == null) return null;
+    return difference * costPrice!;
+  }
 
   Map<String, dynamic> toJson() {
     return {
       'productId': productId,
       'productName': productName,
+      'initialStock': initialStock,
       'systemStock': systemStock,
       'physicalStock': physicalStock,
       'difference': difference,
+      'unit': unit,
+      'costPrice': costPrice,
+      'retailPrice': retailPrice,
       'note': note,
     };
   }
 
   factory SensitiveProductAudit.fromJson(Map<String, dynamic> json) {
+    final sys = (json['systemStock'] as num?)?.toInt() ?? 0;
+    final phys = (json['physicalStock'] as num?)?.toInt() ?? 0;
+    final init = (json['initialStock'] as num?)?.toInt() ?? sys;
+
     return SensitiveProductAudit(
       productId: json['productId']?.toString() ?? '',
       productName: json['productName']?.toString() ?? '',
-      systemStock: (json['systemStock'] as num?)?.toInt() ?? 0,
-      physicalStock: (json['physicalStock'] as num?)?.toInt() ?? 0,
-      difference: (json['difference'] as num?)?.toInt() ?? 0,
+      initialStock: init,
+      systemStock: sys,
+      physicalStock: phys,
+      difference: (json['difference'] as num?)?.toInt() ?? (phys - sys),
+      unit: json['unit']?.toString() ?? 'pcs',
+      costPrice: (json['costPrice'] as num?)?.toDouble(),
+      retailPrice: (json['retailPrice'] as num?)?.toDouble() ?? 0.0,
       note: json['note']?.toString(),
     );
   }
@@ -79,6 +105,16 @@ class ShiftRecord {
     this.transactionCount = 0,
   });
 
+  int get differenceCount => stockAudits.where((a) => a.hasDifference).length;
+  int get matchedCount => stockAudits.where((a) => !a.hasDifference).length;
+
+  double get totalLossByCost => stockAudits.fold(0.0, (sum, a) {
+        if (a.costPrice != null) {
+          return sum + (a.difference * a.costPrice!);
+        }
+        return sum;
+      });
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -107,8 +143,12 @@ class ShiftRecord {
       id: json['id']?.toString() ?? 'LAPORAN-${DateTime.now().millisecondsSinceEpoch}',
       cashierName: json['cashierName']?.toString() ?? 'Penjaga',
       shiftName: json['shiftName']?.toString() ?? 'Laporan Jaga',
-      startTime: json['startTime'] != null ? DateTime.tryParse(json['startTime'].toString()) ?? DateTime.now() : DateTime.now(),
-      endTime: json['endTime'] != null ? DateTime.tryParse(json['endTime'].toString()) ?? DateTime.now() : DateTime.now(),
+      startTime: json['startTime'] != null
+          ? DateTime.tryParse(json['startTime'].toString()) ?? DateTime.now()
+          : DateTime.now(),
+      endTime: json['endTime'] != null
+          ? DateTime.tryParse(json['endTime'].toString()) ?? DateTime.now()
+          : DateTime.now(),
       startingCashDrawer: 0,
       systemCashSales: (json['totalSystemSales'] as num?)?.toDouble() ?? 0.0,
       systemQrisSales: 0,

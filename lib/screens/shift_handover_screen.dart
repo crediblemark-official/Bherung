@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../models/product.dart';
+import '../services/apps_script_service.dart';
 import '../services/inventory_storage_service.dart';
 import '../theme/app_theme.dart';
+import 'scanner_screen.dart';
 
 class ShiftHandoverScreen extends StatefulWidget {
   final String currentCashier;
@@ -13,7 +16,7 @@ class ShiftHandoverScreen extends StatefulWidget {
   final double defaultStartingCash;
   final String storeName;
   final double previousShiftSales;
-  final Function(ShiftRecord shiftRecord, AppUser? nextUser) onShiftHandoverCompleted;
+  final Function(ShiftRecord shiftRecord, AppUser? nextUser, List<Product> updatedProducts) onShiftHandoverCompleted;
 
   const ShiftHandoverScreen({
     super.key,
@@ -36,29 +39,57 @@ class ShiftHandoverScreen extends StatefulWidget {
 class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
   final TextEditingController _nextCashierController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
   final Map<String, TextEditingController> _auditControllers = {};
-  late List<Product> _sensitiveProducts;
+  final Map<String, int> _initialStocksMap = {}; // Stok Lama Baseline Terkunci
+  
+  late List<Product> _allProducts;
+  String _searchQuery = '';
+  String _selectedCategory = 'all';
   AppUser? _selectedNextUser;
   bool _isChangingGuard = false;
+  bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    _sensitiveProducts = widget.products.where((p) => p.isSensitiveItem || p.categoryId == 'rokok').toList();
-    if (_sensitiveProducts.isEmpty) {
-      _sensitiveProducts = widget.products.take(4).toList();
-    }
-    for (final p in _sensitiveProducts) {
+    _allProducts = List.from(widget.products);
+    for (final p in _allProducts) {
       _auditControllers[p.id] = TextEditingController(text: p.stock.toString());
     }
-    _selectedNextUser = null;
-    _nextCashierController.text = widget.currentCashier;
+
+    _selectedNextUser = widget.initialIncomingUser;
+    if (_selectedNextUser != null) {
+      _isChangingGuard = true;
+      _nextCashierController.text = _selectedNextUser!.name;
+    } else {
+      _nextCashierController.text = widget.currentCashier;
+    }
+
+    _loadLockedBaselineStocks();
+  }
+
+  Future<void> _loadLockedBaselineStocks() async {
+    final storage = InventoryStorageService();
+    final savedBaseline = await storage.loadBaselineStocks();
+    
+    if (savedBaseline.isNotEmpty) {
+      _initialStocksMap.addAll(savedBaseline);
+    } else {
+      // Inisialisasi awal jika belum ada baseline tersimpan
+      for (final p in _allProducts) {
+        _initialStocksMap[p.id] = p.stock;
+      }
+      await storage.saveBaselineStocks(_initialStocksMap);
+    }
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
     _nextCashierController.dispose();
     _notesController.dispose();
+    _searchController.dispose();
     for (final c in _auditControllers.values) {
       c.dispose();
     }
@@ -72,21 +103,102 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
     });
   }
 
-  void _submit() {
-    _finalizeSubmit();
+  int _getPhysicalStock(Product p) {
+    final text = _auditControllers[p.id]?.text.trim() ?? '';
+    return int.tryParse(text) ?? p.stock;
+  }
+
+  int _getInitialStock(Product p) {
+    return _initialStocksMap[p.id] ?? p.stock;
+  }
+
+  void _setPhysicalStock(Product p, int newQty) {
+    if (newQty < 0) newQty = 0;
+    _auditControllers[p.id]?.text = newQty.toString();
+    setState(() {});
+  }
+
+  void _openBarcodeScanner() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (ctx) => ScannerScreen(
+          onBarcodeDetected: (scannedCode) {
+            final codeClean = scannedCode.trim().toLowerCase();
+            final matchIndex = _allProducts.indexWhere((p) => p.code.toLowerCase() == codeClean);
+            if (matchIndex != -1) {
+              final matchedProduct = _allProducts[matchIndex];
+              setState(() {
+                _searchController.text = matchedProduct.name;
+                _searchQuery = matchedProduct.name;
+                _selectedCategory = 'all';
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Produk ditemukan: ${matchedProduct.name}'),
+                  backgroundColor: AppTheme.primaryTeal,
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Barcode "$scannedCode" tidak ditemukan.'),
+                  backgroundColor: Colors.orange[800],
+                ),
+              );
+            }
+          },
+        ),
+      ),
+    );
   }
 
   Future<void> _finalizeSubmit() async {
+    setState(() => _isSaving = true);
+    final storage = InventoryStorageService();
+
     final List<SensitiveProductAudit> audits = [];
-    for (final p in _sensitiveProducts) {
-      final physical = int.tryParse(_auditControllers[p.id]?.text.trim() ?? '') ?? p.stock;
+    final List<Product> updatedProducts = [];
+    final List<StockMutation> mutations = [];
+    final Map<String, int> nextContractBaselineStocks = {};
+
+    for (final p in _allProducts) {
+      final physical = _getPhysicalStock(p);
+      final initial = _getInitialStock(p);
+      final diff = physical - p.stock;
+
       audits.add(SensitiveProductAudit(
         productId: p.id,
         productName: p.name,
+        initialStock: initial,
         systemStock: p.stock,
         physicalStock: physical,
-        difference: physical - p.stock,
+        difference: diff,
+        unit: p.unit,
+        costPrice: p.costPrice,
+        retailPrice: p.price,
       ));
+
+      if (diff != 0) {
+        mutations.add(StockMutation(
+          id: 'MUT-SHIFT-${DateTime.now().millisecondsSinceEpoch}-${p.id}',
+          productId: p.id,
+          productName: p.name,
+          type: StockMutationType.auditCorrection,
+          qtyChange: diff,
+          previousStock: p.stock,
+          newStock: physical,
+          timestamp: DateTime.now(),
+          cashierName: widget.currentCashier,
+          note: 'Koreksi Serah Terima Jaga (${diff > 0 ? "Surplus +$diff" : "Minus $diff"})',
+          costPrice: p.costPrice,
+        ));
+      }
+
+      // Stok fisik riil hari ini di-lock menjadi baseline "Stok Lama" bagi penjaga baru
+      nextContractBaselineStocks[p.id] = physical;
+      updatedProducts.add(p.copyWith(stock: physical));
     }
 
     final AppUser? nextUser = _isChangingGuard ? _selectedNextUser : null;
@@ -98,37 +210,99 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
       shiftName: 'Laporan ${widget.storeName}',
       startTime: DateTime.now().subtract(const Duration(hours: 24)),
       endTime: DateTime.now(),
-      startingCashDrawer: 0,
+      startingCashDrawer: widget.defaultStartingCash,
       systemCashSales: widget.currentShiftSales,
       systemQrisSales: 0,
       systemKasbonSales: 0,
       totalSystemSales: widget.currentShiftSales,
-      physicalCashCounted: 0,
+      physicalCashCounted: widget.defaultStartingCash + widget.currentShiftSales,
       cashDifference: 0,
       stockAudits: audits,
-      handoverNotes: _notesController.text.trim(),
+      handoverNotes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
       nextCashierName: recipientName,
       transactionCount: widget.currentShiftTransactions,
     );
 
-    if (nextUser != null) {
-      await InventoryStorageService().saveScheduledNextUser(nextUser);
+    // 1. Simpan Baseline Stok Lama Terkunci Baru HANYA jika serah terima pergantian penjaga resmi
+    if (_isChangingGuard && nextUser != null) {
+      await storage.saveBaselineStocks(nextContractBaselineStocks);
     }
 
-    widget.onShiftHandoverCompleted(shiftRecord, nextUser);
+    // 2. Simpan master produk & mutasi stok
+    await storage.saveProducts(updatedProducts);
+    if (mutations.isNotEmpty) {
+      final existingMutations = await storage.loadMutations();
+      existingMutations.insertAll(0, mutations);
+      await storage.saveMutations(existingMutations);
+    }
+
+    // 3. Simpan riwayat serah terima
+    final existingShifts = await storage.loadShifts();
+    existingShifts.insert(0, shiftRecord);
+    await storage.saveShifts(existingShifts);
+
+    if (nextUser != null) {
+      await storage.saveScheduledNextUser(nextUser);
+    }
+
+    // 4. Sinkronisasi ke Google Spreadsheet
+    AppsScriptService().syncAllProducts(updatedProducts);
+    AppsScriptService().sendShiftRecord(shiftRecord);
+
+    widget.onShiftHandoverCompleted(shiftRecord, nextUser, updatedProducts);
+
+    setState(() => _isSaving = false);
+
     if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            nextUser != null
+                ? 'Serah terima disahkan! Stok fisik riil terkunci menjadi Stok Lama bagi ${nextUser.name}.'
+                : 'Laporan serah terima berhasil disimpan dan stok sistem diperbarui.',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          backgroundColor: AppTheme.successGreen,
+          duration: const Duration(seconds: 4),
+        ),
+      );
       Navigator.pop(context);
     }
   }
 
+  List<Product> get _filteredProducts {
+    return _allProducts.where((p) {
+      if (_searchQuery.isNotEmpty) {
+        final q = _searchQuery.toLowerCase();
+        final matchName = p.name.toLowerCase().contains(q);
+        final matchCode = p.code.toLowerCase().contains(q);
+        if (!matchName && !matchCode) return false;
+      }
+
+      if (_selectedCategory == 'all') return true;
+      if (_selectedCategory == 'sensitive') {
+        return p.isSensitiveItem ||
+            p.categoryId == 'rokok' ||
+            p.categoryId == 'gas_galon' ||
+            p.categoryId == 'bensin' ||
+            p.categoryId == 'sembako';
+      }
+      return p.categoryId.toLowerCase() == _selectedCategory.toLowerCase();
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final filtered = _filteredProducts;
+    final int matchedCount = _allProducts.where((p) => _getPhysicalStock(p) == p.stock).length;
+    final int diffCount = _allProducts.where((p) => _getPhysicalStock(p) != p.stock).length;
+
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
       appBar: AppBar(
         backgroundColor: AppTheme.primaryDark,
         elevation: 0,
-        toolbarHeight: 50,
+        toolbarHeight: 52,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
           onPressed: () => Navigator.pop(context),
@@ -138,33 +312,40 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
         title: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(5),
+              padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
                 gradient: AppTheme.goldGradient,
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(7),
               ),
-              child: const Icon(Icons.assessment_rounded, color: AppTheme.primaryDark, size: 16),
+              child: const Icon(Icons.fact_check_rounded, color: AppTheme.primaryDark, size: 18),
             ),
             const SizedBox(width: 8),
-            const Text(
-              'Laporan & Tutup Kas',
-              style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryGold.withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(5),
-                border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.4)),
-              ),
-              child: Text(
-                widget.currentCashier,
-                style: const TextStyle(color: AppTheme.goldAccent, fontSize: 10.5, fontWeight: FontWeight.bold),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Serah Terima Jaga & Cekan Toko',
+                    style: TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w900),
+                  ),
+                  Text(
+                    'Penjaga: ${widget.currentCashier} • $matchedCount Cocok / $diffCount Selisih',
+                    style: const TextStyle(color: AppTheme.textSubtle, fontSize: 10.5, fontWeight: FontWeight.w500),
+                  ),
+                ],
               ),
             ),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.qr_code_scanner_rounded, color: AppTheme.primaryGold, size: 22),
+            tooltip: 'Scan Barcode',
+            onPressed: _openBarcodeScanner,
+          ),
+          const SizedBox(width: 4),
+        ],
       ),
       body: SafeArea(
         child: Column(
@@ -173,7 +354,32 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 children: [
-                  // 1. Ringkasan Omzet
+                  // Banner Edukasi Alur Stok Lama Terkunci
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0F172A),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.lock_clock_rounded, color: AppTheme.primaryGold, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '🔒 STOK LAMA adalah angka modal awal yang terkunci mati selama masa tugas ${widget.currentCashier}. '
+                            'Saat serah terima disahkan, hasil hitung Fisik Riil hari ini otomatis di-lock menjadi Stok Lama bagi penjaga berikutnya.',
+                            style: const TextStyle(color: Colors.white, fontSize: 10.5, height: 1.35),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // 1. Ringkasan Omzet Jaga
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
@@ -199,7 +405,7 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                           children: [
                             Icon(Icons.bar_chart_rounded, color: AppTheme.goldAccent, size: 16),
                             SizedBox(width: 6),
-                            Text('Ringkasan Omzet', style: TextStyle(color: AppTheme.goldAccent, fontSize: 12, fontWeight: FontWeight.w800)),
+                            Text('Ringkasan Omzet Jaga', style: TextStyle(color: AppTheme.goldAccent, fontSize: 12, fontWeight: FontWeight.w800)),
                           ],
                         ),
                         const SizedBox(height: 12),
@@ -212,9 +418,7 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                                   const Text('Periode Lalu:', style: TextStyle(fontSize: 11, color: AppTheme.textSubtle)),
                                   const SizedBox(height: 3),
                                   Text(
-                                    widget.previousShiftSales > 0
-                                        ? AppTheme.formatRupiah(widget.previousShiftSales)
-                                        : '—',
+                                    widget.previousShiftSales > 0 ? AppTheme.formatRupiah(widget.previousShiftSales) : '—',
                                     style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white70),
                                   ),
                                 ],
@@ -226,7 +430,7 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('Omzet Saat Ini:', style: TextStyle(fontSize: 11, color: AppTheme.textSubtle)),
+                                  const Text('Omzet Jaga Ini:', style: TextStyle(fontSize: 11, color: AppTheme.textSubtle)),
                                   const SizedBox(height: 3),
                                   Text(
                                     AppTheme.formatRupiah(widget.currentShiftSales),
@@ -247,10 +451,10 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text('Total Transaksi:', style: TextStyle(fontSize: 11, color: AppTheme.textSubtle)),
+                              const Text('Total Transaksi:', style: TextStyle(color: Colors.white70, fontSize: 11)),
                               Text(
                                 '${widget.currentShiftTransactions} Transaksi',
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white),
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
                               ),
                             ],
                           ),
@@ -260,46 +464,142 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                   ),
                   const SizedBox(height: 14),
 
-                  // 2. Cek Stok Rokok & Barang Penting
-                  if (_sensitiveProducts.isNotEmpty) ...[
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppTheme.borderColor),
-                        boxShadow: AppTheme.softShadow,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(5),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.warningOrange.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(6),
+                  // 2. Cekan & Pencocokan Fisik Barang
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppTheme.borderColor),
+                      boxShadow: AppTheme.softShadow,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.inventory_2_rounded, color: AppTheme.primaryTeal, size: 18),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Pencocokan Stok Fisik Toko',
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppTheme.textDark),
                                 ),
-                                child: const Icon(Icons.inventory_2_rounded, color: AppTheme.warningOrange, size: 16),
+                              ],
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: diffCount > 0 ? const Color(0xFFFEE2E2) : const Color(0xFFDCFCE7),
+                                borderRadius: BorderRadius.circular(5),
                               ),
-                              const SizedBox(width: 8),
-                              const Text(
-                                'Cek Stok Rokok & Barang Penting',
-                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppTheme.textDark),
+                              child: Text(
+                                diffCount > 0 ? '$diffCount Selisih' : 'Semua Cocok',
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: diffCount > 0 ? AppTheme.dangerRed : AppTheme.successGreen,
+                                ),
                               ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Cocokkan jumlah fisik riil di etalase dengan stok sistem:',
+                          style: TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                        ),
+                        const SizedBox(height: 10),
+
+                        // Search Bar
+                        Row(
+                          children: [
+                            Expanded(
+                              child: SizedBox(
+                                height: 36,
+                                child: TextField(
+                                  controller: _searchController,
+                                  style: const TextStyle(fontSize: 12.5),
+                                  decoration: InputDecoration(
+                                    hintText: 'Cari produk / barcode...',
+                                    hintStyle: const TextStyle(fontSize: 11.5, color: AppTheme.textMuted),
+                                    prefixIcon: const Icon(Icons.search_rounded, size: 16, color: AppTheme.textMuted),
+                                    suffixIcon: _searchQuery.isNotEmpty
+                                        ? IconButton(
+                                            icon: const Icon(Icons.clear_rounded, size: 14),
+                                            onPressed: () {
+                                              _searchController.clear();
+                                              setState(() => _searchQuery = '');
+                                            },
+                                          )
+                                        : null,
+                                    isDense: true,
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                                    filled: true,
+                                    fillColor: AppTheme.bgSubtle,
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppTheme.borderColor)),
+                                  ),
+                                  onChanged: (val) => setState(() => _searchQuery = val.trim()),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            InkWell(
+                              onTap: _openBarcodeScanner,
+                              borderRadius: BorderRadius.circular(8),
+                              child: Container(
+                                height: 36,
+                                padding: const EdgeInsets.symmetric(horizontal: 10),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryDark,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Icon(Icons.barcode_reader, color: AppTheme.primaryGold, size: 16),
+                                    SizedBox(width: 4),
+                                    Text('Scan', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+
+                        // Category Filter Chips
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              _buildCategoryChip('all', 'Semua (${_allProducts.length})'),
+                              const SizedBox(width: 6),
+                              _buildCategoryChip('sensitive', '⭐ Barang Rawan'),
+                              const SizedBox(width: 6),
+                              _buildCategoryChip('rokok', 'Rokok'),
+                              const SizedBox(width: 6),
+                              _buildCategoryChip('gas_galon', 'Gas & Galon'),
+                              const SizedBox(width: 6),
+                              _buildCategoryChip('sembako', 'Sembako'),
                             ],
                           ),
-                          const SizedBox(height: 3),
-                          const Text(
-                            'Cocokkan jumlah fisik barang dengan stok di sistem:',
-                            style: TextStyle(fontSize: 10.5, color: AppTheme.textMuted),
-                          ),
-                          const SizedBox(height: 10),
+                        ),
+                        const SizedBox(height: 12),
 
-                          ..._sensitiveProducts.map((prod) {
+                        // Product List
+                        if (filtered.isEmpty)
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            alignment: Alignment.center,
+                            child: const Text('Tidak ada produk yang cocok.', style: TextStyle(fontSize: 12, color: AppTheme.textMuted)),
+                          )
+                        else
+                          ...filtered.map((prod) {
                             final controller = _auditControllers[prod.id];
-                            final physical = int.tryParse(controller?.text ?? '') ?? prod.stock;
+                            final physical = _getPhysicalStock(prod);
+                            final initial = _getInitialStock(prod);
                             final diff = physical - prod.stock;
 
                             return Container(
@@ -308,7 +608,9 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                               decoration: BoxDecoration(
                                 color: AppTheme.bgSubtle,
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: AppTheme.borderColor),
+                                border: Border.all(
+                                  color: diff != 0 ? (diff < 0 ? const Color(0xFFFCA5A5) : const Color(0xFF93C5FD)) : AppTheme.borderColor,
+                                ),
                               ),
                               child: Row(
                                 children: [
@@ -317,34 +619,93 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(prod.name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
-                                        Text('Sistem: ${prod.stock} ${prod.unit}', style: const TextStyle(fontSize: 10.5, color: AppTheme.textMuted)),
+                                        const SizedBox(height: 2),
+                                        Row(
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1.5),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFE2E8F0),
+                                                borderRadius: BorderRadius.circular(4),
+                                              ),
+                                              child: Text(
+                                                'Stok Lama: $initial ${prod.unit}',
+                                                style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: Color(0xFF334155)),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              'Sistem: ${prod.stock} ${prod.unit}',
+                                              style: const TextStyle(fontSize: 10.5, color: AppTheme.textMuted, fontWeight: FontWeight.w600),
+                                            ),
+                                          ],
+                                        ),
+                                        if (diff != 0 && prod.costPrice != null && prod.costPrice! > 0)
+                                          Padding(
+                                            padding: const EdgeInsets.only(top: 2),
+                                            child: Text(
+                                              'Selisih Modal: ${AppTheme.formatRupiah(diff * prod.costPrice!)}',
+                                              style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: diff < 0 ? AppTheme.dangerRed : AppTheme.successGreen),
+                                            ),
+                                          )
+                                        else if (diff != 0 && (prod.costPrice == null || prod.costPrice == 0))
+                                          const Padding(
+                                            padding: EdgeInsets.only(top: 2),
+                                            child: Text(
+                                              '⚠️ HPP Belum Diset',
+                                              style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFFB45309)),
+                                            ),
+                                          ),
                                       ],
                                     ),
                                   ),
                                   const SizedBox(width: 8),
+
+                                  // Stepper - & +
+                                  IconButton(
+                                    icon: const Icon(Icons.remove_circle_outline_rounded, size: 18, color: AppTheme.textDark),
+                                    visualDensity: VisualDensity.compact,
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    onPressed: () => _setPhysicalStock(prod, physical - 1),
+                                  ),
+                                  const SizedBox(width: 4),
+
                                   SizedBox(
-                                    width: 74,
+                                    width: 58,
                                     height: 34,
                                     child: TextField(
                                       controller: controller,
                                       keyboardType: TextInputType.number,
                                       textAlign: TextAlign.center,
+                                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                                       onChanged: (_) => setState(() {}),
                                       style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
                                       decoration: InputDecoration(
                                         isDense: true,
-                                        suffixText: prod.unit,
-                                        suffixStyle: const TextStyle(fontSize: 10, color: AppTheme.textMuted),
-                                        contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
                                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                                        filled: true,
+                                        fillColor: Colors.white,
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
+                                  const SizedBox(width: 4),
+
+                                  IconButton(
+                                    icon: const Icon(Icons.add_circle_outline_rounded, size: 18, color: AppTheme.primaryDark),
+                                    visualDensity: VisualDensity.compact,
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    onPressed: () => _setPhysicalStock(prod, physical + 1),
+                                  ),
+                                  const SizedBox(width: 6),
+
+                                  // Badge Status
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                                     decoration: BoxDecoration(
-                                      color: diff == 0 ? const Color(0xFFECFDF5) : const Color(0xFFFEF2F2),
+                                      color: diff == 0 ? const Color(0xFFECFDF5) : (diff < 0 ? const Color(0xFFFEF2F2) : const Color(0xFFEFF6FF)),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
@@ -352,7 +713,7 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                                       style: TextStyle(
                                         fontSize: 10.5,
                                         fontWeight: FontWeight.bold,
-                                        color: diff == 0 ? AppTheme.successGreen : AppTheme.dangerRed,
+                                        color: diff == 0 ? AppTheme.successGreen : (diff < 0 ? AppTheme.dangerRed : const Color(0xFF2563EB)),
                                       ),
                                     ),
                                   ),
@@ -360,11 +721,10 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                               ),
                             );
                           }),
-                        ],
-                      ),
+                      ],
                     ),
-                    const SizedBox(height: 14),
-                  ],
+                  ),
+                  const SizedBox(height: 14),
 
                   // 3. Catatan & Ganti Penjaga
                   Container(
@@ -382,7 +742,7 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                           children: [
                             Icon(Icons.edit_note_rounded, color: AppTheme.primaryTeal, size: 18),
                             SizedBox(width: 6),
-                            Text('Catatan ke Pemilik Toko (Opsional)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppTheme.textDark)),
+                            Text('Catatan / Kesepakatan Serah Terima', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppTheme.textDark)),
                           ],
                         ),
                         const SizedBox(height: 8),
@@ -391,7 +751,7 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                           maxLines: 3,
                           style: const TextStyle(fontSize: 12),
                           decoration: InputDecoration(
-                            hintText: 'cth: Ada langganan titip gas 3kg, kulkas bocor tadi malam, rokok A kosong...',
+                            hintText: 'cth: Titipan gas 3kg, kesepakatan potongan selisih barang, uang laci...',
                             hintStyle: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
                             isDense: true,
                             contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -409,11 +769,11 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('Ganti Orang Jaga?', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppTheme.textDark)),
+                                  const Text('Serahkan ke Penjaga Baru?', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppTheme.textDark)),
                                   Text(
                                     _isChangingGuard
-                                        ? 'Pilih penjaga pengganti di bawah ini'
-                                        : 'Tidak — penjaga tetap sama seperti biasa',
+                                        ? 'Pilih penjaga penerima toko di bawah ini'
+                                        : 'Tidak — penjaga tetap bertugas seperti biasa',
                                     style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
                                   ),
                                 ],
@@ -435,7 +795,7 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
 
                         if (_isChangingGuard && widget.users.isNotEmpty) ...[
                           const SizedBox(height: 10),
-                          const Text('Pilih penjaga pengganti:', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                          const Text('Pilih penjaga penerima toko:', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
                           const SizedBox(height: 8),
                           Wrap(
                             spacing: 8,
@@ -472,14 +832,14 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                                       Text(
                                         user.name,
                                         style: TextStyle(
-                                          fontSize: 11.5,
-                                          fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
+                                          fontSize: 12,
+                                          fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
                                           color: isSelected ? AppTheme.primaryDark : AppTheme.textDark,
                                         ),
                                       ),
                                       if (isCurrent) ...[
                                         const SizedBox(width: 4),
-                                        const Text('(Jaga Sekarang)', style: TextStyle(fontSize: 9.5, color: AppTheme.textMuted)),
+                                        const Text('(Saat ini)', style: TextStyle(fontSize: 10, color: AppTheme.textMuted)),
                                       ],
                                     ],
                                   ),
@@ -491,48 +851,75 @@ class _ShiftHandoverScreenState extends State<ShiftHandoverScreen> {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
 
-            // Sticky Bottom Button
+            // Bottom Submit Button
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: Colors.white,
-                border: const Border(top: BorderSide(color: AppTheme.borderColor)),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 8,
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 10,
                     offset: const Offset(0, -3),
                   ),
                 ],
               ),
               child: SizedBox(
                 width: double.infinity,
-                height: 44,
+                height: 48,
                 child: ElevatedButton.icon(
-                  onPressed: _submit,
-                  icon: const Icon(Icons.send_rounded, size: 18),
-                  label: Text(
-                    _isChangingGuard && _selectedNextUser != null
-                        ? 'KIRIM LAPORAN & GANTI KE ${_selectedNextUser!.name.toUpperCase()}'
-                        : 'KIRIM LAPORAN KE PEMILIK TOKO',
-                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12.5, letterSpacing: 0.2),
-                  ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryTeal,
+                    backgroundColor: AppTheme.primaryDark,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     elevation: 2,
                   ),
+                  icon: _isSaving
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.check_circle_rounded, color: AppTheme.primaryGold, size: 20),
+                  label: Text(
+                    _isChangingGuard && _selectedNextUser != null
+                        ? 'Sahkan & Serahkan Toko ke ${_selectedNextUser!.name}'
+                        : 'Simpan Laporan & Selesaikan Cekan',
+                    style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w900),
+                  ),
+                  onPressed: _isSaving ? null : _finalizeSubmit,
                 ),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildCategoryChip(String catKey, String label) {
+    final isSelected = _selectedCategory == catKey;
+    return ChoiceChip(
+      selected: isSelected,
+      showCheckmark: false,
+      label: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+          color: isSelected ? Colors.white : AppTheme.textDark,
+        ),
+      ),
+      selectedColor: AppTheme.primaryDark,
+      backgroundColor: AppTheme.bgSubtle,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(6),
+        side: BorderSide(color: isSelected ? Colors.transparent : AppTheme.borderColor),
+      ),
+      onSelected: (selected) {
+        if (selected) setState(() => _selectedCategory = catKey);
+      },
     );
   }
 }

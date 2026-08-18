@@ -327,6 +327,17 @@ class AppMenuScreen extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
+                    // Serah Terima Jaga & Cekan Toko
+                    _buildMenuItem(
+                      context: context,
+                      icon: Icons.fact_check_rounded,
+                      iconColor: const Color(0xFF3B82F6),
+                      title: 'Serah Terima Jaga & Cekan Toko',
+                      subtitle: 'Pencocokan stok fisik vs stok lama, omzet & estafet jaga',
+                      onTap: onOpenShiftHandover,
+                    ),
+                    const Divider(height: 1, indent: 56),
+
                     // Kontrol Stok
                     _buildMenuItem(
                       context: context,
@@ -347,19 +358,6 @@ class AppMenuScreen extends StatelessWidget {
                       subtitle: 'Restock barang masuk dari agen sembako',
                       onTap: onOpenRestock,
                     ),
-                    if (currentUser.isOwner) ...[
-                      const Divider(height: 1, indent: 56),
-
-                      // Shift & Kas (Khusus Pemilik Toko)
-                      _buildMenuItem(
-                        context: context,
-                        icon: Icons.sync_alt_rounded,
-                        iconColor: const Color(0xFF3B82F6),
-                        title: 'Serah Terima Jaga & Kas (Owner)',
-                        subtitle: 'Tutup jaga kasir, hitung fisik kas & rokok dengan penjaga',
-                        onTap: onOpenShiftHandover,
-                      ),
-                    ],
                     const Divider(height: 1, indent: 56),
 
                     // Kasbon
